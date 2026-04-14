@@ -147,7 +147,7 @@ CREATE TABLE "Review" (
 );
 
 -- CreateTable
-CREATE TABLE "Connection" (
+CREATE TABLE "ConsumerLead" (
     "id" TEXT NOT NULL,
     "consumerId" TEXT NOT NULL,
     "listingId" TEXT NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE "Connection" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Connection_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ConsumerLead_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -287,6 +287,78 @@ CREATE TABLE "PageView" (
     CONSTRAINT "PageView_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Permission" (
+    "key" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Permission_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateTable
+CREATE TABLE "RolePermission" (
+    "role" "UserRole" NOT NULL,
+    "permissionKey" TEXT NOT NULL,
+
+    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("role","permissionKey")
+);
+
+-- CreateTable
+CREATE TABLE "BusinessConnection" (
+    "id" TEXT NOT NULL,
+    "initiatorId" TEXT NOT NULL,
+    "targetId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "strengthScore" DECIMAL(5,2) NOT NULL DEFAULT 0,
+    "lastInteractAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "acceptedAt" TIMESTAMP(3),
+
+    CONSTRAINT "BusinessConnection_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BusinessInvitation" (
+    "id" TEXT NOT NULL,
+    "senderId" TEXT NOT NULL,
+    "recipientEmail" TEXT NOT NULL,
+    "recipientUserId" TEXT,
+    "message" TEXT,
+    "token" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "acceptedAt" TIMESTAMP(3),
+
+    CONSTRAINT "BusinessInvitation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DomainEvent" (
+    "id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "aggregateId" TEXT NOT NULL,
+    "actorId" TEXT,
+    "payload" JSONB NOT NULL,
+    "publishedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "DomainEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OnboardingProgress" (
+    "userId" TEXT NOT NULL,
+    "zip" TEXT,
+    "primaryCategoryId" TEXT,
+    "goals" JSONB,
+    "completedSteps" JSONB NOT NULL DEFAULT '[]',
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+
+    CONSTRAINT "OnboardingProgress_pkey" PRIMARY KEY ("userId")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -366,16 +438,16 @@ CREATE INDEX "Review_rating_idx" ON "Review"("rating");
 CREATE UNIQUE INDEX "Review_listingId_userId_key" ON "Review"("listingId", "userId");
 
 -- CreateIndex
-CREATE INDEX "Connection_consumerId_idx" ON "Connection"("consumerId");
+CREATE INDEX "ConsumerLead_consumerId_idx" ON "ConsumerLead"("consumerId");
 
 -- CreateIndex
-CREATE INDEX "Connection_listingId_idx" ON "Connection"("listingId");
+CREATE INDEX "ConsumerLead_listingId_idx" ON "ConsumerLead"("listingId");
 
 -- CreateIndex
-CREATE INDEX "Connection_eventType_idx" ON "Connection"("eventType");
+CREATE INDEX "ConsumerLead_eventType_idx" ON "ConsumerLead"("eventType");
 
 -- CreateIndex
-CREATE INDEX "Connection_status_idx" ON "Connection"("status");
+CREATE INDEX "ConsumerLead_status_idx" ON "ConsumerLead"("status");
 
 -- CreateIndex
 CREATE INDEX "Referral_senderId_idx" ON "Referral"("senderId");
@@ -446,6 +518,36 @@ CREATE INDEX "PageView_listingId_idx" ON "PageView"("listingId");
 -- CreateIndex
 CREATE INDEX "PageView_createdAt_idx" ON "PageView"("createdAt");
 
+-- CreateIndex
+CREATE INDEX "RolePermission_permissionKey_idx" ON "RolePermission"("permissionKey");
+
+-- CreateIndex
+CREATE INDEX "BusinessConnection_status_idx" ON "BusinessConnection"("status");
+
+-- CreateIndex
+CREATE INDEX "BusinessConnection_initiatorId_idx" ON "BusinessConnection"("initiatorId");
+
+-- CreateIndex
+CREATE INDEX "BusinessConnection_targetId_idx" ON "BusinessConnection"("targetId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BusinessConnection_initiatorId_targetId_key" ON "BusinessConnection"("initiatorId", "targetId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BusinessInvitation_token_key" ON "BusinessInvitation"("token");
+
+-- CreateIndex
+CREATE INDEX "BusinessInvitation_recipientEmail_idx" ON "BusinessInvitation"("recipientEmail");
+
+-- CreateIndex
+CREATE INDEX "BusinessInvitation_status_idx" ON "BusinessInvitation"("status");
+
+-- CreateIndex
+CREATE INDEX "DomainEvent_type_publishedAt_idx" ON "DomainEvent"("type", "publishedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DomainEvent_aggregateId_idx" ON "DomainEvent"("aggregateId");
+
 -- AddForeignKey
 ALTER TABLE "OAuthAccount" ADD CONSTRAINT "OAuthAccount_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -471,10 +573,10 @@ ALTER TABLE "Review" ADD CONSTRAINT "Review_listingId_fkey" FOREIGN KEY ("listin
 ALTER TABLE "Review" ADD CONSTRAINT "Review_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Connection" ADD CONSTRAINT "Connection_consumerId_fkey" FOREIGN KEY ("consumerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ConsumerLead" ADD CONSTRAINT "ConsumerLead_consumerId_fkey" FOREIGN KEY ("consumerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Connection" ADD CONSTRAINT "Connection_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ConsumerLead" ADD CONSTRAINT "ConsumerLead_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Referral" ADD CONSTRAINT "Referral_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -508,4 +610,22 @@ ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionKey_fkey" FOREIGN KEY ("permissionKey") REFERENCES "Permission"("key") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BusinessConnection" ADD CONSTRAINT "BusinessConnection_initiatorId_fkey" FOREIGN KEY ("initiatorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BusinessConnection" ADD CONSTRAINT "BusinessConnection_targetId_fkey" FOREIGN KEY ("targetId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BusinessInvitation" ADD CONSTRAINT "BusinessInvitation_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BusinessInvitation" ADD CONSTRAINT "BusinessInvitation_recipientUserId_fkey" FOREIGN KEY ("recipientUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OnboardingProgress" ADD CONSTRAINT "OnboardingProgress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
