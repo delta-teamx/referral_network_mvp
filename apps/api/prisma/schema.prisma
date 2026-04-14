@@ -1,0 +1,409 @@
+// ReferralNetworkUSA — Prisma schema
+// See /root/.claude/plans/valiant-sprouting-island.md for context.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  CONSUMER
+  BUSINESS_OWNER
+  GROUP_LEADER
+  CITY_CAPTAIN
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum ListingStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+  PENDING_REVIEW
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  EXPIRED
+}
+
+enum ReferralStatus {
+  SENT
+  ACCEPTED
+  CONVERTED
+  DECLINED
+}
+
+enum EventType {
+  BUYING_HOUSE
+  SELLING_HOUSE
+  GETTING_MARRIED
+  STARTING_BUSINESS
+  HAVING_BABY
+  PLANNING_FUNERAL
+  HOME_RENOVATION
+  PLANNING_RETIREMENT
+  MOVING_TO_NEW_CITY
+  HOSTING_EVENT
+  GOING_TO_COLLEGE
+  GETTING_DIVORCED
+  OPENING_RESTAURANT
+  CULTURAL_CELEBRATION
+}
+
+enum GroupMemberRole {
+  MEMBER
+  LEADER
+  CO_LEADER
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  passwordHash     String? // null for OAuth-only users
+  firstName        String
+  lastName         String
+  phone            String?
+  avatarUrl        String?
+  role             UserRole         @default(CONSUMER)
+  subscriptionTier SubscriptionTier @default(FREE)
+  stripeCustomerId String?          @unique
+  emailVerified    Boolean          @default(false)
+  emailVerifyToken String?
+  phoneVerified    Boolean          @default(false)
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  oauthAccounts     OAuthAccount[]
+  listings          Listing[]
+  reviews           Review[]
+  sentReferrals     Referral[]     @relation("ReferralSender")
+  receivedReferrals Referral[]     @relation("ReferralReceiver")
+  connections       Connection[]   @relation("ConnectionConsumer")
+  groupMemberships  GroupMember[]
+  favorites         Favorite[]
+  notifications     Notification[]
+  subscription      Subscription?
+
+  @@index([email])
+  @@index([role])
+  @@index([subscriptionTier])
+}
+
+model OAuthAccount {
+  id          String   @id @default(uuid())
+  userId      String
+  provider    String // "google", "facebook"
+  providerId  String // Provider's user ID
+  accessToken String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  parentId    String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  parent          Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children        Category[]         @relation("CategoryHierarchy")
+  listings        Listing[]
+  eventCategories EventCategoryMap[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Listing {
+  id               String        @id @default(uuid())
+  userId           String
+  categoryId       String
+  name             String
+  slug             String        @unique
+  description      String
+  shortDescription String?       @db.VarChar(255)
+  address          String
+  city             String
+  state            String        @db.VarChar(2)
+  zipCode          String        @db.VarChar(10)
+  latitude         Decimal       @db.Decimal(10, 7)
+  longitude        Decimal       @db.Decimal(10, 7)
+  phone            String?
+  email            String?
+  website          String?
+  hours            Json? // { monday: { open: "9:00", close: "17:00" }, ... }
+  logoUrl          String?
+  coverPhotoUrl    String?
+  isVerified       Boolean       @default(false)
+  isClaimed        Boolean       @default(true)
+  isFeatured       Boolean       @default(false)
+  trustScore       Decimal       @default(0) @db.Decimal(3, 1)
+  avgRating        Decimal       @default(0) @db.Decimal(2, 1)
+  reviewCount      Int           @default(0)
+  viewCount        Int           @default(0)
+  status           ListingStatus @default(ACTIVE)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+
+  user        User           @relation(fields: [userId], references: [id])
+  category    Category       @relation(fields: [categoryId], references: [id])
+  photos      ListingPhoto[]
+  reviews     Review[]
+  connections Connection[]
+  referrals   Referral[]
+  favorites   Favorite[]
+  tags        ListingTag[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([city, state])
+  @@index([zipCode])
+  @@index([status])
+  @@index([userId])
+  @@index([trustScore(sort: Desc)])
+}
+
+model ListingPhoto {
+  id        String   @id @default(uuid())
+  listingId String
+  url       String
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+}
+
+model ListingTag {
+  id        String @id @default(uuid())
+  listingId String
+  tag       String
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, tag])
+  @@index([tag])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  listingId  String
+  userId     String
+  rating     Int // 1-5
+  title      String?
+  text       String
+  isVerified Boolean  @default(false) // Verified purchase/service
+  status     String   @default("active") // active, flagged, removed
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([listingId, userId]) // One review per user per listing
+  @@index([listingId])
+  @@index([userId])
+  @@index([rating])
+}
+
+model Connection {
+  id          String           @id @default(uuid())
+  consumerId  String
+  listingId   String
+  eventType   EventType
+  status      ConnectionStatus @default(PENDING)
+  notes       String?
+  contactedAt DateTime?
+  convertedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  consumer User    @relation("ConnectionConsumer", fields: [consumerId], references: [id])
+  listing  Listing @relation(fields: [listingId], references: [id])
+
+  @@index([consumerId])
+  @@index([listingId])
+  @@index([eventType])
+  @@index([status])
+}
+
+model Referral {
+  id          String         @id @default(uuid())
+  senderId    String
+  receiverId  String
+  listingId   String
+  status      ReferralStatus @default(SENT)
+  notes       String?
+  clientName  String?
+  clientPhone String?
+  clientEmail String?
+  convertedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  sender   User    @relation("ReferralSender", fields: [senderId], references: [id])
+  receiver User    @relation("ReferralReceiver", fields: [receiverId], references: [id])
+  listing  Listing @relation(fields: [listingId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([listingId])
+  @@index([status])
+}
+
+model EventCategoryMap {
+  id         String    @id @default(uuid())
+  eventType  EventType
+  categoryId String
+  relevance  Int       @default(1) // Higher = more relevant
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([eventType, categoryId])
+  @@index([eventType])
+}
+
+model Group {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  city            String
+  state           String   @db.VarChar(2)
+  meetingSchedule String? // "Every Tuesday 7am" (human readable)
+  meetingUrl      String? // Virtual meeting link
+  maxMembers      Int      @default(30)
+  isPublic        Boolean  @default(true)
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members GroupMember[]
+  events  GroupEvent[]
+
+  @@index([slug])
+  @@index([city, state])
+}
+
+model GroupMember {
+  id       String          @id @default(uuid())
+  groupId  String
+  userId   String
+  role     GroupMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupEvent {
+  id          String   @id @default(uuid())
+  groupId     String
+  title       String
+  description String?
+  date        DateTime
+  location    String? // Address or "Virtual"
+  meetingUrl  String?
+  rsvpCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([date])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([listingId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String // "new_lead", "new_referral", "review", "group_invite"
+  title     String
+  body      String
+  data      Json? // Extra payload (listingId, referralId, etc.)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Subscription {
+  id                   String           @id @default(uuid())
+  userId               String           @unique
+  stripeSubscriptionId String           @unique
+  stripePriceId        String
+  tier                 SubscriptionTier
+  status               String // "active", "canceled", "past_due", "trialing"
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean          @default(false)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+}
+
+model PageView {
+  id        String   @id @default(uuid())
+  listingId String
+  visitorId String? // Anonymous session ID or userId
+  source    String? // "search", "direct", "connect", "referral"
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+  @@index([createdAt])
+}

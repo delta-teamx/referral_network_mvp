@@ -1,0 +1,73 @@
+import 'dotenv/config';
+import { z } from 'zod';
+
+/**
+ * Zod schema for all environment variables the API reads.
+ *
+ * Third-party credentials (Stripe, Twilio, SendGrid, AWS, OAuth providers)
+ * are `.optional()` in Branch 1 so the server boots without them. Later
+ * branches will require them via their own narrower schemas when a feature
+ * is actually enabled.
+ */
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3001),
+  APP_NAME: z.string().default('ReferralNetworkUSA'),
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  API_URL: z.string().url().default('http://localhost:3001'),
+
+  DATABASE_URL: z.string().url(),
+  REDIS_URL: z.string().url().default('redis://localhost:6379'),
+  ELASTICSEARCH_URL: z.string().url().default('http://localhost:9200'),
+
+  // JWT — optional in Branch 1, required in Branch 2
+  JWT_ACCESS_SECRET: z.string().min(32).optional(),
+  JWT_REFRESH_SECRET: z.string().min(32).optional(),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  JWT_REFRESH_TTL: z.string().default('30d'),
+
+  // OAuth — Branch 2
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CALLBACK_URL: z.string().url().optional(),
+  FACEBOOK_CLIENT_ID: z.string().optional(),
+  FACEBOOK_CLIENT_SECRET: z.string().optional(),
+  FACEBOOK_CALLBACK_URL: z.string().url().optional(),
+
+  // Stripe — Branch 5
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRO_PRICE_ID: z.string().optional(),
+  STRIPE_PREMIUM_PRICE_ID: z.string().optional(),
+
+  // AWS — Branch 3
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_REGION: z.string().default('us-east-1'),
+  AWS_S3_BUCKET: z.string().optional(),
+
+  // Email — Branch 2
+  EMAIL_FROM: z.string().email().default('noreply@referralnetworkusa.com'),
+  SENDGRID_API_KEY: z.string().optional(),
+
+  // SMS — Branch 3/4
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+
+  // Maps — Branch 3
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+});
+
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  // eslint-disable-next-line no-console
+  console.error('\u274C Invalid environment variables:');
+  // eslint-disable-next-line no-console
+  console.error(parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+
+export const env = parsed.data;
+export type Env = typeof env;
