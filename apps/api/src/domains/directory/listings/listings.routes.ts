@@ -6,6 +6,7 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
+  createListing,
   getListingBySlug,
   getListingReviews,
   listListings,
@@ -14,6 +15,23 @@ import {
 } from './listings.service.js';
 
 export const listingsRouter: Router = Router();
+
+const createListingSchema = z.object({
+  categoryId: z.string().uuid(),
+  name: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(10).max(5000),
+  shortDescription: z.string().trim().max(255).optional(),
+  address: z.string().trim().max(255),
+  city: z.string().trim().max(80),
+  state: z.string().trim().length(2),
+  zipCode: z
+    .string()
+    .trim()
+    .regex(/^\d{5}(-\d{4})?$/),
+  phone: z.string().trim().max(40).optional(),
+  email: z.string().trim().email().optional(),
+  website: z.string().trim().url().optional(),
+});
 
 const updateListingSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
@@ -116,5 +134,17 @@ listingsRouter.patch(
     const listing = await updateOwnListing(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof listing> = { success: true, data: listing };
     res.json(body);
+  }),
+);
+
+listingsRouter.post(
+  '/',
+  authenticate,
+  validate(createListingSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const listing = await createListing(req.user.id, req.body);
+    const body: ApiResponse<typeof listing> = { success: true, data: listing };
+    res.status(201).json(body);
   }),
 );

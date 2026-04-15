@@ -13,6 +13,8 @@ import { connectorRouter } from './domains/matching/connector/connector.routes.j
 import { leadsRouter } from './domains/matching/leads/leads.routes.js';
 import { registerLeadSubscribers } from './domains/matching/leads/leads.subscribers.js';
 import { dashboardRouter } from './domains/core/dashboard/dashboard.routes.js';
+import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
+import { referralsRouter } from './domains/network/referrals/referrals.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
@@ -44,6 +46,8 @@ app.use('/api/v1/categories', categoriesRouter);
 app.use('/api/v1/connect', connectorRouter);
 app.use('/api/v1/consumer-leads', leadsRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
+app.use('/api/v1/reviews', reviewsRouter);
+app.use('/api/v1/referrals', referralsRouter);
 
 // 404 + error handler (order matters)
 app.use(notFoundHandler);

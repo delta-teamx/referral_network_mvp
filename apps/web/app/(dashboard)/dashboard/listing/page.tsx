@@ -111,7 +111,12 @@ export default function EditListingPage() {
           <p className="mb-4 text-sm text-gray-600">
             You don&rsquo;t have a listing yet. Create one to appear in the directory.
           </p>
-          <Button variant="primary">Create listing</Button>
+          <a
+            href="/dashboard/listing/new"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            Create listing →
+          </a>
         </div>
       </div>
     );

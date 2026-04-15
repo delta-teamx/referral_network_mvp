@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
+import { eventBus } from '../../core/events/index.js';
 
 /**
  * Listings service — directory read/write.
@@ -109,37 +110,6 @@ export async function getListingBySlug(slug: string) {
   return listing;
 }
 
-export interface UpdateListingInput {
-  name?: string;
-  description?: string;
-  shortDescription?: string | null;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  phone?: string | null;
-  email?: string | null;
-  website?: string | null;
-}
-
-export async function updateOwnListing(
-  listingId: string,
-  userId: string,
-  input: UpdateListingInput,
-) {
-  const existing = await prisma.listing.findFirst({
-    where: { id: listingId, userId, deletedAt: null },
-    select: { id: true },
-  });
-  if (!existing) throw AppError.notFound('Listing not found');
-
-  return prisma.listing.update({
-    where: { id: listingId },
-    data: input,
-    select: listingCardSelect,
-  });
-}
-
 export async function getListingReviews(slug: string, page = 1, limit = 10) {
   const listing = await prisma.listing.findFirst({
     where: { slug, status: 'ACTIVE', deletedAt: null },
@@ -167,6 +137,114 @@ export async function getListingReviews(slug: string, page = 1, limit = 10) {
   ]);
 
   return { reviews, total, page, limit };
+}
+
+// ---- Writes ------------------------------------------------------------------
+
+export interface CreateListingInput {
+  categoryId: string;
+  name: string;
+  description: string;
+  shortDescription?: string | null;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+}
+
+/**
+ * Generate a URL-safe slug from a name, falling back to a random suffix if
+ * that slug is already taken.
+ */
+async function uniqueSlug(base: string): Promise<string> {
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'listing';
+  let slug = slugify(base);
+  // eslint-disable-next-line no-constant-condition
+  for (let i = 0; i < 5; i++) {
+    const exists = await prisma.listing.findUnique({ where: { slug } });
+    if (!exists) return slug;
+    slug = `${slugify(base)}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+  return `${slugify(base)}-${Date.now()}`;
+}
+
+export async function createListing(userId: string, input: CreateListingInput) {
+  const category = await prisma.category.findUnique({
+    where: { id: input.categoryId },
+    select: { id: true },
+  });
+  if (!category) throw AppError.badRequest('Invalid category');
+
+  const slug = await uniqueSlug(input.name);
+
+  const listing = await prisma.listing.create({
+    data: {
+      userId,
+      categoryId: category.id,
+      slug,
+      name: input.name,
+      description: input.description,
+      shortDescription: input.shortDescription ?? null,
+      address: input.address,
+      city: input.city,
+      state: input.state.toUpperCase(),
+      zipCode: input.zipCode,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      website: input.website ?? null,
+      // Approximate coordinates — listings don't yet prompt for geocoding; a
+      // Branch 5 job backfills lat/lng via Google Maps geocoding.
+      latitude: 38.627,
+      longitude: -90.1994,
+    },
+    select: listingCardSelect,
+  });
+
+  await eventBus.publish('listing.created', { listingId: listing.id, userId });
+
+  return listing;
+}
+
+export interface UpdateListingInput {
+  name?: string;
+  description?: string;
+  shortDescription?: string | null;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+}
+
+export async function updateOwnListing(
+  listingId: string,
+  userId: string,
+  input: UpdateListingInput,
+) {
+  const existing = await prisma.listing.findFirst({
+    where: { id: listingId, userId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!existing) throw AppError.notFound('Listing not found');
+
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: input,
+    select: listingCardSelect,
+  });
+
+  await eventBus.publish('listing.updated', { listingId: updated.id });
+  return updated;
 }
 
 /** Slim projection used on every card. Keeps payloads small. */
