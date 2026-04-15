@@ -7,6 +7,9 @@ import { disconnectPrisma } from './config/prisma.js';
 import { healthRouter } from './domains/health/health.routes.js';
 import { authRouter } from './domains/core/auth/auth.routes.js';
 import { onboardingRouter } from './domains/core/onboarding/onboarding.routes.js';
+import { listingsRouter } from './domains/directory/listings/listings.routes.js';
+import { categoriesRouter } from './domains/directory/categories/categories.routes.js';
+import { connectorRouter } from './domains/matching/connector/connector.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
@@ -32,6 +35,9 @@ registerOnboardingSubscribers(eventBus);
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/onboarding', onboardingRouter);
+app.use('/api/v1/listings', listingsRouter);
+app.use('/api/v1/categories', categoriesRouter);
+app.use('/api/v1/connect', connectorRouter);
 
 // 404 + error handler (order matters)
 app.use(notFoundHandler);
