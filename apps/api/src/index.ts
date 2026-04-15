@@ -10,6 +10,9 @@ import { onboardingRouter } from './domains/core/onboarding/onboarding.routes.js
 import { listingsRouter } from './domains/directory/listings/listings.routes.js';
 import { categoriesRouter } from './domains/directory/categories/categories.routes.js';
 import { connectorRouter } from './domains/matching/connector/connector.routes.js';
+import { leadsRouter } from './domains/matching/leads/leads.routes.js';
+import { registerLeadSubscribers } from './domains/matching/leads/leads.subscribers.js';
+import { dashboardRouter } from './domains/core/dashboard/dashboard.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
@@ -30,6 +33,7 @@ app.use(cookieParser());
 
 // ---- Domain subscribers ------------------------------------------------------
 registerOnboardingSubscribers(eventBus);
+registerLeadSubscribers(eventBus);
 
 // ---- Routes -----------------------------------------------------------------
 app.use('/api/v1/health', healthRouter);
@@ -38,6 +42,8 @@ app.use('/api/v1/onboarding', onboardingRouter);
 app.use('/api/v1/listings', listingsRouter);
 app.use('/api/v1/categories', categoriesRouter);
 app.use('/api/v1/connect', connectorRouter);
+app.use('/api/v1/consumer-leads', leadsRouter);
+app.use('/api/v1/dashboard', dashboardRouter);
 
 // 404 + error handler (order matters)
 app.use(notFoundHandler);

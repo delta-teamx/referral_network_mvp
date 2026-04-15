@@ -109,6 +109,37 @@ export async function getListingBySlug(slug: string) {
   return listing;
 }
 
+export interface UpdateListingInput {
+  name?: string;
+  description?: string;
+  shortDescription?: string | null;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+}
+
+export async function updateOwnListing(
+  listingId: string,
+  userId: string,
+  input: UpdateListingInput,
+) {
+  const existing = await prisma.listing.findFirst({
+    where: { id: listingId, userId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!existing) throw AppError.notFound('Listing not found');
+
+  return prisma.listing.update({
+    where: { id: listingId },
+    data: input,
+    select: listingCardSelect,
+  });
+}
+
 export async function getListingReviews(slug: string, page = 1, limit = 10) {
   const listing = await prisma.listing.findFirst({
     where: { slug, status: 'ACTIVE', deletedAt: null },

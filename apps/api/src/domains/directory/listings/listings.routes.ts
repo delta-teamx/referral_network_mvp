@@ -1,14 +1,36 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
+import { authenticate } from '../../../middleware/authenticate.js';
+import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
+import { AppError } from '../../../utils/AppError.js';
 import {
   getListingBySlug,
   getListingReviews,
   listListings,
   recentListings,
+  updateOwnListing,
 } from './listings.service.js';
 
 export const listingsRouter: Router = Router();
+
+const updateListingSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().min(10).max(5000).optional(),
+  shortDescription: z.string().trim().max(255).nullable().optional(),
+  address: z.string().trim().max(255).optional(),
+  city: z.string().trim().max(80).optional(),
+  state: z.string().trim().length(2).optional(),
+  zipCode: z
+    .string()
+    .trim()
+    .regex(/^\d{5}(-\d{4})?$/)
+    .optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+  email: z.string().trim().email().nullable().optional(),
+  website: z.string().trim().url().nullable().optional(),
+});
 
 listingsRouter.get(
   '/recent',
@@ -81,6 +103,18 @@ listingsRouter.get(
         totalPages: Math.max(1, Math.ceil(result.total / result.limit)),
       },
     };
+    res.json(body);
+  }),
+);
+
+listingsRouter.patch(
+  '/:id',
+  authenticate,
+  validate(updateListingSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const listing = await updateOwnListing(req.params.id ?? '', req.user.id, req.body);
+    const body: ApiResponse<typeof listing> = { success: true, data: listing };
     res.json(body);
   }),
 );

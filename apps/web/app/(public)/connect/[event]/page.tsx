@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import type { EventType } from '@refnet/shared';
 import { EVENT_TYPES, EVENT_TYPE_META } from '@refnet/shared';
 import { fadeInUp, staggerContainer } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
+import { useAuthStore } from '../../../../stores/auth';
 
 interface MatchedListing {
   listingId: string;
@@ -32,16 +33,20 @@ function slugToEventType(slug: string): EventType | null {
 }
 
 export default function ConnectEventPage() {
+  const router = useRouter();
   const params = useParams<{ event: string }>();
   const eventType = slugToEventType(params.event ?? '');
   if (!eventType) notFound();
 
   const meta = EVENT_TYPE_META[eventType];
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   const [zip, setZip] = useState('');
   const [results, setResults] = useState<MatchedListing[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,15 +57,36 @@ export default function ConnectEventPage() {
     }
     setLoading(true);
     try {
-      const res = await api.post<MatchedListing[]>('/api/v1/connect/match', {
-        eventType,
-        zip,
-      });
+      const res = await api.post<MatchedListing[]>('/api/v1/connect/match', { eventType, zip });
       setResults(res);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Match failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function connectTo(listingId: string) {
+    if (!accessToken) {
+      router.push(`/login?next=/connect/${params.event}`);
+      return;
+    }
+    setConnectingId(listingId);
+    try {
+      await api.post(
+        '/api/v1/consumer-leads',
+        { listingId, eventType },
+        { accessToken: accessToken ?? undefined },
+      );
+      setConnectedIds((prev) => {
+        const next = new Set(prev);
+        next.add(listingId);
+        return next;
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send request');
+    } finally {
+      setConnectingId(null);
     }
   }
 
@@ -81,8 +107,7 @@ export default function ConnectEventPage() {
           className="mb-8 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
         >
           <p className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-            <Sparkles size={14} />
-            Life event
+            <Sparkles size={14} /> Life event
           </p>
           <h1 className="mb-2 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
             {meta.label}
@@ -141,62 +166,72 @@ export default function ConnectEventPage() {
               animate="visible"
               className="space-y-3"
             >
-              {results.map((m, idx) => (
-                <motion.li key={m.listingId} variants={fadeInUp}>
-                  <Link
-                    href={`/listing/${m.slug}`}
-                    className="group flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary sm:flex">
-                        #{idx + 1}
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                          {m.categoryName}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-lg font-semibold text-gray-900 group-hover:text-primary">
-                            {m.name}
+              {results.map((m, idx) => {
+                const connected = connectedIds.has(m.listingId);
+                const busy = connectingId === m.listingId;
+                return (
+                  <motion.li key={m.listingId} variants={fadeInUp}>
+                    <div className="group flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-lg sm:flex-row sm:items-center sm:justify-between">
+                      <Link href={`/listing/${m.slug}`} className="flex items-start gap-4">
+                        <div className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary sm:flex">
+                          #{idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+                            {m.categoryName}
                           </p>
-                          {m.isVerified && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
-                              <ShieldCheck size={10} />
-                              Verified
-                            </span>
+                          <div className="flex items-center gap-2">
+                            <p className="text-lg font-semibold text-gray-900 group-hover:text-primary">
+                              {m.name}
+                            </p>
+                            {m.isVerified && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                                <ShieldCheck size={10} /> Verified
+                              </span>
+                            )}
+                          </div>
+                          {m.shortDescription && (
+                            <p className="mt-1 text-sm text-gray-600">{m.shortDescription}</p>
                           )}
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                            <span className="inline-flex items-center gap-1 text-gray-700">
+                              <Star size={12} className="fill-amber-400 text-amber-400" />
+                              {Number(m.avgRating).toFixed(1)}
+                              <span className="text-gray-400">({m.reviewCount})</span>
+                            </span>
+                            <span className="text-gray-300">·</span>
+                            <span className="text-gray-500">
+                              {m.city}, {m.state}
+                            </span>
+                            <span className="text-gray-300">·</span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 font-semibold text-primary">
+                              Trust {Number(m.trustScore).toFixed(1)}
+                            </span>
+                          </div>
                         </div>
-                        {m.shortDescription && (
-                          <p className="mt-1 text-sm text-gray-600">{m.shortDescription}</p>
+                      </Link>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+                          Match {m.score.toFixed(1)}
+                        </span>
+                        {connected ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-4 py-1.5 text-xs font-semibold text-success">
+                            <Check size={12} /> Request sent
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => void connectTo(m.listingId)}
+                            disabled={busy}
+                            className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
+                          >
+                            {busy ? 'Sending…' : accessToken ? 'Connect →' : 'Log in to connect →'}
+                          </button>
                         )}
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                          <span className="inline-flex items-center gap-1 text-gray-700">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {Number(m.avgRating).toFixed(1)}
-                            <span className="text-gray-400">({m.reviewCount})</span>
-                          </span>
-                          <span className="text-gray-300">·</span>
-                          <span className="text-gray-500">
-                            {m.city}, {m.state}
-                          </span>
-                          <span className="text-gray-300">·</span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 font-semibold text-primary">
-                            Trust {Number(m.trustScore).toFixed(1)}
-                          </span>
-                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
-                        Match {m.score.toFixed(1)}
-                      </span>
-                      <span className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white">
-                        Connect →
-                      </span>
-                    </div>
-                  </Link>
-                </motion.li>
-              ))}
+                  </motion.li>
+                );
+              })}
             </motion.ul>
           </section>
         )}
