@@ -13,7 +13,19 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
   APP_NAME: z.string().default('ReferralNetworkUSA'),
-  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  // Comma-separated list of allowed frontend origins (for CORS + cookie domain).
+  // Single URL works too; splitting happens in index.ts.
+  FRONTEND_URL: z
+    .string()
+    .default('http://localhost:3000')
+    .refine(
+      (v) =>
+        v
+          .split(',')
+          .map((s) => s.trim())
+          .every((s) => /^https?:\/\//.test(s)),
+      { message: 'FRONTEND_URL must be one or more http(s) URLs, comma-separated' },
+    ),
   API_URL: z.string().url().default('http://localhost:3001'),
 
   DATABASE_URL: z.string().url(),

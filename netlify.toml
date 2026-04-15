@@ -1,0 +1,18 @@
+# Netlify config for the Next.js frontend in a pnpm monorepo.
+# The Next.js runtime plugin is auto-installed by Netlify when it detects Next.
+
+[build]
+  base = "."
+  command = "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @refnet/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Let the monorepo's packageManager field pick pnpm 10.x
+  NPM_FLAGS = "--version"
+  # Skip the sharp / canvas native builds we don't use
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Required runtime env vars (set these in the Netlify UI, NOT here):
+#   NEXT_PUBLIC_API_URL    = https://<your-render-api>.onrender.com
+#   NEXT_PUBLIC_APP_NAME   = ReferralNetworkUSA

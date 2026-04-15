@@ -23,9 +23,23 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 const app = express();
 
 app.use(helmet());
+
+// CORS — allow every origin listed in FRONTEND_URL (comma-separated) plus any
+// *.netlify.app preview domain. Keeps localhost dev working and lets us add
+// staging/prod domains without code changes.
+const allowedOrigins = env.FRONTEND_URL.split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (/^https:\/\/([a-z0-9-]+--)?[a-z0-9-]+\.netlify\.app$/i.test(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error(`CORS blocked: ${origin}`));
+    },
     credentials: true,
   }),
 );
