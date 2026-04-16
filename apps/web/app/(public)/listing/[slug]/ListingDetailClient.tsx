@@ -22,9 +22,17 @@ import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
+type ConnectionState =
+  | 'none'
+  | 'pending_outbound'
+  | 'pending_inbound'
+  | 'accepted'
+  | 'declined';
+
 interface ListingDetail {
   id: string;
   slug: string;
+  userId: string;
   name: string;
   description: string;
   shortDescription: string | null;
@@ -68,6 +76,8 @@ export default function ListingDetailClient() {
   const [loading, setLoading] = useState(true);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [connState, setConnState] = useState<ConnectionState>('none');
+  const [connBusy, setConnBusy] = useState(false);
 
   async function reload() {
     if (!slug) return;
@@ -95,6 +105,47 @@ export default function ListingDetailClient() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // Check connection state once we know who owns the listing.
+  useEffect(() => {
+    if (!listing || !accessToken || !user || user.id === listing.userId) return;
+    let cancelled = false;
+    async function loadState() {
+      try {
+        const res = await api.get<{ state: ConnectionState }>(
+          `/api/v1/connections/state/${listing!.userId}`,
+          { accessToken: accessToken ?? undefined },
+        );
+        if (!cancelled) setConnState(res.state);
+      } catch {
+        /* silent — connection feature is non-critical */
+      }
+    }
+    void loadState();
+    return () => {
+      cancelled = true;
+    };
+  }, [listing, accessToken, user]);
+
+  async function requestConnect() {
+    if (!listing || !accessToken) {
+      router.push(`/login?next=/listing/${slug}`);
+      return;
+    }
+    setConnBusy(true);
+    try {
+      await api.post(
+        '/api/v1/connections/request',
+        { targetUserId: listing.userId },
+        { accessToken: accessToken ?? undefined },
+      );
+      setConnState('pending_outbound');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send connect request');
+    } finally {
+      setConnBusy(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -191,6 +242,13 @@ export default function ListingDetailClient() {
             >
               Refer this business
             </button>
+            {user && listing.userId !== user.id && (
+              <ConnectButton
+                state={connState}
+                busy={connBusy}
+                onRequest={() => void requestConnect()}
+              />
+            )}
           </div>
         </motion.div>
 
@@ -622,5 +680,49 @@ function ModalShell({
         {children}
       </motion.div>
     </div>
+  );
+}
+
+function ConnectButton({
+  state,
+  busy,
+  onRequest,
+}: {
+  state: ConnectionState;
+  busy: boolean;
+  onRequest: () => void;
+}) {
+  if (state === 'accepted') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/5 px-5 py-2.5 text-sm font-semibold text-success">
+        <Check size={14} /> Connected
+      </span>
+    );
+  }
+  if (state === 'pending_outbound') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800">
+        <Clock size={14} /> Request sent
+      </span>
+    );
+  }
+  if (state === 'pending_inbound') {
+    return (
+      <Link
+        href="/dashboard/network"
+        className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+      >
+        Respond to request →
+      </Link>
+    );
+  }
+  return (
+    <button
+      onClick={onRequest}
+      disabled={busy}
+      className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {busy ? 'Sending…' : 'Connect'}
+    </button>
   );
 }

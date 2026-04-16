@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BarChart3, Inbox, LayoutDashboard, Store, Users } from 'lucide-react';
+import { BarChart3, Inbox, LayoutDashboard, Network, Store, Users } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV = [
@@ -12,6 +12,7 @@ const NAV = [
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/listing', label: 'My listing', icon: Store },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },
+  { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 

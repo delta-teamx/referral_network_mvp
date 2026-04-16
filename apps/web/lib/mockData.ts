@@ -357,6 +357,87 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
 ];
 
+export const MOCK_CONNECTIONS = [
+  {
+    id: 'conn-1',
+    status: 'accepted',
+    direction: 'outbound',
+    strengthScore: '74.5',
+    createdAt: isoDaysAgo(45),
+    acceptedAt: isoDaysAgo(44),
+    lastInteractAt: isoDaysAgo(5),
+    peer: {
+      id: 'user-1',
+      firstName: 'Daniel',
+      lastName: 'Reyes',
+      email: 'daniel@tworiverscpa.com',
+      avatarUrl: null,
+    },
+  },
+  {
+    id: 'conn-2',
+    status: 'accepted',
+    direction: 'inbound',
+    strengthScore: '68.2',
+    createdAt: isoDaysAgo(30),
+    acceptedAt: isoDaysAgo(29),
+    lastInteractAt: isoDaysAgo(8),
+    peer: {
+      id: 'user-2',
+      firstName: 'Maya',
+      lastName: 'Patel',
+      email: 'maya@stonegateweddings.com',
+      avatarUrl: null,
+    },
+  },
+  {
+    id: 'conn-3',
+    status: 'pending',
+    direction: 'inbound',
+    strengthScore: '0',
+    createdAt: isoDaysAgo(2),
+    acceptedAt: null,
+    lastInteractAt: null,
+    peer: {
+      id: 'user-3',
+      firstName: 'Emma',
+      lastName: 'Chen',
+      email: 'emma@bloomphoto.com',
+      avatarUrl: null,
+    },
+  },
+];
+
+export const MOCK_INVITATIONS = [
+  {
+    id: 'inv-1',
+    recipientEmail: 'karen@gatewayfamilylaw.com',
+    message: "We've been sending each other referrals for months — let's make it official.",
+    status: 'pending',
+    expiresAt: new Date(Date.now() + 12 * 86400_000).toISOString(),
+    createdAt: isoDaysAgo(2),
+    token: 'demo-token-1',
+  },
+];
+
+export const MOCK_PUBLIC_INVITE = {
+  id: 'demo-token-1',
+  recipientEmail: 'friend@example.com',
+  message: 'Hey — you\u2019d be a great fit for our referral network.',
+  status: 'pending' as const,
+  expiresAt: new Date(Date.now() + 12 * 86400_000).toISOString(),
+  sender: {
+    firstName: 'Sarah',
+    lastName: 'Johnson',
+    listing: {
+      name: 'Johnson Realty Group',
+      slug: 'johnson-realty-group',
+      city: 'St. Louis',
+      state: 'MO',
+    },
+  },
+};
+
 export const MOCK_REVIEWS: MockReview[] = [
   {
     id: 'rev-1',
@@ -466,6 +547,19 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url.startsWith('/api/v1/connect/')) {
       return MOCK_LISTINGS.slice(0, 6);
+    }
+    if (url === '/api/v1/connections') {
+      return MOCK_CONNECTIONS;
+    }
+    if (url.startsWith('/api/v1/connections/state/')) {
+      return { state: 'none' };
+    }
+    if (url === '/api/v1/invitations/sent') {
+      return MOCK_INVITATIONS;
+    }
+    if (url.startsWith('/api/v1/invitations/public/')) {
+      const token = url.replace('/api/v1/invitations/public/', '');
+      return { ...MOCK_PUBLIC_INVITE, id: token };
     }
   }
 
