@@ -20,6 +20,7 @@ import { findUserByEmail, toAuthenticatedUserDto } from '../users/users.service.
 import { eventBus } from '../events/index.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { env } from '../../../config/env.js';
+import { assertEmailIsCredible } from './email.credibility.js';
 
 /**
  * Internal service return — carries the refresh token that the route
@@ -37,6 +38,8 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
  * which the onboarding subscriber uses to seed an OnboardingProgress row.
  */
 export async function signup(input: SignupInput): Promise<AuthResult> {
+  await assertEmailIsCredible(input.email);
+
   const existing = await findUserByEmail(input.email);
   if (existing) {
     throw AppError.conflict('An account with this email already exists.', 'auth/email_taken');

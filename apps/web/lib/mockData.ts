@@ -357,6 +357,58 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
 ];
 
+export const MOCK_GROUPS = [
+  {
+    id: 'grp-1',
+    slug: 'stl-realtors-network',
+    name: 'STL Realtors + Home Services',
+    description:
+      'Weekly coffee meetup for realtors, inspectors, mortgage brokers, and home-services pros.',
+    city: 'St. Louis',
+    state: 'MO',
+    meetingSchedule: 'Every Tuesday 7am at Kaldi\u2019s Demun',
+    memberCount: 18,
+    maxMembers: 30,
+    isPublic: true,
+  },
+  {
+    id: 'grp-2',
+    slug: 'stl-wedding-pros',
+    name: 'Wedding Pros of St. Louis',
+    description: 'Photographers, planners, caterers, DJs, florists — one seat each.',
+    city: 'St. Louis',
+    state: 'MO',
+    meetingSchedule: 'First Wednesday of the month · virtual',
+    memberCount: 12,
+    maxMembers: 20,
+    isPublic: true,
+  },
+  {
+    id: 'grp-3',
+    slug: 'clayton-pro-circle',
+    name: 'Clayton Professional Circle',
+    description: 'Lawyers, CPAs, financial planners, insurance brokers. Invite only.',
+    city: 'Clayton',
+    state: 'MO',
+    meetingSchedule: 'Every other Thursday 5:30pm',
+    memberCount: 14,
+    maxMembers: 24,
+    isPublic: false,
+  },
+  {
+    id: 'grp-4',
+    slug: 'chesterfield-home-builders',
+    name: 'Chesterfield Home Builders',
+    description: 'Contractors, architects, interior designers, landscapers.',
+    city: 'Chesterfield',
+    state: 'MO',
+    meetingSchedule: 'Monthly, second Monday',
+    memberCount: 9,
+    maxMembers: 25,
+    isPublic: true,
+  },
+];
+
 export const MOCK_CONNECTIONS = [
   {
     id: 'conn-1',
@@ -539,6 +591,30 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url === '/api/v1/dashboard/metrics') {
       return MOCK_DASHBOARD_METRICS;
     }
+    if (url === '/api/v1/dashboard/analytics') {
+      const labels = Array.from({ length: 12 }, (_, i) => `W-${11 - i}`);
+      return {
+        labels,
+        series: {
+          leads: [2, 3, 1, 4, 5, 3, 7, 6, 8, 7, 10, 12],
+          leadsConverted: [0, 1, 1, 2, 2, 1, 3, 2, 4, 3, 4, 5],
+          referrals: [1, 2, 1, 2, 3, 2, 4, 3, 5, 4, 6, 7],
+          referralsConverted: [0, 1, 0, 1, 2, 1, 2, 1, 3, 2, 3, 4],
+          reviews: [1, 2, 0, 3, 2, 3, 1, 4, 2, 3, 5, 6],
+        },
+        ratings: {
+          avg: 4.7,
+          count: 32,
+          distribution: [
+            { star: 1, count: 0 },
+            { star: 2, count: 1 },
+            { star: 3, count: 2 },
+            { star: 4, count: 9 },
+            { star: 5, count: 20 },
+          ],
+        },
+      };
+    }
     if (url === '/api/v1/referrals/received' || url === '/api/v1/referrals/sent') {
       return [];
     }
@@ -550,6 +626,43 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url === '/api/v1/connections') {
       return MOCK_CONNECTIONS;
+    }
+    if (url === '/api/v1/groups' || url === '/api/v1/groups/mine') {
+      return MOCK_GROUPS;
+    }
+    if (url === '/api/v1/billing/plans') {
+      return [
+        {
+          tier: 'FREE',
+          name: 'Free',
+          pricePerMonthCents: 0,
+          maxLeadsPerMonth: 3,
+          maxListings: 1,
+          prioritizedInRanking: false,
+          canSeeRankingDetails: false,
+        },
+        {
+          tier: 'PRO',
+          name: 'Pro',
+          pricePerMonthCents: 4900,
+          maxLeadsPerMonth: 30,
+          maxListings: 3,
+          prioritizedInRanking: false,
+          canSeeRankingDetails: true,
+        },
+        {
+          tier: 'PREMIUM',
+          name: 'Premium',
+          pricePerMonthCents: 14900,
+          maxLeadsPerMonth: null,
+          maxListings: 10,
+          prioritizedInRanking: true,
+          canSeeRankingDetails: true,
+        },
+      ];
+    }
+    if (url === '/api/v1/billing/quota') {
+      return { allowed: true, used: 1, cap: 3, tier: 'FREE' };
     }
     if (url.startsWith('/api/v1/connections/state/')) {
       return { state: 'none' };
@@ -573,6 +686,9 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url === '/api/v1/auth/refresh') {
       return { accessToken: 'demo-access-token', expiresIn: 900 };
+    }
+    if (url === '/api/v1/billing/checkout') {
+      return { url: '/billing/success?tier=PRO&demo=1', demo: true };
     }
     // Generic ack for create/update mutations in demo mode
     return { ok: true, demo: true };

@@ -2,6 +2,7 @@ import type { EventType } from '@refnet/shared';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { canReceiveMoreLeads } from '../../billing/billing.tiers.js';
 
 /**
  * Consumer leads — created when a consumer clicks "Connect" on a matched
@@ -24,6 +25,16 @@ export async function createLead(input: CreateLeadInput) {
     select: { id: true, userId: true },
   });
   if (!listing) throw AppError.notFound('Listing not found');
+
+  // Tier cap: FREE businesses get 3 leads/month, PRO 30, PREMIUM unlimited.
+  // Over-cap leads fall through to a higher-tier peer if one is available;
+  // for now we just reject so consumers know to pick another pro.
+  const quota = await canReceiveMoreLeads(listing.userId);
+  if (!quota.allowed) {
+    throw AppError.tooMany(
+      `This business has reached its monthly lead quota (${quota.used}/${quota.cap}). Try another pro.`,
+    );
+  }
 
   const lead = await prisma.consumerLead.create({
     data: {

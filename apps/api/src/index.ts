@@ -17,6 +17,8 @@ import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
 import { referralsRouter } from './domains/network/referrals/referrals.routes.js';
 import { connectionsRouter } from './domains/network/connections/connections.routes.js';
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
+import { groupsRouter } from './domains/network/groups/groups.routes.js';
+import { billingRouter } from './domains/billing/billing.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
@@ -66,6 +68,8 @@ app.use('/api/v1/reviews', reviewsRouter);
 app.use('/api/v1/referrals', referralsRouter);
 app.use('/api/v1/connections', connectionsRouter);
 app.use('/api/v1/invitations', invitationsRouter);
+app.use('/api/v1/groups', groupsRouter);
+app.use('/api/v1/billing', billingRouter);
 
 // 404 + error handler (order matters)
 app.use(notFoundHandler);

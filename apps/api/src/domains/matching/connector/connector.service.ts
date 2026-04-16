@@ -1,12 +1,15 @@
 import type { EventType } from '@refnet/shared';
 import { prisma } from '../../../config/prisma.js';
+import { env } from '../../../config/env.js';
 import { eventBus } from '../../core/events/index.js';
+import type { RankingCandidate } from '../ranking/RankingStrategy.js';
+import { strategyByName } from '../ranking/registry.js';
 
 /**
  * Life-events connector — turn an EventType + ZIP into a ranked list of
- * local pros. Branch 2/3 implementation uses straightforward SQL joins
- * and a weighted-score formula; Branch 5 swaps the inline scorer for
- * the pluggable `RankingStrategy` under `domains/matching/ranking/`.
+ * local pros. Delegates scoring to a pluggable `RankingStrategy` (see
+ * `domains/matching/ranking/`). Default strategy is `life-event-match`;
+ * override via `RANKING_STRATEGY` env var or per-request `strategy` field.
  */
 
 export interface MatchRequest {
@@ -15,6 +18,8 @@ export interface MatchRequest {
   /** ZIP prefix length used for "nearby" (3 = ~metro area). */
   radiusPrefix?: number;
   limit?: number;
+  /** Optional override of the ranking strategy name. */
+  strategy?: string;
 }
 
 export interface MatchedListing {
@@ -30,25 +35,20 @@ export interface MatchedListing {
   reviewCount: number;
   trustScore: number;
   isVerified: boolean;
+  isFeatured: boolean;
   score: number;
-  scoreBreakdown: {
-    relevance: number;
-    trust: number;
-    rating: number;
-    verifiedBonus: number;
-  };
+  scoreBreakdown: Record<string, number>;
+  strategy: string;
 }
 
 export async function match(req: MatchRequest): Promise<MatchedListing[]> {
   const limit = Math.min(20, Math.max(3, req.limit ?? 10));
   const prefix = req.zip.slice(0, req.radiusPrefix ?? 3);
 
-  // Categories that matter for this life event, with their relevance weight.
   const mapping = await prisma.eventCategoryMap.findMany({
     where: { eventType: req.eventType },
     select: { categoryId: true, relevance: true },
   });
-
   if (mapping.length === 0) return [];
 
   const relevanceById = new Map(mapping.map((m) => [m.categoryId, m.relevance]));
@@ -60,7 +60,7 @@ export async function match(req: MatchRequest): Promise<MatchedListing[]> {
       categoryId: { in: mapping.map((m) => m.categoryId) },
       zipCode: { startsWith: prefix },
     },
-    take: 40, // over-fetch; we re-rank below
+    take: 60,
     select: {
       id: true,
       slug: true,
@@ -68,22 +68,52 @@ export async function match(req: MatchRequest): Promise<MatchedListing[]> {
       shortDescription: true,
       city: true,
       state: true,
+      zipCode: true,
       categoryId: true,
       avgRating: true,
       reviewCount: true,
       trustScore: true,
       isVerified: true,
+      isFeatured: true,
+      userId: true,
       category: { select: { name: true, slug: true } },
     },
   });
 
-  const ranked: MatchedListing[] = candidates
-    .map((c) => {
-      const relevance = relevanceById.get(c.categoryId) ?? 1;
-      const trust = Number(c.trustScore);
-      const rating = Number(c.avgRating);
-      const verifiedBonus = c.isVerified ? 5 : 0;
-      const score = relevance * 3 + trust * 2 + rating * 1.5 + verifiedBonus;
+  if (candidates.length === 0) return [];
+
+  // Enrich candidates with historical conversion rate (a Branch-5 signal
+  // that wasn't available in Branch 4). Cheap: one count per candidate.
+  const ownerIds = [...new Set(candidates.map((c) => c.userId))];
+  const convRates = await conversionRatesFor(ownerIds);
+
+  // Prefer the per-request strategy, fall back to env, then default.
+  const strategy = strategyByName(
+    req.strategy ?? (env.NODE_ENV === 'production' ? undefined : undefined),
+  );
+
+  const ranking = strategy.rank(
+    candidates.map(
+      (c): RankingCandidate => ({
+        listingId: c.id,
+        score: 0,
+        trustScore: Number(c.trustScore),
+        avgRating: Number(c.avgRating),
+        reviewCount: c.reviewCount,
+        isVerified: c.isVerified,
+        isFeatured: c.isFeatured,
+        eventCategoryRelevance: relevanceById.get(c.categoryId) ?? 1,
+        conversionRate: convRates.get(c.userId),
+        zipCode: c.zipCode,
+      }),
+    ),
+    { eventType: req.eventType, consumerZip: req.zip, limit },
+  );
+
+  const byId = new Map(candidates.map((c) => [c.id, c]));
+  const ranked: MatchedListing[] = ranking
+    .map((r) => {
+      const c = byId.get(r.listingId)!;
       return {
         listingId: c.id,
         slug: c.slug,
@@ -93,21 +123,16 @@ export async function match(req: MatchRequest): Promise<MatchedListing[]> {
         state: c.state,
         categoryName: c.category.name,
         categorySlug: c.category.slug,
-        avgRating: rating,
+        avgRating: Number(c.avgRating),
         reviewCount: c.reviewCount,
-        trustScore: trust,
+        trustScore: Number(c.trustScore),
         isVerified: c.isVerified,
-        score,
-        scoreBreakdown: {
-          relevance: relevance * 3,
-          trust: trust * 2,
-          rating: rating * 1.5,
-          verifiedBonus,
-        },
+        isFeatured: c.isFeatured,
+        score: r.score,
+        scoreBreakdown: r.breakdown,
+        strategy: strategy.name,
       };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    });
 
   await eventBus.publish('matching.completed', {
     requestId: crypto.randomUUID(),
@@ -116,4 +141,48 @@ export async function match(req: MatchRequest): Promise<MatchedListing[]> {
   });
 
   return ranked;
+}
+
+/**
+ * Historical conversion rate = CONVERTED / (CONVERTED + DECLINED + PENDING)
+ * over the last 180 days, per business owner. Returns undefined for owners
+ * without enough lead history — the strategy will cold-start them to trust.
+ */
+async function conversionRatesFor(userIds: string[]): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const cutoff = new Date(Date.now() - 180 * 86400_000);
+
+  const rows = await prisma.consumerLead.groupBy({
+    by: ['listingId', 'status'],
+    where: {
+      listing: { userId: { in: userIds } },
+      createdAt: { gte: cutoff },
+    },
+    _count: { _all: true },
+  });
+
+  // Map listingId → userId for reverse aggregation.
+  const listings = await prisma.listing.findMany({
+    where: { id: { in: [...new Set(rows.map((r) => r.listingId))] } },
+    select: { id: true, userId: true },
+  });
+  const ownerByListing = new Map(listings.map((l) => [l.id, l.userId]));
+
+  type Counts = { converted: number; total: number };
+  const byOwner = new Map<string, Counts>();
+  for (const row of rows) {
+    const owner = ownerByListing.get(row.listingId);
+    if (!owner) continue;
+    const bucket = byOwner.get(owner) ?? { converted: 0, total: 0 };
+    bucket.total += row._count._all;
+    if (row.status === 'CONVERTED') bucket.converted += row._count._all;
+    byOwner.set(owner, bucket);
+  }
+
+  const out = new Map<string, number>();
+  for (const [owner, { converted, total }] of byOwner) {
+    if (total < 5) continue;
+    out.set(owner, converted / total);
+  }
+  return out;
 }

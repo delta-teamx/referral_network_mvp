@@ -4,3 +4,4 @@ export * from './categories';
 export * from './roles';
 export * from './permissions';
 export * from './events';
+export * from './disposableEmails';

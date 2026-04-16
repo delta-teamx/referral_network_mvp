@@ -20,6 +20,8 @@ export interface RankingCandidate extends SearchHit {
   eventCategoryRelevance?: number;
   /** Historical conversion rate on matched leads (0–1), null if sparse. */
   conversionRate?: number;
+  /** 5-digit US ZIP; used for zip-prefix proximity until PostGIS lands. */
+  zipCode?: string;
 }
 
 export interface RankingContext {
