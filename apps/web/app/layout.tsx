@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { DemoBanner } from '../components/layout/DemoBanner';
 import { Footer } from '../components/layout/Footer';
 import { TopNav } from '../components/layout/TopNav';
 import './globals.css';
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-white text-gray-900 antialiased">
+        <DemoBanner />
         <TopNav />
         {children}
         <Footer />

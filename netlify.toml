@@ -1,5 +1,12 @@
 # Netlify config for the Next.js frontend in a pnpm monorepo.
 # The Next.js runtime plugin is auto-installed by Netlify when it detects Next.
+#
+# DEFAULT BEHAVIOR: ships in DEMO MODE — the frontend serves realistic mock
+# data from `apps/web/lib/mockData.ts`. No backend required for client demos.
+#
+# To switch to a live backend, add this env var in the Netlify UI:
+#   NEXT_PUBLIC_API_URL = https://<your-render-api>.onrender.com
+# and redeploy.
 
 [build]
   base = "."
@@ -8,11 +15,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Let the monorepo's packageManager field pick pnpm 10.x
-  NPM_FLAGS = "--version"
-  # Skip the sharp / canvas native builds we don't use
   NEXT_TELEMETRY_DISABLED = "1"
-
-# Required runtime env vars (set these in the Netlify UI, NOT here):
-#   NEXT_PUBLIC_API_URL    = https://<your-render-api>.onrender.com
-#   NEXT_PUBLIC_APP_NAME   = ReferralNetworkUSA
+  # Force demo mode by default. Override in Netlify UI to point at a real API.
+  NEXT_PUBLIC_DEMO_MODE = "force"
+  NEXT_PUBLIC_APP_NAME = "ReferralNetworkUSA"
