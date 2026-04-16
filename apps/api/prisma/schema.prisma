@@ -1,0 +1,519 @@
+// ReferralNetworkUSA — Prisma schema
+// See /root/.claude/plans/valiant-sprouting-island.md for context.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis, pg_trgm]
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  CONSUMER
+  BUSINESS_OWNER
+  GROUP_LEADER
+  CITY_CAPTAIN
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum ListingStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+  PENDING_REVIEW
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  EXPIRED
+}
+
+enum ReferralStatus {
+  SENT
+  ACCEPTED
+  CONVERTED
+  DECLINED
+}
+
+enum EventType {
+  BUYING_HOUSE
+  SELLING_HOUSE
+  GETTING_MARRIED
+  STARTING_BUSINESS
+  HAVING_BABY
+  PLANNING_FUNERAL
+  HOME_RENOVATION
+  PLANNING_RETIREMENT
+  MOVING_TO_NEW_CITY
+  HOSTING_EVENT
+  GOING_TO_COLLEGE
+  GETTING_DIVORCED
+  OPENING_RESTAURANT
+  CULTURAL_CELEBRATION
+}
+
+enum GroupMemberRole {
+  MEMBER
+  LEADER
+  CO_LEADER
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  passwordHash     String? // null for OAuth-only users
+  firstName        String
+  lastName         String
+  phone            String?
+  avatarUrl        String?
+  role             UserRole         @default(CONSUMER)
+  subscriptionTier SubscriptionTier @default(FREE)
+  stripeCustomerId String?          @unique
+  emailVerified    Boolean          @default(false)
+  emailVerifyToken String?
+  phoneVerified    Boolean          @default(false)
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  oauthAccounts          OAuthAccount[]
+  listings               Listing[]
+  reviews                Review[]
+  sentReferrals          Referral[]     @relation("ReferralSender")
+  receivedReferrals      Referral[]     @relation("ReferralReceiver")
+  consumerLeads          ConsumerLead[] @relation("ConsumerLeadConsumer")
+  groupMemberships       GroupMember[]
+  favorites              Favorite[]
+  notifications          Notification[]
+  subscription           Subscription?
+  initiatedConnections   BusinessConnection[] @relation("BusinessConnectionInitiator")
+  targetedConnections    BusinessConnection[] @relation("BusinessConnectionTarget")
+  sentInvitations        BusinessInvitation[] @relation("InvitationSender")
+  receivedInvitations    BusinessInvitation[] @relation("InvitationRecipient")
+  onboardingProgress     OnboardingProgress?
+
+  @@index([email])
+  @@index([role])
+  @@index([subscriptionTier])
+}
+
+model OAuthAccount {
+  id          String   @id @default(uuid())
+  userId      String
+  provider    String // "google", "facebook"
+  providerId  String // Provider's user ID
+  accessToken String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  parentId    String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  parent          Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children        Category[]         @relation("CategoryHierarchy")
+  listings        Listing[]
+  eventCategories EventCategoryMap[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Listing {
+  id               String        @id @default(uuid())
+  userId           String
+  categoryId       String
+  name             String
+  slug             String        @unique
+  description      String
+  shortDescription String?       @db.VarChar(255)
+  address          String
+  city             String
+  state            String        @db.VarChar(2)
+  zipCode          String        @db.VarChar(10)
+  latitude         Decimal       @db.Decimal(10, 7)
+  longitude        Decimal       @db.Decimal(10, 7)
+  phone            String?
+  email            String?
+  website          String?
+  hours            Json? // { monday: { open: "9:00", close: "17:00" }, ... }
+  logoUrl          String?
+  coverPhotoUrl    String?
+  isVerified       Boolean       @default(false)
+  isClaimed        Boolean       @default(true)
+  isFeatured       Boolean       @default(false)
+  trustScore       Decimal       @default(0) @db.Decimal(3, 1)
+  avgRating        Decimal       @default(0) @db.Decimal(2, 1)
+  reviewCount      Int           @default(0)
+  viewCount        Int           @default(0)
+  status           ListingStatus @default(ACTIVE)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+
+  user          User           @relation(fields: [userId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  photos        ListingPhoto[]
+  reviews       Review[]
+  consumerLeads ConsumerLead[]
+  referrals     Referral[]
+  favorites     Favorite[]
+  tags          ListingTag[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([city, state])
+  @@index([zipCode])
+  @@index([status])
+  @@index([userId])
+  @@index([trustScore(sort: Desc)])
+}
+
+model ListingPhoto {
+  id        String   @id @default(uuid())
+  listingId String
+  url       String
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+}
+
+model ListingTag {
+  id        String @id @default(uuid())
+  listingId String
+  tag       String
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, tag])
+  @@index([tag])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  listingId  String
+  userId     String
+  rating     Int // 1-5
+  title      String?
+  text       String
+  isVerified Boolean  @default(false) // Verified purchase/service
+  status     String   @default("active") // active, flagged, removed
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([listingId, userId]) // One review per user per listing
+  @@index([listingId])
+  @@index([userId])
+  @@index([rating])
+}
+
+/// Consumer-to-business lead generated by the Life Events Connector.
+/// Renamed from `Connection` to disambiguate from B2B `BusinessConnection`.
+model ConsumerLead {
+  id          String           @id @default(uuid())
+  consumerId  String
+  listingId   String
+  eventType   EventType
+  status      ConnectionStatus @default(PENDING)
+  notes       String?
+  contactedAt DateTime?
+  convertedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  consumer User    @relation("ConsumerLeadConsumer", fields: [consumerId], references: [id])
+  listing  Listing @relation(fields: [listingId], references: [id])
+
+  @@index([consumerId])
+  @@index([listingId])
+  @@index([eventType])
+  @@index([status])
+}
+
+model Referral {
+  id          String         @id @default(uuid())
+  senderId    String
+  receiverId  String
+  listingId   String
+  status      ReferralStatus @default(SENT)
+  notes       String?
+  clientName  String?
+  clientPhone String?
+  clientEmail String?
+  convertedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  sender   User    @relation("ReferralSender", fields: [senderId], references: [id])
+  receiver User    @relation("ReferralReceiver", fields: [receiverId], references: [id])
+  listing  Listing @relation(fields: [listingId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([listingId])
+  @@index([status])
+}
+
+model EventCategoryMap {
+  id         String    @id @default(uuid())
+  eventType  EventType
+  categoryId String
+  relevance  Int       @default(1) // Higher = more relevant
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([eventType, categoryId])
+  @@index([eventType])
+}
+
+model Group {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  city            String
+  state           String   @db.VarChar(2)
+  meetingSchedule String? // "Every Tuesday 7am" (human readable)
+  meetingUrl      String? // Virtual meeting link
+  maxMembers      Int      @default(30)
+  isPublic        Boolean  @default(true)
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members GroupMember[]
+  events  GroupEvent[]
+
+  @@index([slug])
+  @@index([city, state])
+}
+
+model GroupMember {
+  id       String          @id @default(uuid())
+  groupId  String
+  userId   String
+  role     GroupMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupEvent {
+  id          String   @id @default(uuid())
+  groupId     String
+  title       String
+  description String?
+  date        DateTime
+  location    String? // Address or "Virtual"
+  meetingUrl  String?
+  rsvpCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([date])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([listingId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String // "new_lead", "new_referral", "review", "group_invite"
+  title     String
+  body      String
+  data      Json? // Extra payload (listingId, referralId, etc.)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Subscription {
+  id                   String           @id @default(uuid())
+  userId               String           @unique
+  stripeSubscriptionId String           @unique
+  stripePriceId        String
+  tier                 SubscriptionTier
+  status               String // "active", "canceled", "past_due", "trialing"
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean          @default(false)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+}
+
+model PageView {
+  id        String   @id @default(uuid())
+  listingId String
+  visitorId String? // Anonymous session ID or userId
+  source    String? // "search", "direct", "connect", "referral"
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+  @@index([createdAt])
+}
+
+// ==================== RBAC ====================
+
+/// Permission key registry. Code owns the canonical list (see @refnet/shared
+/// PERMISSIONS); this table lets admins audit and toggle assignments in prod.
+model Permission {
+  key         String   @id
+  description String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+/// Role-to-permission join table. Seeded from ROLE_PERMISSIONS in
+/// @refnet/shared on first boot; admins can subsequently grant/revoke.
+model RolePermission {
+  role          UserRole
+  permissionKey String
+
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([role, permissionKey])
+  @@index([permissionKey])
+}
+
+// ==================== BUSINESS NETWORK (B2B) ====================
+
+/// Business-to-business relationship. Distinct from `ConsumerLead`
+/// (consumer → business) and from `Referral` (one business sending a
+/// specific client to another).
+model BusinessConnection {
+  id             String    @id @default(uuid())
+  initiatorId    String
+  targetId       String
+  status         String    @default("pending") // pending, accepted, declined, archived
+  strengthScore  Decimal   @default(0) @db.Decimal(5, 2)
+  lastInteractAt DateTime?
+  createdAt      DateTime  @default(now())
+  acceptedAt     DateTime?
+
+  initiator User @relation("BusinessConnectionInitiator", fields: [initiatorId], references: [id])
+  target    User @relation("BusinessConnectionTarget", fields: [targetId], references: [id])
+
+  @@unique([initiatorId, targetId])
+  @@index([status])
+  @@index([initiatorId])
+  @@index([targetId])
+}
+
+/// Invitation for a business to join the network (or to connect with the
+/// sender once they sign up). Drives viral growth in Branch 4.
+model BusinessInvitation {
+  id              String   @id @default(uuid())
+  senderId        String
+  recipientEmail  String
+  recipientUserId String?
+  message         String?
+  token           String   @unique
+  status          String   @default("pending") // pending, accepted, expired, revoked
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  acceptedAt      DateTime?
+
+  sender    User  @relation("InvitationSender", fields: [senderId], references: [id])
+  recipient User? @relation("InvitationRecipient", fields: [recipientUserId], references: [id])
+
+  @@index([recipientEmail])
+  @@index([status])
+}
+
+// ==================== EVENT SOURCING ====================
+
+/// Append-only audit log of domain events. In-process `EventBus` optionally
+/// persists here so admins can replay history and analytics can backfill.
+model DomainEvent {
+  id          String   @id @default(uuid())
+  type        String // e.g. "user.signed_up", "consumer_lead.matched"
+  aggregateId String // primary entity ID (userId, listingId, ...)
+  actorId     String?
+  payload     Json
+  publishedAt DateTime @default(now())
+
+  @@index([type, publishedAt(sort: Desc)])
+  @@index([aggregateId])
+}
+
+// ==================== ONBOARDING ====================
+
+/// Per-user onboarding state. Drives the Branch 2 onboarding flow — first
+/// session captures zip/category/goals and the system auto-suggests
+/// connections so new users get immediate value (addresses retention
+/// concern from architecture review point #9).
+model OnboardingProgress {
+  userId            String    @id
+  zip               String?
+  primaryCategoryId String?
+  goals             Json? // array of strings, e.g. ["get_more_leads", "build_referral_partners"]
+  completedSteps    Json      @default("[]") // array of completed step identifiers
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
