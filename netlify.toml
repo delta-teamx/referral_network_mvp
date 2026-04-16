@@ -1,25 +1,16 @@
-# Netlify config for the Next.js frontend, shipped as a STATIC EXPORT.
+# Netlify config — NO-BUILD mode.
 #
-# The app runs in "demo mode" by default (forced via NEXT_PUBLIC_DEMO_MODE):
-# all API calls fall back to realistic mock data from lib/mockData.ts so the
-# site is fully navigable without a backend. Perfect for client previews.
-#
-# To plug in a live backend later, set NEXT_PUBLIC_API_URL in the Netlify UI
-# and remove NEXT_PUBLIC_DEMO_MODE, then redeploy.
+# The static site is pre-built to apps/web/out/ and committed directly to the
+# repo. Netlify's job is literally just to serve those static files. No pnpm,
+# no node, no build step — nothing that can fail.
 
 [build]
   base = "."
-  command = "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @refnet/web build"
+  command = "echo 'Serving pre-built static export from apps/web/out/'"
   publish = "apps/web/out"
 
-[build.environment]
-  NODE_VERSION = "20"
-  NEXT_TELEMETRY_DISABLED = "1"
-  NEXT_PUBLIC_DEMO_MODE = "force"
-  NEXT_PUBLIC_APP_NAME = "ReferralNetworkUSA"
-
-# SPA-style fallback: any unknown path (e.g. refreshed dashboard routes) falls
-# back to the homepage HTML so the Next client router can handle it.
+# SPA-style fallback: any unknown path falls back to the root index so the
+# Next.js client router can handle it.
 [[redirects]]
   from = "/*"
   to = "/index.html"
