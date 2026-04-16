@@ -10,6 +10,7 @@ import {
 } from '@refnet/shared';
 import { validate } from '../../../middleware/validate.js';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { authRateLimit, signupRateLimit } from '../../../middleware/rateLimit.js';
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
@@ -21,6 +22,12 @@ import {
   signup,
   verifyEmailToken,
 } from './auth.service.js';
+import {
+  buildGoogleAuthUrl,
+  completeGoogleOAuth,
+  generateStateToken,
+  isGoogleOAuthConfigured,
+} from './oauth.service.js';
 import { findUserById, toAuthenticatedUserDto } from '../users/users.service.js';
 
 export const authRouter: Router = Router();
@@ -44,6 +51,7 @@ function clearRefreshCookie(res: Response): void {
 
 authRouter.post(
   '/signup',
+  signupRateLimit,
   validate(signupSchema),
   asyncHandler(async (req, res) => {
     const result = await signup(req.body);
@@ -55,6 +63,7 @@ authRouter.post(
 
 authRouter.post(
   '/login',
+  authRateLimit,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
     const result = await login(req.body);
@@ -84,6 +93,7 @@ authRouter.post('/logout', (_req, res) => {
 
 authRouter.post(
   '/forgot-password',
+  authRateLimit,
   validate(forgotPasswordSchema),
   asyncHandler(async (req, res) => {
     await requestPasswordReset(req.body);
@@ -110,6 +120,59 @@ authRouter.get(
     await verifyEmailToken(parsed.token);
     const body: ApiResponse<{ verified: true }> = { success: true, data: { verified: true } };
     res.json(body);
+  }),
+);
+
+// ---------- Google OAuth ----------------------------------------------------
+const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAUTH_STATE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+
+authRouter.get(
+  '/oauth/google',
+  asyncHandler(async (_req, res) => {
+    if (!isGoogleOAuthConfigured()) {
+      // Demo mode: send them to the web app's demo-login page which fakes
+      // a logged-in state. Keeps the "Continue with Google" button visible
+      // and clickable in preview deploys without real credentials.
+      const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
+      res.redirect(`${origin}/oauth/demo`);
+      return;
+    }
+    const state = generateStateToken();
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
+      path: '/api/v1/auth',
+    });
+    res.redirect(buildGoogleAuthUrl(state));
+  }),
+);
+
+authRouter.get(
+  '/oauth/google/callback',
+  asyncHandler(async (req, res) => {
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const state = typeof req.query.state === 'string' ? req.query.state : '';
+    const cookieState = (req.cookies as Record<string, string | undefined>)?.[OAUTH_STATE_COOKIE];
+    if (!code || !state || state !== cookieState) {
+      throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
+    }
+    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth' });
+
+    const result = await completeGoogleOAuth(code);
+    setRefreshCookie(res, result.refreshToken);
+
+    // Redirect to the web app with the access token in a fragment — the
+    // auth store's `consumeOAuthFragment` picks it up and hydrates.
+    const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
+    const fragment = new URLSearchParams({
+      access_token: result.dto.tokens.accessToken,
+      expires_in: String(result.dto.tokens.expiresIn),
+      user_id: result.dto.user.id,
+    });
+    res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
   }),
 );
 

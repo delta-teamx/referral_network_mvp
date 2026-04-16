@@ -25,10 +25,22 @@ import { adminRouter } from './domains/admin/admin.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { registerNotificationSubscribers } from './domains/core/notifications/notifications.subscribers.js';
+import { registerTrustSubscribers } from './domains/core/trust/trust.subscribers.js';
+import { startScheduler } from './domains/core/jobs/scheduler.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { mutationRateLimit } from './middleware/rateLimit.js';
+import { initSentry, sentryErrorHandler } from './config/sentry.js';
 
 const app = express();
+
+// Respect X-Forwarded-* from a single known proxy (Render/Fly/Netlify edge).
+// Needed for accurate IP extraction in rate limiter + Sentry.
+app.set('trust proxy', 1);
+
+// Sentry must be first in the middleware chain — it wraps all subsequent
+// handlers. No-op when SENTRY_DSN is not configured.
+void initSentry(app);
 
 app.use(helmet());
 
@@ -63,10 +75,18 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Global soft limit on mutating requests. Fine-grained limits live on
+// specific routes (auth, signup) for tighter policies.
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  return mutationRateLimit(req, res, next);
+});
+
 // ---- Domain subscribers ------------------------------------------------------
 registerOnboardingSubscribers(eventBus);
 registerLeadSubscribers(eventBus);
 registerNotificationSubscribers(eventBus);
+registerTrustSubscribers(eventBus);
 
 // ---- Routes -----------------------------------------------------------------
 app.use('/api/v1/health', healthRouter);
@@ -86,8 +106,10 @@ app.use('/api/v1/groups', groupsRouter);
 app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/admin', adminRouter);
 
-// 404 + error handler (order matters)
+// 404 + error handler (order matters). Sentry hooks BEFORE our handler so
+// it captures the error with full request context before we format JSON.
 app.use(notFoundHandler);
+app.use(sentryErrorHandler);
 app.use(errorHandler);
 
 async function start(): Promise<void> {
@@ -104,6 +126,9 @@ async function start(): Promise<void> {
     // eslint-disable-next-line no-console
     console.warn('[rbac] seed skipped (DB not reachable or migrations not applied):', String(err));
   }
+
+  // Background jobs — BullMQ when REDIS_URL is real, setInterval otherwise.
+  void startScheduler();
 
   app.listen(env.PORT, () => {
     // eslint-disable-next-line no-console

@@ -22,6 +22,8 @@ export interface AuthState {
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
   clearError: () => void;
+  /** Used by the OAuth callback to seed state after an external redirect. */
+  setAuth: (user: AuthenticatedUserDto, accessToken: string, expiresAt: number) => void;
 }
 
 function applyAuthSuccess(data: AuthSuccessDto, set: (patch: Partial<AuthState>) => void): void {
@@ -91,5 +93,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearError() {
     set({ error: null });
+  },
+
+  setAuth(user, accessToken, expiresAt) {
+    set({
+      user,
+      accessToken,
+      accessTokenExpiresAt: expiresAt,
+      status: 'authenticated',
+      error: null,
+    });
   },
 }));

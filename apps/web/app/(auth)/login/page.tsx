@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { loginSchema } from '@refnet/shared';
 import { AuthShell } from '../../../components/auth/AuthShell';
+import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { useAuthStore } from '../../../stores/auth';
@@ -56,6 +57,12 @@ export default function LoginPage() {
         </>
       }
     >
+      <GoogleButton />
+      <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
+        <div className="h-px flex-1 bg-gray-200" />
+        <span>or sign in with email</span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
       <form onSubmit={onSubmit} noValidate>
         <FormField
           label="Email"

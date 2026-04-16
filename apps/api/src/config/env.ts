@@ -69,6 +69,9 @@ const envSchema = z.object({
 
   // Maps — Branch 3
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+
+  // Observability
+  SENTRY_DSN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

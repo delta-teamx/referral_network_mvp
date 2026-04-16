@@ -8,7 +8,9 @@
     "start": "next start --port 3000",
     "lint": "next lint --dir app --dir components --dir lib",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf .next .turbo *.tsbuildinfo"
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
+    "clean": "rm -rf .next out .turbo *.tsbuildinfo"
   },
   "dependencies": {
     "@refnet/shared": "workspace:*",
@@ -20,6 +22,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@types/node": "^20.16.11",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
