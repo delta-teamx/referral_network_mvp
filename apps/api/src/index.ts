@@ -8,6 +8,7 @@ import { healthRouter } from './domains/health/health.routes.js';
 import { authRouter } from './domains/core/auth/auth.routes.js';
 import { onboardingRouter } from './domains/core/onboarding/onboarding.routes.js';
 import { listingsRouter } from './domains/directory/listings/listings.routes.js';
+import { photosRouter } from './domains/directory/photos/photos.routes.js';
 import { categoriesRouter } from './domains/directory/categories/categories.routes.js';
 import { connectorRouter } from './domains/matching/connector/connector.routes.js';
 import { leadsRouter } from './domains/matching/leads/leads.routes.js';
@@ -19,8 +20,11 @@ import { connectionsRouter } from './domains/network/connections/connections.rou
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
 import { groupsRouter } from './domains/network/groups/groups.routes.js';
 import { billingRouter } from './domains/billing/billing.routes.js';
+import { stripeWebhookHandler } from './domains/billing/billing.webhook.js';
+import { adminRouter } from './domains/admin/admin.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
+import { registerNotificationSubscribers } from './domains/core/notifications/notifications.subscribers.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
@@ -47,6 +51,14 @@ app.use(
     credentials: true,
   }),
 );
+// Stripe webhook needs the raw request body to verify the signature, so it
+// must be mounted BEFORE express.json() strips / parses it.
+app.post(
+  '/api/v1/billing/webhook',
+  express.raw({ type: 'application/json' }),
+  stripeWebhookHandler,
+);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -54,12 +66,14 @@ app.use(cookieParser());
 // ---- Domain subscribers ------------------------------------------------------
 registerOnboardingSubscribers(eventBus);
 registerLeadSubscribers(eventBus);
+registerNotificationSubscribers(eventBus);
 
 // ---- Routes -----------------------------------------------------------------
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/onboarding', onboardingRouter);
 app.use('/api/v1/listings', listingsRouter);
+app.use('/api/v1/photos', photosRouter);
 app.use('/api/v1/categories', categoriesRouter);
 app.use('/api/v1/connect', connectorRouter);
 app.use('/api/v1/consumer-leads', leadsRouter);
@@ -70,6 +84,7 @@ app.use('/api/v1/connections', connectionsRouter);
 app.use('/api/v1/invitations', invitationsRouter);
 app.use('/api/v1/groups', groupsRouter);
 app.use('/api/v1/billing', billingRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // 404 + error handler (order matters)
 app.use(notFoundHandler);

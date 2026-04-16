@@ -528,6 +528,8 @@ export const MOCK_DASHBOARD_METRICS = {
     firstName: 'Demo',
     lastName: 'Owner',
     email: 'demo@referralnetworkusa.app',
+    role: 'ADMIN',
+    subscriptionTier: 'PRO',
   },
   trustScore: 87,
   listings: [
@@ -664,6 +666,130 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url === '/api/v1/billing/quota') {
       return { allowed: true, used: 1, cap: 3, tier: 'FREE' };
     }
+    if (url === '/api/v1/admin/overview') {
+      return {
+        counts: {
+          users: 184,
+          listings: 42,
+          leads: 128,
+          referrals: 67,
+          groups: 8,
+          pendingListings: 3,
+        },
+        tierBreakdown: { FREE: 142, PRO: 31, PREMIUM: 11 },
+      };
+    }
+    if (url === '/api/v1/admin/users') {
+      return {
+        users: [
+          {
+            id: 'u1',
+            email: 'sarah@johnsonrealty.com',
+            firstName: 'Sarah',
+            lastName: 'Johnson',
+            role: 'BUSINESS_OWNER',
+            subscriptionTier: 'PRO',
+            emailVerified: true,
+            createdAt: isoDaysAgo(120),
+            _count: { listings: 1, referralsSent: 14 },
+          },
+          {
+            id: 'u2',
+            email: 'daniel@tworiverscpa.com',
+            firstName: 'Daniel',
+            lastName: 'Reyes',
+            role: 'BUSINESS_OWNER',
+            subscriptionTier: 'FREE',
+            emailVerified: true,
+            createdAt: isoDaysAgo(85),
+            _count: { listings: 1, referralsSent: 6 },
+          },
+          {
+            id: 'u3',
+            email: 'maya@stonegateweddings.com',
+            firstName: 'Maya',
+            lastName: 'Patel',
+            role: 'BUSINESS_OWNER',
+            subscriptionTier: 'PREMIUM',
+            emailVerified: true,
+            createdAt: isoDaysAgo(200),
+            _count: { listings: 1, referralsSent: 23 },
+          },
+        ],
+        total: 184,
+        page: 1,
+        limit: 50,
+      };
+    }
+    if (url === '/api/v1/admin/listings') {
+      return {
+        listings: MOCK_LISTINGS.slice(0, 6).map((l) => ({
+          id: l.id,
+          slug: l.slug,
+          name: l.name,
+          city: l.city,
+          state: l.state,
+          status: 'ACTIVE',
+          isVerified: l.isVerified,
+          isFeatured: l.isFeatured,
+          avgRating: l.avgRating,
+          reviewCount: l.reviewCount,
+          trustScore: l.trustScore,
+          createdAt: isoDaysAgo(30),
+          user: { email: 'owner@example.com', firstName: 'Owner', lastName: 'Name' },
+        })),
+        total: 42,
+        page: 1,
+        limit: 50,
+      };
+    }
+    if (url === '/api/v1/admin/listings/pending') {
+      return [
+        {
+          id: 'pend-1',
+          slug: 'summit-legal-partners',
+          name: 'Summit Legal Partners',
+          city: 'St. Louis',
+          state: 'MO',
+          createdAt: isoDaysAgo(1),
+          user: {
+            id: 'u-new',
+            email: 'intake@summitlegal.com',
+            firstName: 'Karen',
+            lastName: 'Vasquez',
+          },
+          category: { name: 'Lawyer', slug: 'lawyer' },
+        },
+      ];
+    }
+    if (url === '/api/v1/admin/groups') {
+      return MOCK_GROUPS.map((g) => ({
+        id: g.id,
+        slug: g.slug,
+        name: g.name,
+        city: g.city,
+        state: g.state,
+        status: 'active',
+        maxMembers: g.maxMembers,
+        _count: { members: g.memberCount },
+      }));
+    }
+    if (url.startsWith('/api/v1/photos/')) {
+      return [
+        {
+          id: 'photo-1',
+          url: 'https://picsum.photos/seed/refnet1/1200/800',
+          caption: null,
+          sortOrder: 0,
+        },
+        {
+          id: 'photo-2',
+          url: 'https://picsum.photos/seed/refnet2/1200/800',
+          caption: null,
+          sortOrder: 1,
+        },
+      ];
+    }
     if (url.startsWith('/api/v1/connections/state/')) {
       return { state: 'none' };
     }
@@ -689,6 +815,14 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url === '/api/v1/billing/checkout') {
       return { url: '/billing/success?tier=PRO&demo=1', demo: true };
+    }
+    if (url === '/api/v1/photos/presign') {
+      return {
+        uploadUrl: 'demo://skip-upload',
+        publicUrl: `https://picsum.photos/seed/${Date.now()}/1200/800`,
+        key: 'demo',
+        demo: true,
+      };
     }
     // Generic ack for create/update mutations in demo mode
     return { ok: true, demo: true };

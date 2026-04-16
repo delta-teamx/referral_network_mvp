@@ -65,6 +65,14 @@ export interface DomainEventMap {
   'subscription.activated': { userId: string; tier: string };
   'subscription.canceled': { userId: string };
   'subscription.payment_failed': { userId: string };
+
+  // Admin moderation
+  'admin.user_role_changed': { adminId: string; userId: string; role: string };
+  'admin.user_suspended': { adminId: string; userId: string; reason: string };
+  'admin.listing_approved': { adminId: string; listingId: string };
+  'admin.listing_rejected': { adminId: string; listingId: string; reason: string };
+  'admin.listing_featured': { adminId: string; listingId: string; featured: boolean };
+  'admin.group_archived': { adminId: string; groupId: string };
 }
 
 export type DomainEventType = keyof DomainEventMap;

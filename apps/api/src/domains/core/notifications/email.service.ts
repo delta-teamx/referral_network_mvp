@@ -1,12 +1,14 @@
 import { env } from '../../../config/env.js';
 
 /**
- * Email dispatch — single send function with a template key + data bag.
+ * Email dispatch. Two providers are implemented:
+ *   - SendGridEmailProvider — lazy-loads @sendgrid/mail when SENDGRID_API_KEY
+ *     is set at boot. Ships real HTML emails per template.
+ *   - ConsoleEmailProvider — dev fallback that prints the email body to
+ *     stdout so developers (and demo deploys) can continue without keys.
  *
- * Branch 2 ships the `ConsoleEmailProvider` only: every email is printed
- * to stdout with the verification/reset URL so developers can click
- * through without needing SendGrid credentials. Swap in a real provider
- * (SendGrid / SES) by flipping the factory below once keys are set.
+ * Template bodies live in `renderTemplate` below — keep them plaintext-first
+ * with a simple `html` variant so both providers can render them.
  */
 
 export type EmailTemplate =
@@ -27,40 +29,162 @@ export interface EmailProvider {
   send(req: EmailRequest): Promise<void>;
 }
 
+interface RenderedEmail {
+  subject: string;
+  text: string;
+  html: string;
+}
+
+function renderTemplate(req: EmailRequest): RenderedEmail {
+  const d = req.data;
+  const appName = 'ReferralNetworkUSA';
+  switch (req.template) {
+    case 'verify_email':
+      return {
+        subject: `Verify your ${appName} email`,
+        text: `Welcome! Click to verify your email: ${d.verifyUrl}`,
+        html: basicLayout(
+          'Verify your email',
+          `<p>Welcome to ${appName}.</p><p>Confirm your email to unlock your account:</p>${cta('Verify email', String(d.verifyUrl))}`,
+        ),
+      };
+    case 'password_reset':
+      return {
+        subject: `Reset your ${appName} password`,
+        text: `Reset link (expires in 1 hour): ${d.resetUrl}`,
+        html: basicLayout(
+          'Reset your password',
+          `<p>Click below to set a new password. The link expires in 1 hour.</p>${cta('Reset password', String(d.resetUrl))}<p style="color:#888;font-size:12px">If you didn\u2019t request this, ignore this email.</p>`,
+        ),
+      };
+    case 'welcome':
+      return {
+        subject: `Welcome to ${appName}`,
+        text: `Your account is live. Start by completing onboarding: ${d.onboardingUrl}`,
+        html: basicLayout(
+          `Welcome aboard`,
+          `<p>Your account is ready. Tell us a little about your goals and we\u2019ll match you to the right pros and partners.</p>${cta('Complete onboarding', String(d.onboardingUrl))}`,
+        ),
+      };
+    case 'invitation':
+      return {
+        subject: `${d.senderName ?? 'A peer'} invited you to ${appName}`,
+        text: `${d.senderName ?? 'A peer'} wants to connect on ${appName}: ${d.inviteUrl}`,
+        html: basicLayout(
+          `You\u2019ve been invited to ${appName}`,
+          `<p><strong>${d.senderName ?? 'A peer'}</strong> invited you to join their referral network.</p>${d.message ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.message))}</blockquote>` : ''}${cta('Accept invitation', String(d.inviteUrl))}`,
+        ),
+      };
+    case 'lead_received':
+      return {
+        subject: `New lead: ${d.eventType}`,
+        text: `You have a new ${d.eventType} lead on ${appName}. View: ${d.leadUrl}`,
+        html: basicLayout(
+          'New lead received',
+          `<p>A consumer in zip <strong>${d.zip ?? '—'}</strong> is asking for help with <strong>${d.eventType}</strong>.</p>${cta('View lead', String(d.leadUrl))}`,
+        ),
+      };
+    case 'referral_received':
+      return {
+        subject: `New referral from ${d.senderName ?? 'a peer'}`,
+        text: `You received a referral from ${d.senderName ?? 'a peer'}. Client: ${d.clientName}. View: ${d.referralUrl}`,
+        html: basicLayout(
+          'New B2B referral',
+          `<p><strong>${d.senderName ?? 'A peer'}</strong> sent you a client referral.</p><p><strong>Client:</strong> ${d.clientName ?? '—'}<br><strong>Notes:</strong> ${d.notes ?? '—'}</p>${cta('View referral', String(d.referralUrl))}`,
+        ),
+      };
+  }
+}
+
+function basicLayout(heading: string, bodyHtml: string): string {
+  return `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111;max-width:560px;margin:0 auto;padding:24px;">
+    <h1 style="font-size:20px;margin:0 0 16px;">${heading}</h1>
+    ${bodyHtml}
+    <hr style="border:0;border-top:1px solid #eee;margin:32px 0 16px;">
+    <p style="color:#888;font-size:12px;margin:0;">ReferralNetworkUSA · Trusted local pros, matched to life\u2019s moments</p>
+  </body></html>`;
+}
+
+function cta(label: string, url: string): string {
+  return `<p style="margin:24px 0"><a href="${escapeAttr(url)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">${label}</a></p>`;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+}
+function escapeAttr(s: string): string {
+  return s.replace(/"/g, '&quot;');
+}
+
 class ConsoleEmailProvider implements EmailProvider {
   async send(req: EmailRequest): Promise<void> {
+    const r = renderTemplate(req);
     // eslint-disable-next-line no-console
     console.log('─'.repeat(70));
     // eslint-disable-next-line no-console
-    console.log(`[email:${req.template}] to ${req.to}`);
+    console.log(`[email:${req.template}] to ${req.to} · from ${env.EMAIL_FROM}`);
     // eslint-disable-next-line no-console
-    console.log(`[email:${req.template}] from ${env.EMAIL_FROM}`);
-    for (const [k, v] of Object.entries(req.data)) {
-      // eslint-disable-next-line no-console
-      console.log(`[email:${req.template}] ${k}: ${String(v)}`);
-    }
+    console.log(`[email:${req.template}] subject: ${r.subject}`);
+    // eslint-disable-next-line no-console
+    console.log(`[email:${req.template}] ${r.text}`);
     // eslint-disable-next-line no-console
     console.log('─'.repeat(70));
   }
 }
 
-function createProvider(): EmailProvider {
-  if (env.SENDGRID_API_KEY) {
-    // TODO (Branch 3+): drop in a SendGridEmailProvider here once key set.
-    // eslint-disable-next-line no-console
-    console.warn(
-      '[email] SENDGRID_API_KEY set but SendGrid provider not yet implemented; falling back to console',
-    );
+class SendGridEmailProvider implements EmailProvider {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any = null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(client: any) {
+    this.client = client;
   }
-  return new ConsoleEmailProvider();
+
+  async send(req: EmailRequest): Promise<void> {
+    const r = renderTemplate(req);
+    await this.client.send({
+      to: req.to,
+      from: env.EMAIL_FROM,
+      subject: r.subject,
+      text: r.text,
+      html: r.html,
+    });
+    // eslint-disable-next-line no-console
+    console.log(`[email:sendgrid] sent "${r.subject}" to ${req.to}`);
+  }
 }
 
-const provider = createProvider();
+async function createProvider(): Promise<EmailProvider> {
+  if (!env.SENDGRID_API_KEY) return new ConsoleEmailProvider();
+  try {
+    // @ts-expect-error — @sendgrid/mail is an optional runtime dep; tsc
+    // shouldn't demand its types when the import is dynamically gated.
+    const mod = await import('@sendgrid/mail');
+    const sgMail = mod.default ?? mod;
+    sgMail.setApiKey(env.SENDGRID_API_KEY);
+    // eslint-disable-next-line no-console
+    console.log('[email] SendGrid provider active');
+    return new SendGridEmailProvider(sgMail);
+  } catch {
+    // eslint-disable-next-line no-console
+    console.warn('[email] SENDGRID_API_KEY set but @sendgrid/mail not installed; falling back to console');
+    return new ConsoleEmailProvider();
+  }
+}
+
+// Lazy-init singleton so startup isn't blocked if SendGrid is slow.
+let providerPromise: Promise<EmailProvider> | null = null;
+function getProvider(): Promise<EmailProvider> {
+  if (!providerPromise) providerPromise = createProvider();
+  return providerPromise;
+}
 
 /** Queue an email for delivery. Never throws — failures are logged. */
 export async function sendEmail(req: EmailRequest): Promise<void> {
   try {
-    await provider.send(req);
+    const p = await getProvider();
+    await p.send(req);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[email] send failed', err);

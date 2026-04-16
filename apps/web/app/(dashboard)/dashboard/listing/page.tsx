@@ -196,6 +196,12 @@ export default function EditListingPage() {
             Save changes
           </Button>
           <a
+            href="/dashboard/listing/photos"
+            className="text-sm text-primary hover:underline"
+          >
+            Manage photos →
+          </a>
+          <a
             href={`/listing/${listing.slug}`}
             target="_blank"
             rel="noreferrer"

@@ -77,7 +77,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
       </aside>
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1">
+        {user.role === 'ADMIN' && (
+          <div className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs text-amber-900">
+            You&rsquo;re signed in as an admin.{' '}
+            <Link href="/admin" className="font-semibold underline hover:text-amber-700">
+              Open admin console →
+            </Link>
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }
