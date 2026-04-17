@@ -1,0 +1,200 @@
+import { prisma } from '../../../config/prisma.js';
+import { AppError } from '../../../utils/AppError.js';
+import { eventBus } from '../../core/events/index.js';
+
+/**
+ * Member profiles — the "referral intelligence" layer that powers AI matching.
+ *
+ * Each user gets one MemberProfile (upserted on intake completion). The
+ * profile stores:
+ *   - Business identity (name, industry, headline, services, keywords)
+ *   - ICP: "who I WANT to meet" (industries, roles, problems they solve)
+ *   - Referral cap: "who I CAN REFER" (industries, client types)
+ *   - Video intro metadata (URL, transcript)
+ *   - AI embedding (written by the matching engine after profile change)
+ */
+
+export interface UpsertProfileInput {
+  businessName: string;
+  industry: string;
+  headline?: string;
+  bio?: string;
+  keywords?: string[];
+  servicesOffered?: string[];
+  yearsInBusiness?: number;
+  icpIndustries?: string[];
+  icpRoles?: string[];
+  icpProblems?: string[];
+  icpDealSize?: string;
+  canReferIndustries?: string[];
+  canReferTypes?: string[];
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+export async function upsertMemberProfile(userId: string, input: UpsertProfileInput) {
+  const data = {
+    businessName: input.businessName.trim(),
+    industry: input.industry.trim(),
+    headline: input.headline?.trim() || null,
+    bio: input.bio?.trim() || null,
+    keywords: (input.keywords ?? []).map((k) => k.trim().toLowerCase()).filter(Boolean),
+    servicesOffered: (input.servicesOffered ?? []).map((s) => s.trim()).filter(Boolean),
+    yearsInBusiness: input.yearsInBusiness ?? null,
+    icpIndustries: (input.icpIndustries ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
+    icpRoles: (input.icpRoles ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
+    icpProblems: (input.icpProblems ?? []).map((s) => s.trim()).filter(Boolean),
+    icpDealSize: input.icpDealSize?.trim() || null,
+    canReferIndustries: (input.canReferIndustries ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
+    canReferTypes: (input.canReferTypes ?? []).map((s) => s.trim()).filter(Boolean),
+    city: input.city?.trim() || null,
+    state: input.state?.trim().toUpperCase().slice(0, 2) || null,
+    zipCode: input.zipCode?.trim() || null,
+  };
+
+  const profile = await prisma.memberProfile.upsert({
+    where: { userId },
+    create: { userId, ...data },
+    update: { ...data, embeddingUpdatedAt: null },
+    select: profileSelect,
+  });
+
+  await eventBus.publish('onboarding.completed', { userId });
+  return profile;
+}
+
+export async function getMemberProfile(userId: string) {
+  const profile = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: profileSelect,
+  });
+  if (!profile) throw AppError.notFound('Member profile not found');
+  return profile;
+}
+
+export async function getPublicProfile(profileId: string) {
+  const profile = await prisma.memberProfile.findUnique({
+    where: { id: profileId },
+    select: {
+      ...profileSelect,
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+  if (!profile) throw AppError.notFound('Profile not found');
+  return profile;
+}
+
+export async function searchMembers(filters: {
+  q?: string;
+  industry?: string;
+  city?: string;
+  state?: string;
+  groupId?: string;
+  limit?: number;
+}) {
+  const limit = Math.min(filters.limit ?? 20, 50);
+  const where: Parameters<typeof prisma.memberProfile.findMany>[0] = {
+    where: {
+      ...(filters.industry
+        ? { industry: { contains: filters.industry, mode: 'insensitive' } }
+        : {}),
+      ...(filters.city ? { city: { equals: filters.city, mode: 'insensitive' } } : {}),
+      ...(filters.state ? { state: filters.state.toUpperCase().slice(0, 2) } : {}),
+      ...(filters.q
+        ? {
+            OR: [
+              { businessName: { contains: filters.q, mode: 'insensitive' } },
+              { headline: { contains: filters.q, mode: 'insensitive' } },
+              { bio: { contains: filters.q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    },
+  };
+
+  let userIds: string[] | undefined;
+  if (filters.groupId) {
+    const members = await prisma.groupMember.findMany({
+      where: { groupId: filters.groupId },
+      select: { userId: true },
+    });
+    userIds = members.map((m) => m.userId);
+  }
+
+  return prisma.memberProfile.findMany({
+    ...where,
+    ...(userIds ? { where: { ...where.where, userId: { in: userIds } } } : {}),
+    orderBy: { updatedAt: 'desc' },
+    take: limit,
+    select: {
+      ...profileSelect,
+      user: {
+        select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+      },
+    },
+  });
+}
+
+export async function setVideoMeta(
+  userId: string,
+  meta: { videoUrl: string; videoKey: string; videoDurationSec?: number },
+) {
+  return prisma.memberProfile.update({
+    where: { userId },
+    data: {
+      videoUrl: meta.videoUrl,
+      videoKey: meta.videoKey,
+      videoDurationSec: meta.videoDurationSec ?? null,
+      videoProcessed: false,
+    },
+    select: { id: true, videoUrl: true },
+  });
+}
+
+export async function setVideoTranscript(userId: string, transcript: string) {
+  return prisma.memberProfile.update({
+    where: { userId },
+    data: {
+      videoTranscript: transcript,
+      videoProcessed: true,
+      embeddingUpdatedAt: null,
+    },
+    select: { id: true, videoProcessed: true },
+  });
+}
+
+const profileSelect = {
+  id: true,
+  userId: true,
+  businessName: true,
+  industry: true,
+  headline: true,
+  bio: true,
+  keywords: true,
+  servicesOffered: true,
+  yearsInBusiness: true,
+  icpIndustries: true,
+  icpRoles: true,
+  icpProblems: true,
+  icpDealSize: true,
+  canReferIndustries: true,
+  canReferTypes: true,
+  videoUrl: true,
+  videoDurationSec: true,
+  videoTranscript: true,
+  videoProcessed: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;

@@ -110,10 +110,98 @@ model User {
   sentInvitations        BusinessInvitation[] @relation("InvitationSender")
   receivedInvitations    BusinessInvitation[] @relation("InvitationRecipient")
   onboardingProgress     OnboardingProgress?
+  memberProfile          MemberProfile?
+  introsSent             Introduction[]     @relation("IntroSender")
+  introsReceived         Introduction[]     @relation("IntroTarget")
 
   @@index([email])
   @@index([role])
   @@index([subscriptionTier])
+}
+
+// ==================== MEMBER INTELLIGENCE (Igor's B2B AI Layer) ====================
+
+/// Rich member profile — the "referral intelligence" that powers AI matching.
+/// Separate from User so we can evolve the schema without touching auth.
+model MemberProfile {
+  id        String @id @default(uuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Business identity
+  businessName    String
+  industry        String
+  headline        String? // "Residential roofer serving St. Louis metro"
+  bio             String? // Longer free-text about their business
+  keywords        String[] // Indexed for matching: ["roofing", "residential", "insurance claims"]
+  servicesOffered String[] // ["roof repair", "new construction", "inspections"]
+  yearsInBusiness Int?
+
+  // Ideal Client Profile (ICP) — who they WANT to meet
+  icpIndustries   String[] // ["real estate", "insurance"]
+  icpRoles        String[] // ["agent", "broker", "adjuster"]
+  icpProblems     String[] // ["homebuyer needs roof inspection", "storm damage claims"]
+  icpDealSize     String?  // "5K-25K" | "25K-100K" etc (human-readable)
+
+  // Referral capability — who they CAN REFER business to
+  canReferIndustries String[] // ["plumbing", "electrical", "HVAC"]
+  canReferTypes      String[] // ["homeowners needing repairs", "new construction"]
+
+  // Video intro
+  videoUrl        String?
+  videoKey        String?  // S3 key for deletion
+  videoDurationSec Int?
+  videoTranscript String?  // Whisper-generated transcript
+  videoProcessed  Boolean @default(false)
+
+  // AI-generated embedding for vector similarity matching.
+  // Stored as JSON until we wire pgvector; converted to float[] at query time.
+  profileEmbedding Json?
+  embeddingUpdatedAt DateTime?
+
+  // Location
+  city    String?
+  state   String?  @db.VarChar(2)
+  zipCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([industry])
+  @@index([city, state])
+}
+
+/// AI-generated introduction between two members.
+model Introduction {
+  id          String   @id @default(uuid())
+  senderId    String   // Who AI suggests should initiate
+  targetId    String   // Who they should meet
+  groupId     String?  // Which network group context (null = platform-wide)
+
+  // AI reasoning
+  reason       String  // "John needs a roofer, you do residential roofing in his area"
+  matchScore   Decimal @default(0) @db.Decimal(5, 2) // 0-100 confidence
+  matchFactors Json?   // { "industry_overlap": 0.9, "icp_alignment": 0.85, ... }
+
+  // Lifecycle
+  status       String  @default("suggested") // suggested, requested, accepted, declined, completed
+  outcome      String? // met, referred, deal_closed, no_fit
+  dealValue    Decimal? @db.Decimal(12, 2) // Tracked for AI learning
+  notes        String?
+
+  requestedAt  DateTime?
+  acceptedAt   DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  sender  User   @relation("IntroSender", fields: [senderId], references: [id])
+  target  User   @relation("IntroTarget", fields: [targetId], references: [id])
+  group   Group? @relation(fields: [groupId], references: [id])
+
+  @@index([senderId, status])
+  @@index([targetId, status])
+  @@index([groupId])
+  @@index([status])
 }
 
 model OAuthAccount {
@@ -318,8 +406,9 @@ model Group {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  members GroupMember[]
-  events  GroupEvent[]
+  members       GroupMember[]
+  events        GroupEvent[]
+  introductions Introduction[]
 
   @@index([slug])
   @@index([city, state])

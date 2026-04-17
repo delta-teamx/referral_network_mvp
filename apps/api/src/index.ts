@@ -19,6 +19,7 @@ import { referralsRouter } from './domains/network/referrals/referrals.routes.js
 import { connectionsRouter } from './domains/network/connections/connections.routes.js';
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
 import { groupsRouter } from './domains/network/groups/groups.routes.js';
+import { profilesRouter } from './domains/network/profiles/profiles.routes.js';
 import { billingRouter } from './domains/billing/billing.routes.js';
 import { stripeWebhookHandler } from './domains/billing/billing.webhook.js';
 import { adminRouter } from './domains/admin/admin.routes.js';
@@ -103,6 +104,7 @@ app.use('/api/v1/referrals', referralsRouter);
 app.use('/api/v1/connections', connectionsRouter);
 app.use('/api/v1/invitations', invitationsRouter);
 app.use('/api/v1/groups', groupsRouter);
+app.use('/api/v1/profiles', profilesRouter);
 app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/admin', adminRouter);
 
