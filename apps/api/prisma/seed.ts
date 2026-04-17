@@ -476,7 +476,180 @@ async function main() {
     }
   }
 
-  console.log('[seed] done');
+  console.log('[seed] done seeding listings + event maps');
+
+  // ---- Demo accounts with passwords (for local testing) ----------------------
+  // Lazily import bcrypt so seed works whether or not the user ran a full build.
+  const bcrypt = await import('bcryptjs');
+  const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+
+  console.log('[seed] creating demo admin account');
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@referralnetworkusa.app' },
+    create: {
+      email: 'admin@referralnetworkusa.app',
+      passwordHash: hash('Admin123!'),
+      firstName: 'Platform',
+      lastName: 'Admin',
+      role: 'ADMIN',
+      emailVerified: true,
+      subscriptionTier: 'PREMIUM',
+    },
+    update: {},
+  });
+  console.log(`  admin id=${admin.id} email=admin@referralnetworkusa.app pw=Admin123!`);
+
+  console.log('[seed] creating demo member accounts + profiles');
+  const members = [
+    {
+      email: 'sarah@johnsonrealty.com',
+      password: 'Sarah123!',
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      profile: {
+        businessName: 'Johnson Realty Group',
+        industry: 'Real Estate',
+        headline: '5th-generation St. Louis realtor — 200+ closings since 2018.',
+        keywords: ['realtor', 'residential', 'first-time buyer', 'relocation'],
+        servicesOffered: ['Home buying', 'Home selling', 'Relocation services'],
+        icpIndustries: ['mortgage / lending', 'home inspection', 'moving / relocation'],
+        icpRoles: ['mortgage broker', 'inspector', 'mover'],
+        canReferIndustries: ['plumbing', 'electrical', 'cleaning', 'painting'],
+        canReferTypes: ['Homeowners needing repairs', 'Move-in cleaning'],
+        openToBarter: true,
+        barterOfferings: ['Free home valuation', 'Market analysis report'],
+        barterWants: ['Photography', 'Staging consultation'],
+        city: 'St. Louis', state: 'MO', zipCode: '63108',
+      },
+    },
+    {
+      email: 'daniel@tworiverscpa.com',
+      password: 'Daniel123!',
+      firstName: 'Daniel',
+      lastName: 'Reyes',
+      profile: {
+        businessName: 'Two Rivers CPA',
+        industry: 'Accounting / CPA',
+        headline: 'Small-business CPA — bookkeeping, taxes, payroll.',
+        keywords: ['cpa', 'taxes', 'bookkeeping', 's-corp', 'payroll'],
+        servicesOffered: ['Tax preparation', 'Bookkeeping', 'S-Corp elections', 'Payroll'],
+        icpIndustries: ['law', 'insurance', 'consulting', 'real estate'],
+        icpRoles: ['business owner', 'startup founder'],
+        canReferIndustries: ['law', 'financial planning', 'insurance'],
+        canReferTypes: ['Small business owners needing legal help'],
+        openToBarter: false,
+        barterOfferings: [],
+        barterWants: [],
+        city: 'Clayton', state: 'MO', zipCode: '63105',
+      },
+    },
+    {
+      email: 'maya@stonegateweddings.com',
+      password: 'Maya1234!',
+      firstName: 'Maya',
+      lastName: 'Patel',
+      profile: {
+        businessName: 'Stonegate Wedding Planning',
+        industry: 'Wedding Planning',
+        headline: 'Boutique wedding planning — 80+ weddings, zero disasters.',
+        keywords: ['wedding', 'event', 'planner', 'coordinator', 'venue'],
+        servicesOffered: ['Full planning', 'Day-of coordination', 'Vendor management'],
+        icpIndustries: ['photography', 'catering / food', 'floral', 'dj / entertainment'],
+        icpRoles: ['photographer', 'caterer', 'florist', 'dj'],
+        canReferIndustries: ['photography', 'catering / food', 'floral'],
+        canReferTypes: ['Brides needing vendors', 'Corporate event planners'],
+        openToBarter: true,
+        barterOfferings: ['Free event consultation', 'Vendor negotiation'],
+        barterWants: ['Web design', 'Social media management'],
+        city: 'St. Louis', state: 'MO', zipCode: '63108',
+      },
+    },
+    {
+      email: 'emma@bloomphoto.com',
+      password: 'Emma1234!',
+      firstName: 'Emma',
+      lastName: 'Chen',
+      profile: {
+        businessName: 'Bloom Photography',
+        industry: 'Photography',
+        headline: 'Wedding + family portrait photography. Booking 2026 dates.',
+        keywords: ['photographer', 'wedding', 'portraits', 'headshots'],
+        servicesOffered: ['Wedding photography', 'Family portraits', 'Headshots'],
+        icpIndustries: ['wedding planning', 'real estate', 'marketing'],
+        icpRoles: ['wedding planner', 'realtor', 'marketing agency'],
+        canReferIndustries: ['wedding planning', 'catering / food', 'floral'],
+        canReferTypes: ['Brides looking for planners', 'Businesses needing headshots'],
+        openToBarter: true,
+        barterOfferings: ['Free headshot session', '10 edited photos'],
+        barterWants: ['Legal review', 'Tax prep', 'Web design'],
+        city: 'St. Louis', state: 'MO', zipCode: '63112',
+      },
+    },
+  ];
+
+  for (const m of members) {
+    const user = await prisma.user.upsert({
+      where: { email: m.email },
+      create: {
+        email: m.email,
+        passwordHash: hash(m.password),
+        firstName: m.firstName,
+        lastName: m.lastName,
+        role: 'BUSINESS_OWNER',
+        emailVerified: true,
+      },
+      update: {},
+    });
+    await prisma.memberProfile.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, ...m.profile },
+      update: {},
+    });
+    console.log(`  ${m.firstName} ${m.lastName}: email=${m.email} pw=${m.password}`);
+  }
+
+  // Create a demo group with the members
+  console.log('[seed] creating demo group');
+  const group = await prisma.group.upsert({
+    where: { slug: 'stl-virtual-pros' },
+    create: {
+      name: 'STL Virtual Pros',
+      slug: 'stl-virtual-pros',
+      description: 'Virtual Pros St. Louis chapter — the AI-powered referral network.',
+      city: 'St. Louis',
+      state: 'MO',
+      meetingSchedule: 'Every Tuesday 7am (virtual)',
+      maxMembers: 30,
+      isPublic: true,
+    },
+    update: {},
+  });
+
+  // Add all members + admin to the group
+  for (const m of members) {
+    const user = await prisma.user.findUnique({ where: { email: m.email }, select: { id: true } });
+    if (!user) continue;
+    await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId: group.id, userId: user.id } },
+      create: { groupId: group.id, userId: user.id, role: 'MEMBER' },
+      update: {},
+    });
+  }
+  await prisma.groupMember.upsert({
+    where: { groupId_userId: { groupId: group.id, userId: admin.id } },
+    create: { groupId: group.id, userId: admin.id, role: 'LEADER' },
+    update: {},
+  });
+
+  console.log('[seed] all done!');
+  console.log('');
+  console.log('=== Demo Accounts ===');
+  console.log('Admin:   admin@referralnetworkusa.app / Admin123!');
+  console.log('Sarah:   sarah@johnsonrealty.com / Sarah123!');
+  console.log('Daniel:  daniel@tworiverscpa.com / Daniel123!');
+  console.log('Maya:    maya@stonegateweddings.com / Maya1234!');
+  console.log('Emma:    emma@bloomphoto.com / Emma1234!');
+  console.log('');
 }
 
 main()
