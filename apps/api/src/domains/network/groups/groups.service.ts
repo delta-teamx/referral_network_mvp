@@ -246,3 +246,38 @@ export async function listMyGroups(userId: string): Promise<
   });
   return rows.map((r) => ({ ...toListItem(r.group), role: r.role as GroupRole }));
 }
+
+export interface WhitelabelSettings {
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  welcomeMessage?: string | null;
+  billingModel?: 'platform' | 'per_seat' | 'per_group';
+  seatPriceCents?: number | null;
+  groupPriceCents?: number | null;
+}
+
+export async function updateGroupSettings(
+  groupId: string,
+  userId: string,
+  settings: WhitelabelSettings,
+) {
+  const member = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+    select: { role: true },
+  });
+  if (!member || (member.role !== 'LEADER' && member.role !== 'CO_LEADER')) {
+    throw AppError.forbidden('Only group leaders can update settings.');
+  }
+  return prisma.group.update({
+    where: { id: groupId },
+    data: {
+      ...(settings.logoUrl !== undefined ? { logoUrl: settings.logoUrl } : {}),
+      ...(settings.primaryColor !== undefined ? { primaryColor: settings.primaryColor } : {}),
+      ...(settings.welcomeMessage !== undefined ? { welcomeMessage: settings.welcomeMessage } : {}),
+      ...(settings.billingModel !== undefined ? { billingModel: settings.billingModel } : {}),
+      ...(settings.seatPriceCents !== undefined ? { seatPriceCents: settings.seatPriceCents } : {}),
+      ...(settings.groupPriceCents !== undefined ? { groupPriceCents: settings.groupPriceCents } : {}),
+    },
+    select: groupListSelect,
+  });
+}

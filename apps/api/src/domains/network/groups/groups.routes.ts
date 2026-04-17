@@ -95,3 +95,25 @@ groupsRouter.post(
     res.json(body);
   }),
 );
+
+// White-label settings — leader-only
+const whitelabelSchema = z.object({
+  logoUrl: z.string().url().optional().nullable(),
+  primaryColor: z.string().regex(/^#[a-fA-F0-9]{6}$/).optional().nullable(),
+  welcomeMessage: z.string().trim().max(500).optional().nullable(),
+  billingModel: z.enum(['platform', 'per_seat', 'per_group']).optional(),
+  seatPriceCents: z.number().int().min(0).optional().nullable(),
+  groupPriceCents: z.number().int().min(0).optional().nullable(),
+});
+
+groupsRouter.patch(
+  '/:id/settings',
+  validate(whitelabelSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const { updateGroupSettings } = await import('./groups.service.js');
+    const group = await updateGroupSettings(req.params.id ?? '', req.user.id, req.body);
+    const body: ApiResponse<typeof group> = { success: true, data: group };
+    res.json(body);
+  }),
+);

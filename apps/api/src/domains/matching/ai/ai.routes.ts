@@ -6,6 +6,7 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import { generateMatchesForUser, refreshSuggestionsForUser } from './ai-matching.service.js';
+import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
   listCompletedIntros,
@@ -99,6 +100,20 @@ aiRouter.post(
     if (!req.user) throw AppError.unauthorized();
     const intro = await completeIntro(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof intro> = { success: true, data: intro };
+    res.json(body);
+  }),
+);
+
+// AI system stats + weights (admin/leader view)
+aiRouter.get(
+  '/stats',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const [stats, weights] = await Promise.all([getMatchingStats(), getWeights()]);
+    const body: ApiResponse<{ stats: typeof stats; weights: typeof weights }> = {
+      success: true,
+      data: { stats, weights },
+    };
     res.json(body);
   }),
 );

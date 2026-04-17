@@ -1,6 +1,7 @@
 import { env } from '../../../config/env.js';
 import { recomputeAllTrustScores } from '../trust/trust.service.js';
 import { refreshAllSuggestions } from '../../matching/ai/ai-matching.service.js';
+import { retrainFromOutcomes } from '../../matching/ai/ai-learning.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -47,6 +48,18 @@ const JOBS: JobDefinition[] = [
       // eslint-disable-next-line no-console
       console.log(
         `[jobs] refresh-ai-suggestions: ${result.intros} intros for ${result.users} users`,
+      );
+      return result;
+    },
+  },
+  {
+    name: 'retrain-ai-weights',
+    intervalMs: 24 * 60 * 60 * 1000, // Daily
+    handler: async () => {
+      const result = await retrainFromOutcomes();
+      // eslint-disable-next-line no-console
+      console.log(
+        `[jobs] retrain-ai-weights: processed ${result.introsProcessed} intros`,
       );
       return result;
     },

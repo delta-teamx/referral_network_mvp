@@ -406,6 +406,16 @@ model Group {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // White-label / multi-tenant fields
+  logoUrl           String?   // Custom logo for the group landing page
+  primaryColor      String?   // Hex color for branding (#2563EB)
+  welcomeMessage    String?   // Shown to new members after joining
+  billingModel      String    @default("platform") // "platform" | "per_seat" | "per_group"
+  seatPriceCents    Int?      // Monthly per-seat price when billingModel = "per_seat"
+  groupPriceCents   Int?      // Monthly flat rate when billingModel = "per_group"
+  stripeAccountId   String?   // Connect account for group-level payouts
+  customDomain      String?   // e.g. "network.bnigateway.com"
+
   members       GroupMember[]
   events        GroupEvent[]
   introductions Introduction[]
