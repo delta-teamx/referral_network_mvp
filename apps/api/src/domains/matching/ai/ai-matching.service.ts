@@ -128,6 +128,18 @@ function scoreMatch(me: ProfileData, them: ProfileData): MatchResult {
   const sameState = me.state && them.state && me.state === them.state;
   factors.location = sameCity ? 10 : sameState ? 5 : 0;
 
+  // 7. Barter compatibility — both must be open to barter AND have
+  // overlapping offerings ↔ wants for a bonus.
+  let barterMatch = false;
+  if (me.openToBarter && them.openToBarter) {
+    const theyOfferWhatIWant = countOverlap(them.barterOfferings, me.barterWants) > 0;
+    const iOfferWhatTheyWant = countOverlap(me.barterOfferings, them.barterWants) > 0;
+    barterMatch = theyOfferWhatIWant || iOfferWhatTheyWant;
+    factors.barterMatch = barterMatch ? 10 : (me.openToBarter && them.openToBarter ? 5 : 0);
+  } else {
+    factors.barterMatch = 0;
+  }
+
   const totalScore = Object.values(factors).reduce((a, b) => a + b, 0);
 
   // Generate a human-readable reason
@@ -136,6 +148,7 @@ function scoreMatch(me: ProfileData, them: ProfileData): MatchResult {
   if (theyCanReferMe) reasons.push(`can refer clients to your business`);
   if (iCanReferThem) reasons.push(`you can send them business`);
   if (reverseIndustry) reasons.push(`is looking for someone in your industry`);
+  if (barterMatch) reasons.push(`open to bartering services`);
   if (sameCity) reasons.push(`based in ${them.city}`);
 
   const reason = reasons.length > 0
@@ -242,6 +255,9 @@ type ProfileData = {
   canReferTypes: string[];
   city: string | null;
   state: string | null;
+  openToBarter: boolean;
+  barterOfferings: string[];
+  barterWants: string[];
 };
 
 const profileFields = {
@@ -257,4 +273,7 @@ const profileFields = {
   canReferTypes: true,
   city: true,
   state: true,
+  openToBarter: true,
+  barterOfferings: true,
+  barterWants: true,
 } as const;

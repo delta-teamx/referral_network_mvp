@@ -27,8 +27,8 @@ const INDUSTRIES = [
   'Landscaping', 'Auto Services', 'Consulting', 'Other',
 ];
 
-type Step = 'basics' | 'business' | 'icp' | 'referrals' | 'video' | 'done';
-const STEPS: Step[] = ['basics', 'business', 'icp', 'referrals', 'video', 'done'];
+type Step = 'basics' | 'business' | 'icp' | 'referrals' | 'barter' | 'video' | 'done';
+const STEPS: Step[] = ['basics', 'business', 'icp', 'referrals', 'barter', 'video', 'done'];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -63,6 +63,11 @@ export default function OnboardingPage() {
   const [canReferIndustries, setCanReferIndustries] = useState<string[]>([]);
   const [canReferTypes, setCanReferTypes] = useState('');
 
+  const [openToBarter, setOpenToBarter] = useState(false);
+  const [barterOfferings, setBarterOfferings] = useState('');
+  const [barterWants, setBarterWants] = useState('');
+  const [barterNotes, setBarterNotes] = useState('');
+
   useEffect(() => { if (status === 'idle') void hydrate(); }, [status, hydrate]);
   useEffect(() => { if (status === 'unauthenticated') router.push('/login?next=/onboarding'); }, [status, router]);
 
@@ -91,6 +96,10 @@ export default function OnboardingPage() {
         icpDealSize: icpDealSize || undefined,
         canReferIndustries, canReferTypes: canReferTypes.split('\n').map((t) => t.trim()).filter(Boolean),
         city: city || undefined, state: state || undefined, zipCode: zip || undefined,
+        openToBarter,
+        barterOfferings: barterOfferings.split(',').map((s) => s.trim()).filter(Boolean),
+        barterWants: barterWants.split(',').map((s) => s.trim()).filter(Boolean),
+        barterNotes: barterNotes || undefined,
       }, { accessToken: accessToken ?? undefined });
       setStep('video');
     } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed'); } finally { setSaving(false); }
@@ -98,7 +107,7 @@ export default function OnboardingPage() {
 
   function next() {
     if (step === 'basics') { void saveBasics(); return; }
-    if (step === 'referrals') { void saveProfile(); return; }
+    if (step === 'barter') { void saveProfile(); return; }
     const idx = STEPS.indexOf(step);
     if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]!);
   }
@@ -213,6 +222,47 @@ export default function OnboardingPage() {
           </SC>
         )}
 
+        {step === 'barter' && (
+          <SC icon={<Sparkles size={20} />} title="Are you open to bartering?" sub="Trade services or products with other members instead of (or in addition to) cash.">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm transition hover:border-primary">
+              <input type="checkbox" checked={openToBarter} onChange={(e) => setOpenToBarter(e.target.checked)} className="h-5 w-5 rounded border-gray-300" />
+              <div>
+                <p className="font-semibold text-gray-900">Yes, I&rsquo;m open to bartering</p>
+                <p className="text-xs text-gray-500">Other members will see this on your profile and the AI will factor it into matching.</p>
+              </div>
+            </label>
+            {openToBarter && (
+              <>
+                <FormField
+                  label="What I can offer for trade (comma-separated)"
+                  name="barterOfferings"
+                  hint="e.g. free website audit, 1hr consultation, tax prep"
+                  value={barterOfferings}
+                  onChange={(e) => setBarterOfferings(e.target.value)}
+                />
+                <FormField
+                  label="What I'd accept in trade (comma-separated)"
+                  name="barterWants"
+                  hint="e.g. photography, legal review, social media management"
+                  value={barterWants}
+                  onChange={(e) => setBarterWants(e.target.value)}
+                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-900">Barter terms / notes</label>
+                  <textarea
+                    rows={2}
+                    value={barterNotes}
+                    onChange={(e) => setBarterNotes(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    placeholder="e.g. Will trade up to $500 in services per quarter"
+                    maxLength={500}
+                  />
+                </div>
+              </>
+            )}
+          </SC>
+        )}
+
         {step === 'video' && (
           <SC icon={<Video size={20} />} title="Record your 60-second intro" sub="3x more intros accepted when people see your face.">
             <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
@@ -238,7 +288,7 @@ export default function OnboardingPage() {
         {step !== 'done' && (
           <div className="mt-6 flex items-center justify-between">
             <button type="button" onClick={prev} disabled={stepNum === 0} className="text-sm text-gray-500 hover:text-primary disabled:invisible">← Back</button>
-            <Button onClick={next} loading={saving}>{step === 'basics' || step === 'referrals' ? 'Save & continue' : 'Next →'}</Button>
+            <Button onClick={next} loading={saving}>{step === 'basics' || step === 'barter' ? 'Save & continue' : 'Next →'}</Button>
           </div>
         )}
       </div>

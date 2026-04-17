@@ -31,6 +31,10 @@ export interface UpsertProfileInput {
   city?: string;
   state?: string;
   zipCode?: string;
+  openToBarter?: boolean;
+  barterOfferings?: string[];
+  barterWants?: string[];
+  barterNotes?: string;
 }
 
 export async function upsertMemberProfile(userId: string, input: UpsertProfileInput) {
@@ -51,6 +55,10 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     city: input.city?.trim() || null,
     state: input.state?.trim().toUpperCase().slice(0, 2) || null,
     zipCode: input.zipCode?.trim() || null,
+    openToBarter: input.openToBarter ?? false,
+    barterOfferings: (input.barterOfferings ?? []).map((s) => s.trim()).filter(Boolean),
+    barterWants: (input.barterWants ?? []).map((s) => s.trim()).filter(Boolean),
+    barterNotes: input.barterNotes?.trim() || null,
   };
 
   const profile = await prisma.memberProfile.upsert({
@@ -195,6 +203,10 @@ const profileSelect = {
   city: true,
   state: true,
   zipCode: true,
+  openToBarter: true,
+  barterOfferings: true,
+  barterWants: true,
+  barterNotes: true,
   createdAt: true,
   updatedAt: true,
 } as const;

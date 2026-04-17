@@ -40,6 +40,7 @@ interface MemberBrief {
     videoUrl: string | null;
     city: string | null;
     state: string | null;
+    openToBarter?: boolean;
   } | null;
 }
 
@@ -209,11 +210,18 @@ export function AiFeed() {
                           )}
                         </>
                       )}
+                      <div className="mt-1 flex flex-wrap gap-2">
                       {profile?.videoUrl && (
-                        <span className="mt-1 inline-flex items-center gap-1 text-xs text-primary">
-                          <Video size={12} /> Video intro available
+                        <span className="inline-flex items-center gap-1 text-xs text-primary">
+                          <Video size={12} /> Video intro
                         </span>
                       )}
+                      {profile?.openToBarter && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          Open to barter
+                        </span>
+                      )}
+                    </div>
                     </div>
                   </div>
 

@@ -357,13 +357,14 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
 ];
 
-const mockMemberProfile = (biz: string, ind: string, headline: string, city = 'St. Louis') => ({
+const mockMemberProfile = (biz: string, ind: string, headline: string, city = 'St. Louis', openToBarter = false) => ({
   businessName: biz,
   industry: ind,
   headline,
   videoUrl: null as string | null,
   city,
   state: 'MO',
+  openToBarter,
 });
 
 export const MOCK_AI_SUGGESTIONS = [
@@ -390,6 +391,8 @@ export const MOCK_AI_SUGGESTIONS = [
         'Johnson Realty Group',
         'Real Estate',
         '5th-generation St. Louis realtor — 200+ closings since 2018.',
+        'St. Louis',
+        true,
       ),
     },
   },

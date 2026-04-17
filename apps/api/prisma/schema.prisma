@@ -164,6 +164,12 @@ model MemberProfile {
   state   String?  @db.VarChar(2)
   zipCode String?
 
+  // Bartering
+  openToBarter       Boolean  @default(false)
+  barterOfferings    String[] // Services/products they'll trade: ["free website audit", "tax prep"]
+  barterWants        String[] // What they'd accept in trade: ["photography", "legal review"]
+  barterNotes        String?  // Free-text terms: "Will trade up to $500 in services"
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -62,6 +62,10 @@ const upsertSchema = z.object({
   city: z.string().trim().max(80).optional(),
   state: z.string().trim().max(2).optional(),
   zipCode: z.string().trim().max(10).optional(),
+  openToBarter: z.boolean().optional(),
+  barterOfferings: z.array(z.string().trim().max(100)).max(10).optional(),
+  barterWants: z.array(z.string().trim().max(100)).max(10).optional(),
+  barterNotes: z.string().trim().max(500).optional(),
 });
 
 profilesRouter.post(
