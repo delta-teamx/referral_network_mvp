@@ -111,6 +111,8 @@ model User {
   receivedInvitations    BusinessInvitation[] @relation("InvitationRecipient")
   onboardingProgress     OnboardingProgress?
   memberProfile          MemberProfile?
+  conversations          ConversationParticipant[]
+  sentMessages           Message[] @relation("MessageSender")
   introsSent             Introduction[]     @relation("IntroSender")
   introsReceived         Introduction[]     @relation("IntroTarget")
 
@@ -208,6 +210,38 @@ model Introduction {
   @@index([targetId, status])
   @@index([groupId])
   @@index([status])
+}
+
+// ==================== IN-APP MESSAGING ====================
+
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  Message[]
+  participants ConversationParticipant[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  text           String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+  @@index([conversationId, createdAt])
 }
 
 model OAuthAccount {

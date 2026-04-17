@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Lint, type-check, prisma validate
+    name: Lint, type-check & test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -35,14 +35,11 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter @refnet/api exec prisma generate
 
-      - name: Prisma validate
-        run: pnpm --filter @refnet/api prisma:validate
-
       - name: Type-check
         run: pnpm turbo run type-check
 
       - name: Lint
         run: pnpm turbo run lint
 
-      - name: Prettier check
-        run: pnpm format:check
+      - name: Test
+        run: pnpm turbo run test

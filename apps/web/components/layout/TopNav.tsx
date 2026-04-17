@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { useAuthStore } from '../../stores/auth';
 import { Button } from '../ui/Button';
+import { NotificationBell } from './NotificationBell';
 
 /**
  * Minimal top-nav. Calls `hydrate()` once on mount so a hard refresh
@@ -31,13 +32,14 @@ export function TopNav() {
         <nav className="flex items-center gap-3">
           {status === 'authenticated' && user ? (
             <>
-              <span className="hidden text-sm text-gray-600 sm:inline">Hi, {user.firstName}</span>
+              <NotificationBell />
               <Link
-                href="/onboarding"
+                href="/dashboard"
                 className="rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
               >
-                Onboarding
+                Dashboard
               </Link>
+              <span className="hidden text-sm text-gray-600 sm:inline">Hi, {user.firstName}</span>
               <Button variant="ghost" onClick={() => void logout()} className="px-3 py-1.5">
                 Log out
               </Button>

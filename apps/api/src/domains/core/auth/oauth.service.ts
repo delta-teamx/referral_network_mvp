@@ -163,3 +163,123 @@ export async function completeGoogleOAuth(code: string): Promise<AuthResult> {
     refreshToken: refresh,
   };
 }
+
+// ============================================================================
+// Facebook OAuth 2.0
+// ============================================================================
+
+const FB_AUTH_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
+const FB_TOKEN_URL = 'https://graph.facebook.com/v19.0/oauth/access_token';
+const FB_ME_URL = 'https://graph.facebook.com/v19.0/me';
+
+export function isFacebookOAuthConfigured(): boolean {
+  return Boolean(env.FACEBOOK_CLIENT_ID && env.FACEBOOK_CLIENT_SECRET && env.FACEBOOK_CALLBACK_URL);
+}
+
+export function buildFacebookAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: env.FACEBOOK_CLIENT_ID ?? '',
+    redirect_uri: env.FACEBOOK_CALLBACK_URL ?? '',
+    response_type: 'code',
+    scope: 'email,public_profile',
+    state,
+  });
+  return `${FB_AUTH_URL}?${params.toString()}`;
+}
+
+interface FbTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+interface FbProfile {
+  id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  picture?: { data?: { url?: string } };
+}
+
+async function fbExchangeCode(code: string): Promise<FbTokenResponse> {
+  const params = new URLSearchParams({
+    client_id: env.FACEBOOK_CLIENT_ID ?? '',
+    client_secret: env.FACEBOOK_CLIENT_SECRET ?? '',
+    redirect_uri: env.FACEBOOK_CALLBACK_URL ?? '',
+    code,
+  });
+  const res = await fetch(`${FB_TOKEN_URL}?${params.toString()}`);
+  if (!res.ok) throw AppError.badRequest('Facebook token exchange failed');
+  return (await res.json()) as FbTokenResponse;
+}
+
+async function fbFetchProfile(accessToken: string): Promise<FbProfile> {
+  const url = `${FB_ME_URL}?fields=id,email,first_name,last_name,picture&access_token=${accessToken}`;
+  const res = await fetch(url);
+  if (!res.ok) throw AppError.badRequest('Failed to fetch Facebook profile');
+  return (await res.json()) as FbProfile;
+}
+
+async function upsertFromFbProfile(profile: FbProfile): Promise<User> {
+  const email = (profile.email ?? '').toLowerCase().trim();
+  if (!email) throw AppError.badRequest('Facebook account has no email. Please use email signup.');
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    if (!existing.emailVerified && profile.email) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: { emailVerified: true, emailVerifyToken: null },
+      });
+    }
+    return existing;
+  }
+
+  const created = await prisma.user.create({
+    data: {
+      email,
+      passwordHash: null,
+      firstName: profile.first_name?.trim() || 'First',
+      lastName: profile.last_name?.trim() || 'Last',
+      avatarUrl: profile.picture?.data?.url ?? null,
+      role: 'CONSUMER',
+      emailVerified: true,
+    },
+  });
+
+  await eventBus.publish('user.signed_up', {
+    userId: created.id,
+    email: created.email,
+    role: created.role,
+  });
+
+  return created;
+}
+
+export async function completeFacebookOAuth(code: string): Promise<AuthResult> {
+  const tokens = await fbExchangeCode(code);
+  const profile = await fbFetchProfile(tokens.access_token);
+  const user = await upsertFromFbProfile(profile);
+
+  const access = signAccessToken({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    tier: user.subscriptionTier,
+  });
+  const refresh = signRefreshToken({
+    sub: user.id,
+    jti: crypto.randomBytes(16).toString('hex'),
+  });
+
+  return {
+    dto: {
+      user: toAuthenticatedUserDto(user),
+      tokens: {
+        accessToken: access,
+        expiresIn: accessTokenSeconds(),
+      },
+    },
+    refreshToken: refresh,
+  };
+}

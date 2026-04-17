@@ -27,6 +27,9 @@ import {
   completeGoogleOAuth,
   generateStateToken,
   isGoogleOAuthConfigured,
+  buildFacebookAuthUrl,
+  completeFacebookOAuth,
+  isFacebookOAuthConfigured,
 } from './oauth.service.js';
 import { findUserById, toAuthenticatedUserDto } from '../users/users.service.js';
 
@@ -166,6 +169,52 @@ authRouter.get(
 
     // Redirect to the web app with the access token in a fragment — the
     // auth store's `consumeOAuthFragment` picks it up and hydrates.
+    const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
+    const fragment = new URLSearchParams({
+      access_token: result.dto.tokens.accessToken,
+      expires_in: String(result.dto.tokens.expiresIn),
+      user_id: result.dto.user.id,
+    });
+    res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
+  }),
+);
+
+// ---------- Facebook OAuth ---------------------------------------------------
+
+authRouter.get(
+  '/oauth/facebook',
+  asyncHandler(async (_req, res) => {
+    if (!isFacebookOAuthConfigured()) {
+      const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
+      res.redirect(`${origin}/oauth/demo`);
+      return;
+    }
+    const state = generateStateToken();
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
+      path: '/api/v1/auth',
+    });
+    res.redirect(buildFacebookAuthUrl(state));
+  }),
+);
+
+authRouter.get(
+  '/oauth/facebook/callback',
+  asyncHandler(async (req, res) => {
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const state = typeof req.query.state === 'string' ? req.query.state : '';
+    const cookieState = (req.cookies as Record<string, string | undefined>)?.[OAUTH_STATE_COOKIE];
+    if (!code || !state || state !== cookieState) {
+      throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
+    }
+    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth' });
+
+    const result = await completeFacebookOAuth(code);
+    setRefreshCookie(res, result.refreshToken);
+
     const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
     const fragment = new URLSearchParams({
       access_token: result.dto.tokens.accessToken,

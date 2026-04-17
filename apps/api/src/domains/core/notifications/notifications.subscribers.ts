@@ -2,6 +2,7 @@ import type { EventBus } from '../events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
 import { env } from '../../../config/env.js';
 import { sendEmail } from './email.service.js';
+import { formatLeadSms, formatReferralSms, sendSms } from './sms.service.js';
 
 /**
  * Notification subscribers — turn domain events into outbound emails. Kept
@@ -56,12 +57,23 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
         referralUrl: `${origin}/dashboard/referrals`,
       },
     });
+    // SMS to receiver if they have a phone
+    const receiver = await prisma.user.findFirst({
+      where: { email: ref.receiver.email },
+      select: { phone: true },
+    });
+    if (receiver?.phone) {
+      await sendSms({
+        to: receiver.phone,
+        body: formatReferralSms(`${ref.sender.firstName} ${ref.sender.lastName}`),
+      });
+    }
   });
 
   eventBus.subscribe('consumer_lead.created', async ({ leadId, listingId, eventType }) => {
     const listing = await prisma.listing.findUnique({
       where: { id: listingId },
-      select: { user: { select: { email: true } } },
+      select: { user: { select: { email: true, phone: true } } },
     });
     if (!listing) return;
     await sendEmail({
@@ -73,5 +85,8 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
         leadUrl: `${origin}/dashboard/leads`,
       },
     });
+    if (listing.user.phone) {
+      await sendSms({ to: listing.user.phone, body: formatLeadSms(eventType) });
+    }
   });
 }

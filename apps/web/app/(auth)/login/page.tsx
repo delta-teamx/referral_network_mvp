@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { loginSchema } from '@refnet/shared';
 import { AuthShell } from '../../../components/auth/AuthShell';
+import { FacebookButton } from '../../../components/auth/FacebookButton';
 import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
@@ -58,6 +59,7 @@ export default function LoginPage() {
       }
     >
       <GoogleButton />
+      <FacebookButton />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />
         <span>or sign in with email</span>
