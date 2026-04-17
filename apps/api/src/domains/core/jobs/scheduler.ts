@@ -1,5 +1,6 @@
 import { env } from '../../../config/env.js';
 import { recomputeAllTrustScores } from '../trust/trust.service.js';
+import { refreshAllSuggestions } from '../../matching/ai/ai-matching.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -34,6 +35,18 @@ const JOBS: JobDefinition[] = [
       // eslint-disable-next-line no-console
       console.log(
         `[jobs] recompute-trust-scores: updated ${result.updated} listings in ${result.ms}ms`,
+      );
+      return result;
+    },
+  },
+  {
+    name: 'refresh-ai-suggestions',
+    intervalMs: 6 * 60 * 60 * 1000, // Every 6 hours
+    handler: async () => {
+      const result = await refreshAllSuggestions();
+      // eslint-disable-next-line no-console
+      console.log(
+        `[jobs] refresh-ai-suggestions: ${result.intros} intros for ${result.users} users`,
       );
       return result;
     },

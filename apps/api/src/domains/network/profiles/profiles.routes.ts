@@ -11,6 +11,7 @@ import {
   searchMembers,
   upsertMemberProfile,
 } from './profiles.service.js';
+import { confirmVideoUpload, presignVideoUpload } from './video.service.js';
 
 export const profilesRouter: Router = Router();
 
@@ -80,6 +81,41 @@ profilesRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const profile = await getMemberProfile(req.user.id);
     const body: ApiResponse<typeof profile> = { success: true, data: profile };
+    res.json(body);
+  }),
+);
+
+// Video upload
+const videoPresignSchema = z.object({
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+});
+
+profilesRouter.post(
+  '/video/presign',
+  validate(videoPresignSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await presignVideoUpload(req.user.id, req.body.contentType, req.body.sizeBytes);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+const videoConfirmSchema = z.object({
+  videoUrl: z.string().url(),
+  videoKey: z.string().min(1),
+  durationSec: z.number().int().positive().optional(),
+  demo: z.boolean().optional(),
+});
+
+profilesRouter.post(
+  '/video/confirm',
+  validate(videoConfirmSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await confirmVideoUpload(req.user.id, req.body);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );

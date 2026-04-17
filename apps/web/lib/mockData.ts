@@ -357,6 +357,97 @@ export const MOCK_LISTINGS: MockListing[] = [
   },
 ];
 
+const mockMemberProfile = (biz: string, ind: string, headline: string, city = 'St. Louis') => ({
+  businessName: biz,
+  industry: ind,
+  headline,
+  videoUrl: null as string | null,
+  city,
+  state: 'MO',
+});
+
+export const MOCK_AI_SUGGESTIONS = [
+  {
+    id: 'intro-1',
+    reason:
+      'Sarah works in Real Estate — an industry you want to connect with. She can refer clients to your business, and you can send her business.',
+    matchScore: '82',
+    status: 'suggested',
+    createdAt: isoDaysAgo(1),
+    sender: {
+      id: 'demo-user',
+      firstName: 'Demo',
+      lastName: 'Owner',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile('Demo Business', 'Consulting', 'AI referral demo'),
+    },
+    target: {
+      id: 'user-sarah',
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile(
+        'Johnson Realty Group',
+        'Real Estate',
+        '5th-generation St. Louis realtor — 200+ closings since 2018.',
+      ),
+    },
+  },
+  {
+    id: 'intro-2',
+    reason:
+      'Daniel is an Accountant looking for someone in your industry. He regularly refers clients to Insurance and Consulting businesses.',
+    matchScore: '71',
+    status: 'suggested',
+    createdAt: isoDaysAgo(1),
+    sender: {
+      id: 'demo-user',
+      firstName: 'Demo',
+      lastName: 'Owner',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile('Demo Business', 'Consulting', 'AI referral demo'),
+    },
+    target: {
+      id: 'user-daniel',
+      firstName: 'Daniel',
+      lastName: 'Reyes',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile(
+        'Two Rivers CPA',
+        'Accounting / CPA',
+        'Small-business CPA — bookkeeping, taxes, payroll under one roof.',
+        'Clayton',
+      ),
+    },
+  },
+  {
+    id: 'intro-3',
+    reason:
+      'Maya plans weddings and is looking for vendors to expand her referral network. Based in your city.',
+    matchScore: '64',
+    status: 'requested',
+    createdAt: isoDaysAgo(3),
+    sender: {
+      id: 'user-maya',
+      firstName: 'Maya',
+      lastName: 'Patel',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile(
+        'Stonegate Wedding Planning',
+        'Wedding Planning',
+        'Boutique wedding planning — 80+ weddings.',
+      ),
+    },
+    target: {
+      id: 'demo-user',
+      firstName: 'Demo',
+      lastName: 'Owner',
+      avatarUrl: null,
+      memberProfile: mockMemberProfile('Demo Business', 'Consulting', 'AI referral demo'),
+    },
+  },
+];
+
 export const MOCK_GROUPS = [
   {
     id: 'grp-1',
@@ -589,6 +680,45 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url.startsWith('/api/v1/listings/')) {
       const slug = url.replace('/api/v1/listings/', '');
       return MOCK_LISTINGS.find((l) => l.slug === slug) ?? MOCK_LISTINGS[0];
+    }
+    if (url === '/api/v1/ai/suggestions') {
+      return MOCK_AI_SUGGESTIONS;
+    }
+    if (url === '/api/v1/ai/matches') {
+      return MOCK_AI_SUGGESTIONS.map((s) => ({
+        targetUserId: s.target.id,
+        score: Number(s.matchScore),
+        reason: s.reason,
+        factors: {},
+      }));
+    }
+    if (url === '/api/v1/ai/history') {
+      return [];
+    }
+    if (url === '/api/v1/profiles/me') {
+      return {
+        id: 'profile-demo',
+        userId: 'demo-user',
+        businessName: 'Demo Business',
+        industry: 'Consulting',
+        headline: 'AI-powered referral network demo',
+        keywords: ['consulting', 'networking'],
+        servicesOffered: ['Business consulting'],
+        icpIndustries: ['real estate', 'insurance'],
+        icpRoles: ['agent', 'broker'],
+        icpProblems: [],
+        canReferIndustries: ['accounting', 'law'],
+        canReferTypes: ['Small business owners'],
+        videoUrl: null,
+        city: 'St. Louis',
+        state: 'MO',
+        zipCode: '63108',
+        createdAt: isoDaysAgo(30),
+        updatedAt: isoDaysAgo(2),
+      };
+    }
+    if (url === '/api/v1/profiles/search') {
+      return [];
     }
     if (url === '/api/v1/dashboard/metrics') {
       return MOCK_DASHBOARD_METRICS;
