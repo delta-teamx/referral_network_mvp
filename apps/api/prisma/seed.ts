@@ -480,7 +480,8 @@ async function main() {
 
   // ---- Demo accounts with passwords (for local testing) ----------------------
   // Lazily import bcrypt so seed works whether or not the user ran a full build.
-  const bcrypt = await import('bcryptjs');
+  const bcryptMod = await import('bcryptjs');
+  const bcrypt = bcryptMod.default ?? bcryptMod;
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 
   console.log('[seed] creating demo admin account');
