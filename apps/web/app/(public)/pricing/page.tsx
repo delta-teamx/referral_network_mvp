@@ -93,7 +93,7 @@ export default function PricingPage() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="mb-12 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Pricing</p>
-          <h1 className="mt-2 text-4xl font-bold text-gray-900">
+          <h1 className="mt-2 text-3xl font-bold text-gray-900 md:text-4xl">
             Start free. Upgrade when referrals start rolling in.
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">

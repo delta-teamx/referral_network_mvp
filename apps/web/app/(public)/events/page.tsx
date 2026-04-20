@@ -76,7 +76,7 @@ export default function EventsPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
             Live networking
           </p>
-          <h1 className="mt-1 text-3xl font-bold text-gray-900">
+          <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
             Scheduled Zoom networking events
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600">

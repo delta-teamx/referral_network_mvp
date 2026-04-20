@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
+import { MobileNav } from '../../../components/layout/MobileNav';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -100,7 +101,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
         {children}
+        <div className="h-16 md:hidden" aria-hidden />
       </main>
+      <MobileNav />
     </div>
   );
 }

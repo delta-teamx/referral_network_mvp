@@ -73,7 +73,7 @@ export default function AdminBookingsPage() {
           <p>No bookings yet.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900">
+        <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-gray-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-800/50 text-left text-xs uppercase tracking-wider text-gray-400">
