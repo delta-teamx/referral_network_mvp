@@ -70,6 +70,11 @@ const envSchema = z.object({
   // Maps — Branch 3
   GOOGLE_MAPS_API_KEY: z.string().optional(),
 
+  // Zoom (Server-to-Server OAuth)
+  ZOOM_ACCOUNT_ID: z.string().optional(),
+  ZOOM_CLIENT_ID: z.string().optional(),
+  ZOOM_CLIENT_SECRET: z.string().optional(),
+
   // Observability
   SENTRY_DSN: z.string().optional(),
 });

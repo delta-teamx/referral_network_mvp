@@ -30,6 +30,18 @@ export function TopNav() {
         </Link>
 
         <nav className="flex items-center gap-3">
+          <Link
+            href="/events"
+            className="hidden rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 sm:inline"
+          >
+            Events
+          </Link>
+          <Link
+            href="/search"
+            className="hidden rounded-md px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 sm:inline"
+          >
+            Directory
+          </Link>
           {status === 'authenticated' && user ? (
             <>
               <NotificationBell />

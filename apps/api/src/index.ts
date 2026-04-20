@@ -26,6 +26,8 @@ import { stripeWebhookHandler } from './domains/billing/billing.webhook.js';
 import { adminRouter } from './domains/admin/admin.routes.js';
 import { notificationsRouter } from './domains/core/notifications/notifications.routes.js';
 import { messagingRouter } from './domains/network/messaging/messaging.routes.js';
+import { bookingsRouter } from './domains/network/bookings/bookings.routes.js';
+import { eventsRouter } from './domains/network/events/events.routes.js';
 import { eventBus } from './domains/core/events/index.js';
 import { registerOnboardingSubscribers } from './domains/core/onboarding/onboarding.subscribers.js';
 import { registerNotificationSubscribers } from './domains/core/notifications/notifications.subscribers.js';
@@ -113,6 +115,8 @@ app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/messages', messagingRouter);
+app.use('/api/v1/bookings', bookingsRouter);
+app.use('/api/v1/events', eventsRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.

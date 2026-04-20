@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Briefcase, Film, HandCoins, MapPin } from 'lucide-react';
+import { Briefcase, Calendar, Film, HandCoins, MapPin } from 'lucide-react';
 import { fadeInUp } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
+import { useAuthStore } from '../../../stores/auth';
+import { BookingModal } from '../../../components/booking/BookingModal';
 
 interface PublicProfile {
   id: string;
@@ -23,6 +25,7 @@ interface PublicProfile {
   barterWants: string[];
   barterNotes: string | null;
   user: {
+    id: string;
     firstName: string;
     lastName: string;
     avatarUrl: string | null;
@@ -35,6 +38,8 @@ function MemberProfileInner() {
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (!id) {
@@ -119,7 +124,34 @@ function MemberProfileInner() {
               {[profile.city, profile.state].filter(Boolean).join(', ')}
             </p>
           )}
+          {user && user.id !== profile.user.id && (
+            <div className="mt-4">
+              <button
+                onClick={() => setBookingOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-lg shadow-black/10 transition hover:bg-white/90"
+              >
+                <Calendar size={14} /> Book a call with {profile.user.firstName}
+              </button>
+            </div>
+          )}
+          {!user && (
+            <div className="mt-4">
+              <a
+                href={`/login?next=/members?id=${profile.id}`}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-lg shadow-black/10 transition hover:bg-white/90"
+              >
+                <Calendar size={14} /> Log in to book a call
+              </a>
+            </div>
+          )}
         </div>
+
+        <BookingModal
+          hostUserId={profile.user.id}
+          hostName={`${profile.user.firstName} ${profile.user.lastName}`}
+          open={bookingOpen}
+          onClose={() => setBookingOpen(false)}
+        />
 
         {/* Body */}
         <div className="space-y-6 p-8">

@@ -4,11 +4,23 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BarChart3, Inbox, LayoutDashboard, MessageSquare, Network, Store, Users } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  Clock,
+  Inbox,
+  LayoutDashboard,
+  MessageSquare,
+  Network,
+  Store,
+  Users,
+} from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/dashboard/availability', label: 'Availability', icon: Clock },
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/listing', label: 'My listing', icon: Store },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },

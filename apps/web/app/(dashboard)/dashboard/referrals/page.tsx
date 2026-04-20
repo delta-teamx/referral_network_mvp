@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownLeft, ArrowUpRight, Check, UserCheck, XCircle } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Check, UserCheck, Video, XCircle } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
@@ -205,6 +205,26 @@ export default function ReferralsPage() {
                   >
                     <XCircle size={13} /> Decline
                   </button>
+                </div>
+              )}
+              {/* After-accept CTAs: book a call with the peer or join next event */}
+              {r.status === 'ACCEPTED' && (
+                <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
+                  <p className="flex-1 text-xs font-medium text-blue-900">
+                    Next step: meet live to close this referral faster.
+                  </p>
+                  <Link
+                    href={`/members?id=${tab === 'received' ? r.sender.id : r.receiver.id}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
+                  >
+                    <Calendar size={12} /> Book a call
+                  </Link>
+                  <Link
+                    href="/events"
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 hover:border-primary"
+                  >
+                    <Video size={12} /> Join networking event
+                  </Link>
                 </div>
               )}
             </motion.li>

@@ -115,6 +115,10 @@ model User {
   sentMessages           Message[] @relation("MessageSender")
   introsSent             Introduction[]     @relation("IntroSender")
   introsReceived         Introduction[]     @relation("IntroTarget")
+  availability           Availability[]     @relation("UserAvailability")
+  bookingsAsHost         BookingCall[]      @relation("BookingHost")
+  bookingsAsGuest        BookingCall[]      @relation("BookingGuest")
+  eventRegistrations     EventRegistration[] @relation("EventRegUser")
 
   @@index([email])
   @@index([role])
@@ -655,4 +659,84 @@ model OnboardingProgress {
   completedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==================== BOOKING + NETWORKING EVENTS ====================
+
+/// Weekly availability windows. Each row = one slot, e.g. Monday 09:00-12:00.
+/// getAvailableSlots() expands these into concrete time slots per day,
+/// subtracting any existing BookingCall rows that overlap.
+model Availability {
+  id        String   @id @default(uuid())
+  userId    String
+  dayOfWeek Int      // 0 = Sunday, 6 = Saturday
+  startMin  Int      // Minutes since midnight (e.g. 9*60 = 540)
+  endMin    Int      // Exclusive (e.g. 17*60 = 1020)
+  timezone  String   @default("America/Chicago")
+  createdAt DateTime @default(now())
+
+  user User @relation("UserAvailability", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// A 1-on-1 booked call between two members (host = the one being booked).
+model BookingCall {
+  id          String   @id @default(uuid())
+  hostId      String   // Who was booked (owner of the profile)
+  guestId    String   // Who requested the call
+  reason      String   // "referral" | "partnership" | "service_inquiry" | "general_intro"
+  notes       String?
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String   @default("confirmed") // confirmed, canceled, completed, no_show
+  zoomUrl     String?
+  zoomMeetingId String?
+  createdAt   DateTime @default(now())
+  canceledAt  DateTime?
+
+  host  User @relation("BookingHost", fields: [hostId], references: [id])
+  guest User @relation("BookingGuest", fields: [guestId], references: [id])
+
+  @@index([hostId, startsAt])
+  @@index([guestId, startsAt])
+  @@index([status])
+}
+
+/// Admin-managed recurring / one-off Zoom networking sessions.
+/// e.g. "Tuesday Morning Referrals", "Monthly Expert Panel".
+model NetworkingEvent {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  startsAt    DateTime
+  durationMin Int      @default(60)
+  zoomUrl     String?
+  zoomMeetingId String?
+  maxAttendees Int     @default(100)
+  status      String   @default("scheduled") // scheduled, live, completed, canceled
+  isRecurring Boolean  @default(false)
+  recurrenceRule String? // RFC 5545-ish, e.g. "FREQ=WEEKLY;BYDAY=TU"
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations EventRegistration[]
+
+  @@index([startsAt])
+  @@index([status, startsAt])
+}
+
+/// A member registered for a NetworkingEvent.
+model EventRegistration {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event NetworkingEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User            @relation("EventRegUser", fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([userId])
 }

@@ -17,12 +17,21 @@ export type EmailTemplate =
   | 'welcome'
   | 'invitation'
   | 'lead_received'
-  | 'referral_received';
+  | 'referral_received'
+  | 'booking_confirmed'
+  | 'event_registered';
+
+export interface EmailAttachment {
+  filename: string;
+  content: string; // base64 or plain
+  contentType: string;
+}
 
 export interface EmailRequest {
   to: string;
   template: EmailTemplate;
   data: Record<string, unknown>;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailProvider {
@@ -93,6 +102,31 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
           `<p><strong>${d.senderName ?? 'A peer'}</strong> sent you a client referral.</p><p><strong>Client:</strong> ${d.clientName ?? '—'}<br><strong>Notes:</strong> ${d.notes ?? '—'}</p>${cta('View referral', String(d.referralUrl))}`,
         ),
       };
+    case 'booking_confirmed':
+      return {
+        subject: `Call confirmed: ${d.withName ?? 'your booking'} on ${d.whenLabel ?? ''}`,
+        text: `Your call with ${d.withName} is confirmed for ${d.whenLabel}. Join via Zoom: ${d.zoomUrl}`,
+        html: basicLayout(
+          'Call confirmed',
+          `<p>Your call with <strong>${d.withName ?? ''}</strong> is confirmed.</p>
+           <p><strong>When:</strong> ${d.whenLabel ?? ''}<br>
+           <strong>Reason:</strong> ${d.reason ?? ''}</p>
+           ${d.notes ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.notes))}</blockquote>` : ''}
+           ${cta('Join Zoom meeting', String(d.zoomUrl ?? '#'))}
+           <p style="color:#888;font-size:12px">A calendar invite is attached — open it to add this to your calendar.</p>`,
+        ),
+      };
+    case 'event_registered':
+      return {
+        subject: `Registered: ${d.title}`,
+        text: `You\u2019re registered for ${d.title} on ${d.whenLabel}. Zoom: ${d.zoomUrl}`,
+        html: basicLayout(
+          `You\u2019re in`,
+          `<p>You\u2019re registered for <strong>${d.title ?? ''}</strong>.</p>
+           <p><strong>When:</strong> ${d.whenLabel ?? ''}</p>
+           ${cta('Add to calendar & Zoom link', String(d.eventUrl ?? '#'))}`,
+        ),
+      };
   }
 }
 
@@ -143,12 +177,19 @@ class SendGridEmailProvider implements EmailProvider {
 
   async send(req: EmailRequest): Promise<void> {
     const r = renderTemplate(req);
+    const attachments = (req.attachments ?? []).map((a) => ({
+      content: Buffer.from(a.content).toString('base64'),
+      filename: a.filename,
+      type: a.contentType,
+      disposition: 'attachment' as const,
+    }));
     await this.client.send({
       to: req.to,
       from: env.EMAIL_FROM,
       subject: r.subject,
       text: r.text,
       html: r.html,
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
     // eslint-disable-next-line no-console
     console.log(`[email:sendgrid] sent "${r.subject}" to ${req.to}`);

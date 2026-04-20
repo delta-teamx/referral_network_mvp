@@ -81,9 +81,13 @@ export async function getMemberProfile(userId: string) {
   return profile;
 }
 
-export async function getPublicProfile(profileId: string) {
-  const profile = await prisma.memberProfile.findUnique({
-    where: { id: profileId },
+export async function getPublicProfile(idOrUserId: string) {
+  // Accept either a MemberProfile.id or a User.id — lets the frontend link
+  // to profiles without needing the profile ID.
+  const profile = await prisma.memberProfile.findFirst({
+    where: {
+      OR: [{ id: idOrUserId }, { userId: idOrUserId }],
+    },
     select: {
       ...profileSelect,
       user: {

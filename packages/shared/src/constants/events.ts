@@ -66,6 +66,16 @@ export interface DomainEventMap {
   'subscription.canceled': { userId: string };
   'subscription.payment_failed': { userId: string };
 
+  // Bookings
+  'booking.created': { bookingId: string; hostId: string; guestId: string };
+  'booking.canceled': { bookingId: string };
+  'booking.reminder_due': { bookingId: string };
+
+  // Networking events
+  'networking_event.created': { eventId: string };
+  'networking_event.registered': { eventId: string; userId: string };
+  'networking_event.starting_soon': { eventId: string };
+
   // Admin moderation
   'admin.user_role_changed': { adminId: string; userId: string; role: string };
   'admin.user_suspended': { adminId: string; userId: string; reason: string };

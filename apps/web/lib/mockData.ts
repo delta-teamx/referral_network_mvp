@@ -451,6 +451,78 @@ export const MOCK_AI_SUGGESTIONS = [
   },
 ];
 
+export const MOCK_EVENTS = [
+  {
+    id: 'evt-1',
+    title: 'Tuesday Morning Referrals',
+    description:
+      'Weekly 60-minute Zoom for pros to swap warm leads. Bring one referral-ready client you want to find a match for.',
+    startsAt: new Date(Date.now() + 2 * 86400_000).toISOString(),
+    durationMin: 60,
+    zoomUrl: 'https://zoom.us/j/1234567890?pwd=demo',
+    maxAttendees: 50,
+    status: 'scheduled',
+    isRecurring: true,
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+    _count: { registrations: 18 },
+  },
+  {
+    id: 'evt-2',
+    title: 'Expert Panel: Closing Referral Loops',
+    description:
+      '3 top-earning members share exactly how they convert intros into closed deals. Live Q&A at the end.',
+    startsAt: new Date(Date.now() + 9 * 86400_000).toISOString(),
+    durationMin: 75,
+    zoomUrl: 'https://zoom.us/j/1234567891?pwd=demo',
+    maxAttendees: 100,
+    status: 'scheduled',
+    isRecurring: false,
+    recurrenceRule: null,
+    _count: { registrations: 42 },
+  },
+  {
+    id: 'evt-3',
+    title: 'STL Wedding Vendors Meetup',
+    description: 'Planners, photographers, caterers, florists — monthly virtual coffee.',
+    startsAt: new Date(Date.now() + 14 * 86400_000).toISOString(),
+    durationMin: 45,
+    zoomUrl: 'https://zoom.us/j/1234567892?pwd=demo',
+    maxAttendees: 30,
+    status: 'scheduled',
+    isRecurring: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH',
+    _count: { registrations: 12 },
+  },
+];
+
+export const MOCK_BOOKINGS = [
+  {
+    id: 'bk-1',
+    reason: 'referral',
+    notes: 'Have a client looking for a roofer — want to see if you\u2019re a fit.',
+    startsAt: new Date(Date.now() + 2 * 86400_000 + 10 * 3600_000).toISOString(),
+    endsAt: new Date(Date.now() + 2 * 86400_000 + 10.5 * 3600_000).toISOString(),
+    status: 'confirmed',
+    zoomUrl: 'https://zoom.us/j/9876543210?pwd=demo',
+    zoomMeetingId: '9876543210',
+    createdAt: isoDaysAgo(1),
+    host: {
+      id: 'demo-user',
+      firstName: 'Demo',
+      lastName: 'Owner',
+      email: 'demo@referralnetworkusa.app',
+      memberProfile: { businessName: 'Demo Business', industry: 'Consulting' },
+    },
+    guest: {
+      id: 'user-sarah',
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      email: 'sarah@johnsonrealty.com',
+      memberProfile: { businessName: 'Johnson Realty Group', industry: 'Real Estate' },
+    },
+  },
+];
+
 export const MOCK_GROUPS = [
   {
     id: 'grp-1',
@@ -764,6 +836,39 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url === '/api/v1/groups' || url === '/api/v1/groups/mine') {
       return MOCK_GROUPS;
+    }
+    if (url === '/api/v1/events/upcoming') {
+      return MOCK_EVENTS;
+    }
+    if (url === '/api/v1/events/me/registrations') {
+      return [];
+    }
+    if (url === '/api/v1/events/admin/all') {
+      return MOCK_EVENTS;
+    }
+    if (url === '/api/v1/bookings/mine' || url.startsWith('/api/v1/bookings/mine?')) {
+      return MOCK_BOOKINGS;
+    }
+    if (url === '/api/v1/bookings/my-availability') {
+      return [
+        { id: 'a1', dayOfWeek: 1, startMin: 9 * 60, endMin: 12 * 60 },
+        { id: 'a2', dayOfWeek: 3, startMin: 14 * 60, endMin: 17 * 60 },
+      ];
+    }
+    if (url.startsWith('/api/v1/bookings/availability/')) {
+      const slots: Array<{ startsAt: string; endsAt: string }> = [];
+      const base = new Date();
+      base.setHours(10, 0, 0, 0);
+      for (let d = 1; d <= 5; d++) {
+        for (let t = 0; t < 6; t++) {
+          const s = new Date(base.getTime() + d * 86400_000 + t * 30 * 60_000);
+          slots.push({
+            startsAt: s.toISOString(),
+            endsAt: new Date(s.getTime() + 30 * 60_000).toISOString(),
+          });
+        }
+      }
+      return slots;
     }
     if (url === '/api/v1/billing/plans') {
       return [
