@@ -510,7 +510,7 @@ export const MOCK_BOOKINGS = [
       id: 'demo-user',
       firstName: 'Demo',
       lastName: 'Owner',
-      email: 'demo@referralnetworkusa.app',
+      email: 'demo@virtualprosnetwork.app',
       memberProfile: { businessName: 'Demo Business', industry: 'Consulting' },
     },
     guest: {
@@ -693,7 +693,7 @@ export const MOCK_DASHBOARD_METRICS = {
     id: 'demo-user',
     firstName: 'Demo',
     lastName: 'Owner',
-    email: 'demo@referralnetworkusa.app',
+    email: 'demo@virtualprosnetwork.app',
     role: 'ADMIN',
     subscriptionTier: 'PRO',
   },

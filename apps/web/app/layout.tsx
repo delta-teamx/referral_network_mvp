@@ -5,7 +5,7 @@ import { Footer } from '../components/layout/Footer';
 import { TopNav } from '../components/layout/TopNav';
 import './globals.css';
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'ReferralNetworkUSA';
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'VirtualProsNetwork';
 
 export const metadata: Metadata = {
   title: {

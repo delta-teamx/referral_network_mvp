@@ -5,7 +5,7 @@
   "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_APP_NAME": "ReferralNetworkUSA"
+    "NEXT_PUBLIC_APP_NAME": "VirtualProsNetwork"
   },
   "build": {
     "env": {

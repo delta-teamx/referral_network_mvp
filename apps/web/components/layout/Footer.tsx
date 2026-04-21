@@ -46,7 +46,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
             <Link href="/" className="text-lg font-semibold text-white">
-              ReferralNetworkUSA
+              VirtualProsNetwork
             </Link>
             <p className="mt-3 text-sm text-gray-400">
               A new kind of referral network — life-event matching, verified trust scores, real B2B
@@ -74,7 +74,7 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-gray-800 pt-6 text-xs text-gray-500 md:flex-row">
-          <p>© {new Date().getFullYear()} ReferralNetworkUSA. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
           <p>Made in St. Louis for small businesses everywhere.</p>
         </div>
       </div>

@@ -35,7 +35,7 @@ services:
       - key: PORT
         value: 10000
       - key: APP_NAME
-        value: ReferralNetworkUSA
+        value: VirtualProsNetwork
       - key: DATABASE_URL
         fromDatabase:
           name: refnet-db
@@ -54,7 +54,7 @@ services:
       - key: JWT_REFRESH_TTL
         value: 30d
       - key: EMAIL_FROM
-        value: noreply@referralnetworkusa.com
+        value: noreply@virtualprosnetwork.com
       # Unused on free deploy — keep schema happy.
       - key: REDIS_URL
         value: redis://localhost:6379

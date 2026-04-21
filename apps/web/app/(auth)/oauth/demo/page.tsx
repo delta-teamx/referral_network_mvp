@@ -18,7 +18,7 @@ export default function OAuthDemoPage() {
     setAuth(
       {
         id: 'demo-google-user',
-        email: 'demo.google@referralnetworkusa.app',
+        email: 'demo.google@virtualprosnetwork.app',
         firstName: 'Demo',
         lastName: 'Google',
         role: 'BUSINESS_OWNER',

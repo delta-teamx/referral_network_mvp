@@ -16,7 +16,7 @@ export function AuthShell({ title, subtitle, footer, children }: Props) {
           href="/"
           className="mb-6 block text-center text-xs font-medium uppercase tracking-wider text-primary"
         >
-          ReferralNetworkUSA
+          VirtualProsNetwork
         </Link>
         <h1 className="mb-2 text-center text-2xl font-bold text-gray-900">{title}</h1>
         {subtitle && <p className="mb-6 text-center text-sm text-gray-600">{subtitle}</p>}

@@ -79,13 +79,13 @@ export async function sendSms(req: SmsRequest): Promise<void> {
 }
 
 export function formatIntroSms(senderName: string, targetName: string, reason: string): string {
-  return `${senderName} wants to connect with you on ReferralNetworkUSA: "${reason.slice(0, 100)}". Log in to respond.`;
+  return `${senderName} wants to connect with you on VirtualProsNetwork: "${reason.slice(0, 100)}". Log in to respond.`;
 }
 
 export function formatLeadSms(eventType: string): string {
-  return `New ${eventType} lead on ReferralNetworkUSA. Log in to view details and respond.`;
+  return `New ${eventType} lead on VirtualProsNetwork. Log in to view details and respond.`;
 }
 
 export function formatReferralSms(senderName: string): string {
-  return `${senderName} sent you a client referral on ReferralNetworkUSA. Log in to accept.`;
+  return `${senderName} sent you a client referral on VirtualProsNetwork. Log in to accept.`;
 }

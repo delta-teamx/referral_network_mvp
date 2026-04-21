@@ -5,8 +5,8 @@ Three services to wire up. Total time: ~20 minutes. Total cost: ~$5/mo + domain.
 ## Architecture
 
 ```
-yourdomain.com               → Vercel (Next.js frontend)
-api.yourdomain.com           → Railway (Express API)
+virtualprosnetwork.com               → Vercel (Next.js frontend)
+api.virtualprosnetwork.com           → Railway (Express API)
 supabase.co                  → Supabase (Postgres + Storage + Auth)
 ```
 
@@ -29,7 +29,7 @@ supabase.co                  → Supabase (Postgres + Storage + Auth)
 # ---- Core ----
 NODE_ENV=production
 PORT=3001
-APP_NAME=ReferralNetworkUSA
+APP_NAME=VirtualProsNetwork
 
 # ---- Database ----
 DATABASE_URL=[paste Supabase connection string]
@@ -41,12 +41,12 @@ JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=30d
 
 # ---- CORS (comma-separated) ----
-FRONTEND_URL=https://yourdomain.com,https://www.yourdomain.com
-API_URL=https://api.yourdomain.com
+FRONTEND_URL=https://virtualprosnetwork.com,https://www.virtualprosnetwork.com
+API_URL=https://api.virtualprosnetwork.com
 
 # ---- Email (optional; console fallback if unset) ----
 SENDGRID_API_KEY=
-EMAIL_FROM=noreply@yourdomain.com
+EMAIL_FROM=noreply@virtualprosnetwork.com
 
 # ---- Stripe (optional; demo checkout if unset) ----
 STRIPE_SECRET_KEY=
@@ -71,12 +71,12 @@ OPENAI_API_KEY=
 # ---- Google OAuth (optional) ----
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=https://api.yourdomain.com/api/v1/auth/oauth/google/callback
+GOOGLE_CALLBACK_URL=https://api.virtualprosnetwork.com/api/v1/auth/oauth/google/callback
 
 # ---- Facebook OAuth (optional) ----
 FACEBOOK_CLIENT_ID=
 FACEBOOK_CLIENT_SECRET=
-FACEBOOK_CALLBACK_URL=https://api.yourdomain.com/api/v1/auth/oauth/facebook/callback
+FACEBOOK_CALLBACK_URL=https://api.virtualprosnetwork.com/api/v1/auth/oauth/facebook/callback
 
 # ---- SMS (optional) ----
 TWILIO_ACCOUNT_SID=
@@ -93,7 +93,7 @@ ELASTICSEARCH_URL=
 
 4. Deploy. Railway runs `prisma migrate deploy` then `pnpm start`.
 5. Once healthy, hit `/api/v1/health` in the generated `*.up.railway.app` URL — should return `{success:true}`.
-6. **Settings → Networking → Custom Domain** → add `api.yourdomain.com` and follow the CNAME instructions at your registrar.
+6. **Settings → Networking → Custom Domain** → add `api.virtualprosnetwork.com` and follow the CNAME instructions at your registrar.
 
 ## 3. Frontend — Vercel (free)
 
@@ -105,11 +105,11 @@ ELASTICSEARCH_URL=
    - Output directory: `.next`
 3. **Environment Variables**:
    ```
-   NEXT_PUBLIC_API_URL   = https://api.yourdomain.com
-   NEXT_PUBLIC_APP_NAME  = ReferralNetworkUSA
+   NEXT_PUBLIC_API_URL   = https://api.virtualprosnetwork.com
+   NEXT_PUBLIC_APP_NAME  = VirtualProsNetwork
    ```
 4. Deploy. Get the `*.vercel.app` URL.
-5. **Project Settings → Domains** → add `yourdomain.com` + `www.yourdomain.com` → follow DNS steps at your registrar.
+5. **Project Settings → Domains** → add `virtualprosnetwork.com` + `www.virtualprosnetwork.com` → follow DNS steps at your registrar.
 6. Vercel auto-issues SSL certs.
 
 ## 4. Seed demo data (optional, one-time)
@@ -125,8 +125,8 @@ This creates the admin account + demo members so you can log in immediately.
 
 ## 5. Verify end-to-end
 
-1. Open `https://yourdomain.com` → homepage loads
-2. Log in with `admin@referralnetworkusa.app` / `Admin123!`
+1. Open `https://virtualprosnetwork.com` → homepage loads
+2. Log in with `admin@virtualprosnetwork.app` / `Admin123!`
 3. Dashboard loads → AI suggestions feed shows
 4. `/admin/events` → create a test event (Zoom link auto-generated — demo URL unless Zoom is configured)
 5. `/members?id=<any-user-id>` → click "Book a call" → pick slot → confirm → see booking in `/dashboard/bookings`

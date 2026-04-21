@@ -31,11 +31,11 @@ export function generateIcs(event: IcsEvent): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//ReferralNetworkUSA//Booking//EN',
+    'PRODID:-//VirtualProsNetwork//Booking//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'BEGIN:VEVENT',
-    `UID:${event.uid}@referralnetworkusa.app`,
+    `UID:${event.uid}@virtualprosnetwork.app`,
     `DTSTAMP:${now}`,
     `DTSTART:${fmtDateUtc(event.startsAt)}`,
     `DTEND:${fmtDateUtc(event.endsAt)}`,

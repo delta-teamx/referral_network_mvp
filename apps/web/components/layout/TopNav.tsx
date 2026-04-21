@@ -26,7 +26,7 @@ export function TopNav() {
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <Link href="/" className="text-sm font-semibold text-primary">
-          ReferralNetworkUSA
+          VirtualProsNetwork
         </Link>
 
         <nav className="flex items-center gap-3">

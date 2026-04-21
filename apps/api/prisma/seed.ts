@@ -376,9 +376,9 @@ async function main() {
 
   console.log('[seed] ensuring demo business owner');
   const owner = await prisma.user.upsert({
-    where: { email: 'demo-owner@referralnetworkusa.local' },
+    where: { email: 'demo-owner@virtualprosnetwork.local' },
     create: {
-      email: 'demo-owner@referralnetworkusa.local',
+      email: 'demo-owner@virtualprosnetwork.local',
       firstName: 'Demo',
       lastName: 'Owner',
       role: 'BUSINESS_OWNER',
@@ -486,9 +486,9 @@ async function main() {
 
   console.log('[seed] creating demo admin account');
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@referralnetworkusa.app' },
+    where: { email: 'admin@virtualprosnetwork.app' },
     create: {
-      email: 'admin@referralnetworkusa.app',
+      email: 'admin@virtualprosnetwork.app',
       passwordHash: hash('Admin123!'),
       firstName: 'Platform',
       lastName: 'Admin',
@@ -498,7 +498,7 @@ async function main() {
     },
     update: {},
   });
-  console.log(`  admin id=${admin.id} email=admin@referralnetworkusa.app pw=Admin123!`);
+  console.log(`  admin id=${admin.id} email=admin@virtualprosnetwork.app pw=Admin123!`);
 
   console.log('[seed] creating demo member accounts + profiles');
   const members = [
@@ -645,7 +645,7 @@ async function main() {
   console.log('[seed] all done!');
   console.log('');
   console.log('=== Demo Accounts ===');
-  console.log('Admin:   admin@referralnetworkusa.app / Admin123!');
+  console.log('Admin:   admin@virtualprosnetwork.app / Admin123!');
   console.log('Sarah:   sarah@johnsonrealty.com / Sarah123!');
   console.log('Daniel:  daniel@tworiverscpa.com / Daniel123!');
   console.log('Maya:    maya@stonegateweddings.com / Maya1234!');

@@ -12,7 +12,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
-  APP_NAME: z.string().default('ReferralNetworkUSA'),
+  APP_NAME: z.string().default('VirtualProsNetwork'),
   // Comma-separated list of allowed frontend origins (for CORS + cookie domain).
   // Single URL works too; splitting happens in index.ts.
   FRONTEND_URL: z
@@ -59,7 +59,7 @@ const envSchema = z.object({
   AWS_S3_BUCKET: z.string().optional(),
 
   // Email — Branch 2
-  EMAIL_FROM: z.string().email().default('noreply@referralnetworkusa.com'),
+  EMAIL_FROM: z.string().email().default('noreply@virtualprosnetwork.com'),
   SENDGRID_API_KEY: z.string().optional(),
 
   // SMS — Branch 3/4

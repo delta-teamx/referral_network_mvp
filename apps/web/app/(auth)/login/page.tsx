@@ -48,7 +48,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your ReferralNetworkUSA account"
+      subtitle="Sign in to your VirtualProsNetwork account"
       footer={
         <>
           Need an account?{' '}
