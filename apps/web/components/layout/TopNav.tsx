@@ -28,11 +28,9 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-gray-900">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white text-xs font-black">
-            VP
-          </div>
-          <span className="hidden sm:inline">VirtualProsNetwork</span>
+        <Link href="/" className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
+          <span>Virtual<span className="text-primary">Pros</span></span>
+          <span className="hidden sm:inline">Network</span>
         </Link>
 
         {/* Desktop nav */}

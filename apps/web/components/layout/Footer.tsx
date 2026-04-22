@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Network, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 const LINK_GROUPS = [
   {
@@ -43,26 +43,28 @@ export function Footer() {
   return (
     <footer className="bg-gray-950 px-6 py-16 text-gray-300">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 md:grid-cols-5">
-          <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white text-xs font-black">
-                VP
-              </div>
-              <span className="text-lg font-bold text-white">VirtualProsNetwork</span>
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
+          {/* Brand column */}
+          <div className="sm:col-span-2 md:col-span-1">
+            <Link href="/" className="inline-block">
+              <span className="text-lg font-bold text-white">
+                Virtual<span className="text-primary">Pros</span>Network
+              </span>
             </Link>
-            <p className="mt-4 text-sm text-gray-400">
-              AI-powered referral networking. Stop relying on memory — our engine makes the
-              right introductions automatically.
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
+              AI-powered referral networking. Stop relying on memory — our engine makes the right
+              introductions automatically.
             </p>
             <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
               <Sparkles size={12} className="text-primary" />
               Powered by AI matching
             </div>
           </div>
+
+          {/* Link columns */}
           {LINK_GROUPS.map((g) => (
             <div key={g.heading}>
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
+              <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 {g.heading}
               </h3>
               <ul className="space-y-2.5">
@@ -85,9 +87,15 @@ export function Footer() {
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <p>&copy; {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
             <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-gray-300">Privacy</Link>
-              <Link href="/terms" className="hover:text-gray-300">Terms</Link>
-              <Link href="/contact" className="hover:text-gray-300">Contact</Link>
+              <Link href="/privacy" className="hover:text-gray-300">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-gray-300">
+                Terms
+              </Link>
+              <Link href="/contact" className="hover:text-gray-300">
+                Contact
+              </Link>
             </div>
           </div>
         </div>

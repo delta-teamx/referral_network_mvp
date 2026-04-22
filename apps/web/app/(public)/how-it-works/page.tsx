@@ -20,7 +20,7 @@ import {
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
-import { fadeInUp, staggerContainer, fadeIn } from '../../../lib/animations';
+import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { useState } from 'react';
 
 /* ------------------------------------------------------------------ */

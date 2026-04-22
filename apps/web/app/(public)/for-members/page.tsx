@@ -16,7 +16,6 @@ import {
   LayoutDashboard,
   Zap,
   Check,
-  X,
   Sparkles,
 } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
