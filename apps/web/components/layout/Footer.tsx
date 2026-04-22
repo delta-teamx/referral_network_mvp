@@ -1,64 +1,71 @@
 import Link from 'next/link';
+import { Network, Sparkles } from 'lucide-react';
 
 const LINK_GROUPS = [
   {
-    heading: 'Network',
+    heading: 'Platform',
     links: [
-      { href: '/search', label: 'Browse directory' },
-      { href: '/connect', label: 'Life-event connector' },
-      { href: '/groups', label: 'Networking groups' },
-      { href: '/donate-labor', label: 'Donate your labor' },
+      { href: '/how-it-works', label: 'How It Works' },
+      { href: '/events', label: 'Networking Events' },
+      { href: '/groups', label: 'Browse Groups' },
+      { href: '/search', label: 'Member Directory' },
     ],
   },
   {
-    heading: 'For businesses',
+    heading: 'For Members',
     links: [
-      { href: '/signup?role=BUSINESS_OWNER', label: 'List your business' },
+      { href: '/signup', label: 'Join free' },
+      { href: '/for-members', label: 'Why join?' },
       { href: '/pricing', label: 'Pricing' },
-      { href: '/trust-score', label: 'How trust score works' },
-      { href: '/invite', label: 'Invite a peer' },
+      { href: '/trust-score', label: 'Trust scores' },
+    ],
+  },
+  {
+    heading: 'For Organizations',
+    links: [
+      { href: '/for-groups', label: 'White-label for groups' },
+      { href: '/for-groups#pricing', label: 'Group pricing' },
+      { href: '/for-groups#demo', label: 'Request a demo' },
     ],
   },
   {
     heading: 'Company',
     links: [
-      { href: '/about', label: 'About' },
-      { href: '/blog', label: 'Blog' },
-      { href: '/press', label: 'Press' },
-      { href: '/careers', label: 'Careers' },
-    ],
-  },
-  {
-    heading: 'Support',
-    links: [
-      { href: '/help', label: 'Help center' },
+      { href: '/about', label: 'About us' },
+      { href: '/privacy', label: 'Privacy policy' },
+      { href: '/terms', label: 'Terms of service' },
       { href: '/contact', label: 'Contact' },
-      { href: '/privacy', label: 'Privacy' },
-      { href: '/terms', label: 'Terms' },
     ],
   },
 ];
 
 export function Footer() {
   return (
-    <footer className="bg-gray-950 px-6 py-14 text-gray-300">
+    <footer className="bg-gray-950 px-6 py-16 text-gray-300">
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-1">
-            <Link href="/" className="text-lg font-semibold text-white">
-              VirtualProsNetwork
+            <Link href="/" className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white text-xs font-black">
+                VP
+              </div>
+              <span className="text-lg font-bold text-white">VirtualProsNetwork</span>
             </Link>
-            <p className="mt-3 text-sm text-gray-400">
-              A new kind of referral network — life-event matching, verified trust scores, real B2B
-              relationships.
+            <p className="mt-4 text-sm text-gray-400">
+              AI-powered referral networking. Stop relying on memory — our engine makes the
+              right introductions automatically.
             </p>
+            <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
+              <Sparkles size={12} className="text-primary" />
+              Powered by AI matching
+            </div>
           </div>
           {LINK_GROUPS.map((g) => (
             <div key={g.heading}>
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
                 {g.heading}
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {g.links.map((l) => (
                   <li key={l.href}>
                     <Link
@@ -73,9 +80,16 @@ export function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-gray-800 pt-6 text-xs text-gray-500 md:flex-row">
-          <p>© {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
-          <p>Made in St. Louis for small businesses everywhere.</p>
+
+        <div className="mt-12 border-t border-gray-800 pt-8">
+          <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
+            <p>&copy; {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
+            <div className="flex gap-6">
+              <Link href="/privacy" className="hover:text-gray-300">Privacy</Link>
+              <Link href="/terms" className="hover:text-gray-300">Terms</Link>
+              <Link href="/contact" className="hover:text-gray-300">Contact</Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

@@ -97,7 +97,12 @@ function SearchInner() {
     <main className="min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-6xl px-6 py-6">
-          <h1 className="mb-4 text-2xl font-bold text-gray-900">Find a pro</h1>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Member directory</p>
+          <h1 className="mb-2 text-2xl font-bold text-gray-900">Browse the network</h1>
+          <p className="mb-4 text-sm text-gray-500">
+            Discover professionals in the VirtualProsNetwork. Every member has a verified profile,
+            AI-matched connections, and booking availability.
+          </p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
