@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../lib/animations';
+import { HeroShowcase } from '../components/home/HeroShowcase';
 
 export default function HomePage() {
   return (
@@ -29,67 +30,78 @@ export default function HomePage() {
         <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-blue-500/5 blur-3xl" />
 
-        <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-32">
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="max-w-3xl"
-          >
-            <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
-              <Sparkles size={14} /> AI-Powered Referral Networking
-            </motion.div>
-
-            <motion.h1
-              variants={fadeInUp}
-              className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-6xl"
+        <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            {/* Left — copy */}
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
             >
-              Stop relying on{' '}
-              <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                memory
-              </span>{' '}
-              for referrals
-            </motion.h1>
+              <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
+                <Sparkles size={14} /> AI-Powered Referral Networking
+              </motion.div>
 
-            <motion.p
-              variants={fadeInUp}
-              className="mb-8 max-w-2xl text-lg leading-relaxed text-gray-300 md:text-xl"
+              <motion.h1
+                variants={fadeInUp}
+                className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
+              >
+                Stop relying on{' '}
+                <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  memory
+                </span>{' '}
+                for referrals
+              </motion.h1>
+
+              <motion.p
+                variants={fadeInUp}
+                className="mb-8 max-w-lg text-lg leading-relaxed text-gray-300"
+              >
+                Our AI learns every member&rsquo;s profile — who they serve, who they want to meet,
+                who they can refer — and <strong className="text-white">automatically connects the right people</strong>.
+              </motion.p>
+
+              <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
+                >
+                  Join the network <ArrowRight size={16} />
+                </Link>
+                <Link
+                  href="/how-it-works"
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800/50 px-8 py-4 text-base font-semibold text-gray-200 backdrop-blur transition hover:border-gray-600 hover:bg-gray-800"
+                >
+                  <Play size={16} /> See how it works
+                </Link>
+              </motion.div>
+
+              <motion.div variants={fadeInUp} className="mt-10 flex flex-wrap gap-6 text-sm text-gray-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-primary" />
+                  Free to join
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-primary" />
+                  AI matches in seconds
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-primary" />
+                  Built-in Zoom booking
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Right — 3D animated showcase */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="hidden md:block"
             >
-              Our AI learns every member&rsquo;s profile — who they serve, who they want to meet,
-              who they can refer — and <strong className="text-white">automatically connects the right people</strong>.
-              Like BNI, but powered by artificial intelligence.
-            </motion.p>
-
-            <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
-              <Link
-                href="/signup"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
-              >
-                Join the network <ArrowRight size={16} />
-              </Link>
-              <Link
-                href="/how-it-works"
-                className="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800/50 px-8 py-4 text-base font-semibold text-gray-200 backdrop-blur transition hover:border-gray-600 hover:bg-gray-800"
-              >
-                <Play size={16} /> See how it works
-              </Link>
+              <HeroShowcase />
             </motion.div>
-
-            <motion.div variants={fadeInUp} className="mt-12 flex flex-wrap gap-8 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-primary" />
-                Free to join
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-primary" />
-                AI matches in seconds
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-primary" />
-                Built-in Zoom booking
-              </div>
-            </motion.div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
