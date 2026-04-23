@@ -116,31 +116,77 @@ export default function AdminOverview() {
       </motion.div>
 
       {data && (
-        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-            Subscription tier breakdown
-          </h2>
-          <div className="space-y-2">
-            {(['FREE', 'PRO', 'PREMIUM'] as const).map((t) => {
-              const count = data.tierBreakdown[t] ?? 0;
-              const total =
-                (data.tierBreakdown.FREE ?? 0) +
-                (data.tierBreakdown.PRO ?? 0) +
-                (data.tierBreakdown.PREMIUM ?? 0);
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              const color = t === 'FREE' ? 'bg-gray-500' : t === 'PRO' ? 'bg-blue-500' : 'bg-amber-400';
-              return (
-                <div key={t} className="flex items-center gap-3 text-sm">
-                  <span className="w-16 font-semibold text-gray-300">{t}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
-                    <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="w-24 text-right text-xs text-gray-400">
-                    {count} ({pct}%)
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Subscription breakdown + MRR */}
+          <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
+              Subscriptions + estimated MRR
+            </h2>
+            <div className="space-y-2">
+              {([
+                { tier: 'FREE', price: 0 },
+                { tier: 'PRO', price: 49 },
+                { tier: 'PREMIUM', price: 149 },
+              ] as const).map(({ tier, price }) => {
+                const count = data.tierBreakdown[tier] ?? 0;
+                const total =
+                  (data.tierBreakdown.FREE ?? 0) +
+                  (data.tierBreakdown.PRO ?? 0) +
+                  (data.tierBreakdown.PREMIUM ?? 0);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                const color = tier === 'FREE' ? 'bg-gray-500' : tier === 'PRO' ? 'bg-blue-500' : 'bg-amber-400';
+                return (
+                  <div key={tier} className="flex items-center gap-3 text-sm">
+                    <span className="w-20 font-semibold text-gray-300">{tier}</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
+                      <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-28 text-right text-xs text-gray-400">
+                      {count} ({pct}%)
                   </span>
                 </div>
               );
             })}
+            </div>
+            <div className="mt-4 rounded-xl border border-gray-800 bg-gray-800/50 p-4">
+              <p className="text-xs uppercase tracking-wider text-gray-500">Estimated MRR</p>
+              <p className="text-2xl font-bold text-white">
+                ${(
+                  (data.tierBreakdown.PRO ?? 0) * 49 +
+                  (data.tierBreakdown.PREMIUM ?? 0) * 149
+                ).toLocaleString()}
+                <span className="text-sm font-normal text-gray-400">/mo</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-400">
+              Quick actions
+            </h2>
+            <div className="space-y-2">
+              {[
+                { href: '/admin/users', label: 'Manage users & roles', desc: 'Promote, suspend, change tiers' },
+                { href: '/admin/moderation', label: 'Moderation queue', desc: `${data.counts.pendingListings} listings pending` },
+                { href: '/admin/events', label: 'Create Zoom event', desc: 'Schedule a networking session' },
+                { href: '/admin/listings', label: 'Browse all listings', desc: 'Feature or archive listings' },
+                { href: '/admin/bookings', label: 'View all bookings', desc: 'Monitor call activity' },
+                { href: '/admin/groups', label: 'Manage groups', desc: 'Archive or review groups' },
+              ].map((a) => (
+                <a
+                  key={a.href}
+                  href={a.href}
+                  className="flex items-center justify-between rounded-xl border border-gray-800 bg-gray-800/30 px-4 py-3 transition hover:border-gray-700 hover:bg-gray-800/60"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-white">{a.label}</p>
+                    <p className="text-xs text-gray-500">{a.desc}</p>
+                  </div>
+                  <span className="text-gray-600">&rarr;</span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       )}
