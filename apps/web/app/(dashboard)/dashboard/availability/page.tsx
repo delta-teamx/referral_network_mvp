@@ -72,8 +72,45 @@ export default function AvailabilityPage() {
     setWindows((prev) => prev.map((w, i) => (i === idx ? { ...w, ...patch } : w)));
   }
 
+  function validateWindows(ws: Window[]): string | null {
+    for (const w of ws) {
+      if (w.startMin < 0 || w.endMin > 1440 || w.startMin >= w.endMin) {
+        return `${DAYS[w.dayOfWeek]} window has an invalid time range — end must be after start.`;
+      }
+      if (w.endMin - w.startMin < 30) {
+        return `${DAYS[w.dayOfWeek]} window is shorter than 30 minutes.`;
+      }
+    }
+    const byDay = new Map<number, Window[]>();
+    for (const w of ws) {
+      const arr = byDay.get(w.dayOfWeek) ?? [];
+      arr.push(w);
+      byDay.set(w.dayOfWeek, arr);
+    }
+    for (const [day, arr] of byDay) {
+      const sorted = [...arr].sort((a, b) => a.startMin - b.startMin);
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1]!;
+        const curr = sorted[i]!;
+        if (curr.startMin < prev.endMin) {
+          return `${DAYS[day]} has overlapping windows. Merge or adjust them before saving.`;
+        }
+      }
+    }
+    return null;
+  }
+
   async function save() {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setError('Session expired. Please log in again.');
+      return;
+    }
+    const validationError = validateWindows(windows);
+    if (validationError) {
+      setError(validationError);
+      setSaved(false);
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(false);

@@ -103,7 +103,7 @@ export function TopNav() {
                 {link.label}
               </Link>
             ))}
-            {!user && (
+            {!user ? (
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
@@ -111,6 +111,25 @@ export function TopNav() {
               >
                 Log in
               </Link>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void logout();
+                  }}
+                  className="rounded-md px-3 py-2.5 text-left text-sm text-gray-500 hover:bg-gray-50"
+                >
+                  Log out
+                </button>
+              </>
             )}
           </nav>
         </div>

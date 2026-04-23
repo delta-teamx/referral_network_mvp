@@ -96,7 +96,10 @@ export default function OnboardingPage() {
   }
 
   async function saveProfile() {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setError('Session expired. Please log in again.');
+      return;
+    }
     setSaving(true); setError(null);
     try {
       await api.post('/api/v1/profiles', {

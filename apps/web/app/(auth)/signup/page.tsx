@@ -105,15 +105,25 @@ export default function SignupPage() {
         />
 
         <div className="mb-4">
-          <p className="mb-2 text-sm font-medium text-gray-900">I am a…</p>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:border-primary">
-              <input type="radio" name="role" value="CONSUMER" defaultChecked />
-              Consumer
+          <p className="mb-2 text-sm font-medium text-gray-900">I&rsquo;m joining to…</p>
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-300 px-3 py-3 text-sm hover:border-primary">
+              <input type="radio" name="role" value="BUSINESS_OWNER" defaultChecked className="mt-0.5" />
+              <span>
+                <span className="block font-semibold text-gray-900">Grow my business through referrals</span>
+                <span className="block text-xs text-gray-500">
+                  I own or represent a business and want AI-matched introductions.
+                </span>
+              </span>
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:border-primary">
-              <input type="radio" name="role" value="BUSINESS_OWNER" />
-              Business owner
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-300 px-3 py-3 text-sm hover:border-primary">
+              <input type="radio" name="role" value="CONSUMER" className="mt-0.5" />
+              <span>
+                <span className="block font-semibold text-gray-900">Find a trusted local pro</span>
+                <span className="block text-xs text-gray-500">
+                  I&rsquo;m looking for recommendations from trusted business owners.
+                </span>
+              </span>
             </label>
           </div>
         </div>
