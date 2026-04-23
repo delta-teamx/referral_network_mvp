@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import type { FormEvent } from 'react';
 import { loginSchema } from '@refnet/shared';
 import { AuthShell } from '../../../components/auth/AuthShell';
@@ -12,8 +12,9 @@ import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { useAuthStore } from '../../../stores/auth';
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const status = useAuthStore((s) => s.status);
   const globalError = useAuthStore((s) => s.error);
@@ -39,7 +40,8 @@ export default function LoginPage() {
     }
     try {
       await login(parsed.data);
-      router.push('/');
+      const next = searchParams.get('next');
+      router.push(next && next.startsWith('/') ? next : '/dashboard');
     } catch {
       // globalError handled by the store
     }
@@ -101,5 +103,13 @@ export default function LoginPage() {
         </p>
       </form>
     </AuthShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-primary-light" />}>
+      <LoginInner />
+    </Suspense>
   );
 }

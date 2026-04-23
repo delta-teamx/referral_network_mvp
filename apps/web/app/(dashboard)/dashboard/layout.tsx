@@ -21,14 +21,14 @@ import { MobileNav } from '../../../components/layout/MobileNav';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/dashboard/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/dashboard/availability', label: 'Availability', icon: Clock },
-  { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
-  { href: '/dashboard/listing', label: 'My listing', icon: Store },
-  { href: '/dashboard/referrals', label: 'Referrals', icon: Users },
-  { href: '/dashboard/network', label: 'My network', icon: Network },
-  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
+  { href: '/dashboard/referrals', label: 'Referrals', icon: Users },
+  { href: '/dashboard/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/network', label: 'My network', icon: Network },
+  { href: '/dashboard/availability', label: 'Availability', icon: Clock },
+  { href: '/dashboard/listing', label: 'My listing', icon: Store },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 
