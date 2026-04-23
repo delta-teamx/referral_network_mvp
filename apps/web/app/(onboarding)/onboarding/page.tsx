@@ -72,12 +72,27 @@ export default function OnboardingPage() {
   useEffect(() => { if (status === 'unauthenticated') router.push('/login?next=/onboarding'); }, [status, router]);
 
   async function saveBasics() {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setError('Session expired. Please log in again.');
+      return;
+    }
+    if (!zip || zip.length < 5) {
+      setError('Please enter a valid 5-digit ZIP code.');
+      return;
+    }
+    if (!categorySlug) {
+      setError('Please select your primary category.');
+      return;
+    }
+    if (goals.length === 0) {
+      setError('Please select at least one goal.');
+      return;
+    }
     setSaving(true); setError(null);
     try {
       await api.post('/api/v1/onboarding/profile', { zip, primaryCategorySlug: categorySlug, goals }, { accessToken: accessToken ?? undefined });
       setStep('business');
-    } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed'); } finally { setSaving(false); }
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed. Check your inputs and try again.'); } finally { setSaving(false); }
   }
 
   async function saveProfile() {

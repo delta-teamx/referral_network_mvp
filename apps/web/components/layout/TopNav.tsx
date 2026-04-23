@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
+import { BrandLogo } from '../ui/BrandLogo';
 import { NotificationBell } from './NotificationBell';
 
 const NAV_LINKS = [
@@ -28,9 +29,8 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <Link href="/" className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
-          <span>Virtual<span className="text-primary">Pros</span></span>
-          <span className="hidden sm:inline">Network</span>
+        <Link href="/">
+          <BrandLogo />
         </Link>
 
         {/* Desktop nav */}

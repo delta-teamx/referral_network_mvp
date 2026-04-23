@@ -82,6 +82,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async hydrate() {
+    const state = useAuthStore.getState();
+    // If we already have a valid in-memory token (e.g. just signed up or
+    // logged in this session), don't clobber it with a refresh call that
+    // may fail if the HTTP-only cookie wasn't set yet.
+    if (
+      state.accessToken &&
+      state.accessTokenExpiresAt &&
+      state.accessTokenExpiresAt > Date.now() + 30_000
+    ) {
+      if (state.status !== 'authenticated') set({ status: 'authenticated' });
+      return;
+    }
     set({ status: 'loading' });
     try {
       const data = await api.post<AuthSuccessDto>('/api/v1/auth/refresh');

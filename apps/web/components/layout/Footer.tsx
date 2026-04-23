@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
+import { BrandLogoWhite } from '../ui/BrandLogo';
 
 const LINK_GROUPS = [
   {
@@ -46,10 +47,8 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
-            <Link href="/" className="inline-block">
-              <span className="text-lg font-bold text-white">
-                Virtual<span className="text-primary">Pros</span>Network
-              </span>
+            <Link href="/">
+              <BrandLogoWhite />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
               AI-powered referral networking. Stop relying on memory — our engine makes the right

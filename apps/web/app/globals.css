@@ -3,15 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #1b5e8c;
-  --color-primary-light: #e8f2fa;
-  --color-secondary: #e8913a;
-  --color-success: #2e7d32;
-  --color-danger: #d32f2f;
+  /* Single primary palette — blue with tints. No random accent colors. */
+  --color-primary: #2563eb;
+  --color-primary-light: #eff6ff;
+  --color-primary-dark: #1d4ed8;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
 }
 
-html,
-body {
-  @apply bg-white text-gray-900 antialiased;
-  font-family: 'Inter', system-ui, sans-serif;
+@layer base {
+  html {
+    font-family: var(--font-montserrat), 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+  }
 }

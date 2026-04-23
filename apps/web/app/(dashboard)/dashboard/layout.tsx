@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Network,
+  Settings,
   Store,
   Users,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ const NAV = [
   { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
