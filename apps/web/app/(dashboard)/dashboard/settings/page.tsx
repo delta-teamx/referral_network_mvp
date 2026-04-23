@@ -153,7 +153,7 @@ export default function SettingsPage() {
             </div>
             <FormField label="Services (comma-separated)" name="servicesOffered" defaultValue={profile.servicesOffered.join(', ')} />
             <FormField label="Keywords for matching (comma-separated)" name="keywords" defaultValue={profile.keywords.join(', ')} />
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <FormField label="City" name="city" defaultValue={profile.city ?? ''} />
               <FormField label="State" name="state" defaultValue={profile.state ?? ''} maxLength={2} />
               <FormField label="ZIP" name="zipCode" defaultValue={profile.zipCode ?? ''} />

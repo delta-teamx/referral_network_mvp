@@ -158,16 +158,16 @@ export default function OnboardingPage() {
 
         {step === 'basics' && (
           <SC icon={<MapPin size={20} />} title="Quick start" sub="Where are you based and what are you looking for?">
-            <FormField label="ZIP code" name="zip" required value={zip} onChange={(e) => setZip(e.target.value)} />
+            <FormField label="ZIP code *" name="zip" required value={zip} onChange={(e) => setZip(e.target.value)} />
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-900">Primary category</label>
+              <label className="mb-1 block text-sm font-medium text-gray-900">Primary category *</label>
               <select value={categorySlug} onChange={(e) => setCategorySlug(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                 <option value="">Select…</option>
                 {CATEGORY_SEEDS.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-900">Your goals</label>
+              <label className="mb-2 block text-sm font-medium text-gray-900">Your goals *</label>
               <div className="space-y-2">
                 {GOALS.map((g) => (
                   <label key={g.key} className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:border-primary">
@@ -181,9 +181,9 @@ export default function OnboardingPage() {
 
         {step === 'business' && (
           <SC icon={<Sparkles size={20} />} title="Tell us about your business" sub="Helps the AI match you with the right people.">
-            <FormField label="Business name" name="businessName" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+            <FormField label="Business name *" name="businessName" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-900">Industry</label>
+              <label className="mb-1 block text-sm font-medium text-gray-900">Industry *</label>
               <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                 <option value="">Select…</option>
                 {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}

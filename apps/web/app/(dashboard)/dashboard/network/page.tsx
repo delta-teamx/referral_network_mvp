@@ -221,7 +221,7 @@ function AcceptedList({ items }: { items: Connection[] }) {
             <p className="font-semibold text-gray-900">
               {c.peer.firstName} {c.peer.lastName}
             </p>
-            <p className="text-xs text-gray-500">{c.peer.email}</p>
+            <p className="truncate text-xs text-gray-500">{c.peer.email}</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">

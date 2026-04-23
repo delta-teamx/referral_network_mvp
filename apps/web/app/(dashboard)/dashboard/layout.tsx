@@ -67,7 +67,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <p className="mt-1 font-semibold text-gray-900">
             {user.firstName} {user.lastName}
           </p>
-          <p className="text-xs text-gray-500">{user.email}</p>
+          <p className="truncate text-xs text-gray-500">{user.email}</p>
           <span className="mt-2 inline-block rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
             {user.role.replace('_', ' ')}
           </span>

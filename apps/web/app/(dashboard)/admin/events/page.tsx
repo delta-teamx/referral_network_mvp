@@ -131,7 +131,9 @@ export default function AdminEventsPage() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-300">Start</label>
+              <label className="mb-1 block text-sm font-medium text-gray-300">
+                Start <span className="text-xs font-normal text-gray-500">({Intl.DateTimeFormat().resolvedOptions().timeZone})</span>
+              </label>
               <input
                 type="datetime-local"
                 name="startsAt"
