@@ -58,8 +58,10 @@ export default function LoginPage() {
         </>
       }
     >
-      <GoogleButton />
-      <FacebookButton />
+      <div className="space-y-3">
+        <GoogleButton />
+        <FacebookButton />
+      </div>
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />
         <span>or sign in with email</span>

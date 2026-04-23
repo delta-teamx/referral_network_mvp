@@ -120,11 +120,17 @@ export default function OnboardingPage() {
         barterNotes: barterNotes || undefined,
       }, { accessToken: accessToken ?? undefined });
       setStep('video');
-    } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed'); } finally { setSaving(false); }
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed. Please go back and fill in all required fields.'); } finally { setSaving(false); }
   }
 
   function next() {
+    if (saving) return;
+    setError(null);
     if (step === 'basics') { void saveBasics(); return; }
+    if (step === 'business') {
+      if (!businessName.trim()) { setError('Please enter your business name.'); return; }
+      if (!industry) { setError('Please select an industry.'); return; }
+    }
     if (step === 'barter') { void saveProfile(); return; }
     const idx = STEPS.indexOf(step);
     if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]!);
