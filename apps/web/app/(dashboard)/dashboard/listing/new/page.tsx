@@ -30,7 +30,10 @@ export default function NewListingPage() {
         const cats = await api.get<Category[]>('/api/v1/categories');
         if (!cancelled) setCategories(cats);
       } catch {
-        if (!cancelled) setCategories([]);
+        if (!cancelled) {
+          setCategories([]);
+          setError('Could not load categories. Please refresh.');
+        }
       }
     }
     void load();

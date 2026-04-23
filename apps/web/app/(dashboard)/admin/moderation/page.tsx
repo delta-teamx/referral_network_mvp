@@ -45,6 +45,7 @@ export default function ModerationQueue() {
 
   async function approve(id: string) {
     if (!accessToken) return;
+    if (!window.confirm('Approve this listing and make it publicly visible?')) return;
     setBusy(id);
     try {
       await api.post(`/api/v1/admin/listings/${id}/approve`, {}, { accessToken: accessToken ?? undefined });

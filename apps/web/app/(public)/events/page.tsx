@@ -114,8 +114,9 @@ export default function EventsPage() {
             animate="visible"
             className="grid gap-5 md:grid-cols-2"
           >
-            {events.map((e) => {
+            {events.filter((ev) => new Date(ev.startsAt).getTime() > Date.now()).map((e) => {
               const isReg = registered.has(e.id);
+              const isFull = e._count.registrations >= e.maxAttendees;
               const pct = Math.round((e._count.registrations / e.maxAttendees) * 100);
               return (
                 <motion.div
@@ -166,10 +167,14 @@ export default function EventsPage() {
                           </a>
                         )}
                       </div>
+                    ) : isFull ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-5 py-2 text-xs font-semibold text-gray-500">
+                        Event is full
+                      </span>
                     ) : (
                       <button
                         onClick={() => void register(e.id)}
-                        disabled={busy === e.id || e._count.registrations >= e.maxAttendees}
+                        disabled={busy === e.id}
                         className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Users size={12} />

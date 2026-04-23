@@ -87,9 +87,11 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
 
   if (!open) return null;
 
-  // Group slots by day for display
+  // Filter out past slots and group by day
+  const now = Date.now();
+  const futureSlots = slots.filter((s) => new Date(s.startsAt).getTime() > now);
   const slotsByDay = new Map<string, Slot[]>();
-  for (const s of slots) {
+  for (const s of futureSlots) {
     const day = new Date(s.startsAt).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -167,10 +169,13 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Calendar size={16} className="text-primary" /> Pick a 30-min slot
+              <span className="ml-auto text-xs text-gray-400">
+                Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </span>
             </div>
             {loading ? (
               <p className="py-6 text-center text-sm text-gray-500">Loading availability…</p>
-            ) : slots.length === 0 ? (
+            ) : futureSlots.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center">
                 <p className="text-sm text-gray-600">
                   {hostName} hasn&rsquo;t set availability yet. Send a message instead to request a
@@ -271,7 +276,7 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
             <p className="text-sm text-gray-600">
               Calendar invite sent. Your Zoom link is in your email and on your dashboard.
             </p>
-            {result.zoomUrl && (
+            {result.zoomUrl ? (
               <a
                 href={result.zoomUrl}
                 target="_blank"
@@ -280,6 +285,10 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
               >
                 Copy Zoom link →
               </a>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Zoom link is being generated — check your email shortly.
+              </p>
             )}
             <Button onClick={onClose} className="w-full">
               Done

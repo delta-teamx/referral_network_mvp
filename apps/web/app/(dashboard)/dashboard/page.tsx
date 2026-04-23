@@ -108,6 +108,7 @@ function MetricsPanel() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -119,7 +120,7 @@ function MetricsPanel() {
         });
         if (!cancelled) setMetrics(m);
       } catch {
-        /* silent */
+        if (!cancelled) setMetricsError('Could not load metrics. Try refreshing the page.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -129,6 +130,14 @@ function MetricsPanel() {
       cancelled = true;
     };
   }, [accessToken]);
+
+  if (metricsError) {
+    return (
+      <div className="rounded-2xl border border-danger/30 bg-danger/5 p-6 text-center">
+        <p className="text-sm text-danger">{metricsError}</p>
+      </div>
+    );
+  }
 
   if (loading || !metrics) {
     return (

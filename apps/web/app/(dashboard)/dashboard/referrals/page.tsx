@@ -214,7 +214,7 @@ export default function ReferralsPage() {
                     Next step: meet live to close this referral faster.
                   </p>
                   <Link
-                    href={`/members?id=${tab === 'received' ? r.sender.id : r.receiver.id}`}
+                    href={`/search?q=${encodeURIComponent(tab === 'received' ? `${r.sender.firstName} ${r.sender.lastName}` : `${r.receiver.firstName} ${r.receiver.lastName}`)}`}
                     className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
                   >
                     <Calendar size={12} /> Book a call

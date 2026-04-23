@@ -266,6 +266,32 @@ export default function ListingDetailClient() {
               </p>
             </motion.div>
 
+            {listing.photos.length > 0 && (
+              <motion.div
+                variants={fadeInUp}
+                initial="hidden"
+                animate="visible"
+                className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                <h2 className="mb-3 text-lg font-semibold text-gray-900">Photos</h2>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {listing.photos.map((p) => (
+                    <div key={p.id} className="overflow-hidden rounded-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.url}
+                        alt={p.caption ?? listing.name}
+                        className="aspect-[4/3] w-full object-cover transition hover:scale-105"
+                      />
+                      {p.caption && (
+                        <p className="mt-1 text-xs text-gray-500">{p.caption}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             <motion.div
               variants={fadeInUp}
               initial="hidden"
@@ -560,14 +586,22 @@ function ReferralModal({
     setSubmitting(true);
     setError(null);
     const form = new FormData(e.currentTarget);
+    const clientName = String(form.get('clientName') ?? '').trim();
+    const clientEmail = String(form.get('clientEmail') ?? '').trim();
+    const clientPhone = String(form.get('clientPhone') ?? '').trim();
+    if (!clientName && !clientEmail) {
+      setError('Please provide at least a client name or email.');
+      setSubmitting(false);
+      return;
+    }
     try {
       await api.post(
         '/api/v1/referrals',
         {
           listingSlug: slug,
-          clientName: String(form.get('clientName') ?? '').trim() || undefined,
-          clientPhone: String(form.get('clientPhone') ?? '').trim() || undefined,
-          clientEmail: String(form.get('clientEmail') ?? '').trim() || undefined,
+          clientName: clientName || undefined,
+          clientPhone: clientPhone || undefined,
+          clientEmail: clientEmail || undefined,
           notes: String(form.get('notes') ?? '').trim() || undefined,
         },
         { accessToken: accessToken ?? undefined },
