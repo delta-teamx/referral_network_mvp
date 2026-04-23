@@ -1,22 +1,23 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Public homepage', () => {
-  test('renders hero + life-event grid + demo banner', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    // Demo banner only shows in demo mode (which is forced in Netlify build)
-    await expect(page.getByText(/frontend-only preview/i)).toBeVisible();
-    // At least a few life-event tiles (use roles to avoid copy duplication)
-    await expect(page.getByRole('link', { name: /Buying a House/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /Getting Married/i }).first()).toBeVisible();
+  test('renders hero with brand messaging', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await expect(page.getByText(/Stop relying on/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test('CTA to search navigates', async ({ page }) => {
+  test('shows stats bar', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await expect(page.getByText(/Active members/i).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('has Join CTA button', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+    await expect(page.getByText(/Join the network/i).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('footer is visible', async ({ page }) => {
     await page.goto('/');
-    const link = page.getByRole('link', { name: /browse the full directory/i }).first();
-    if (await link.isVisible()) {
-      await link.click();
-      await expect(page).toHaveURL(/\/search\/?/);
-    }
+    await expect(page.getByText(/All rights reserved/i)).toBeVisible();
   });
 });
