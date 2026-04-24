@@ -41,8 +41,9 @@ function LoginInner() {
     try {
       await login(parsed.data);
       const next = searchParams.get('next');
-      if (next && next.startsWith('/')) {
-        router.push(next);
+      const safeNext = next && /^\/[a-zA-Z]/.test(next) ? next : null;
+      if (safeNext) {
+        router.push(safeNext);
       } else {
         const role = useAuthStore.getState().user?.role;
         router.push(role === 'ADMIN' ? '/admin' : '/dashboard');

@@ -238,7 +238,7 @@ export async function updateOwnListing(
   if (!existing) throw AppError.notFound('Listing not found');
 
   const updated = await prisma.listing.update({
-    where: { id: listingId },
+    where: { id: listingId, userId },
     data: input,
     select: listingCardSelect,
   });

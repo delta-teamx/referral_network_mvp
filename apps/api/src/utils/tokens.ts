@@ -54,7 +54,7 @@ export function signRefreshToken(claims: RefreshTokenClaims): string {
 /** Verify an access token and return its claims, or throw 401. */
 export function verifyAccessToken(token: string): AccessTokenClaims {
   try {
-    const decoded = jwt.verify(token, requireAccessSecret());
+    const decoded = jwt.verify(token, requireAccessSecret(), { algorithms: ['HS256'] });
     if (typeof decoded !== 'object' || decoded === null) {
       throw AppError.unauthorized('Invalid token');
     }
@@ -68,7 +68,7 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
 /** Verify a refresh token and return its claims, or throw 401. */
 export function verifyRefreshToken(token: string): RefreshTokenClaims {
   try {
-    const decoded = jwt.verify(token, requireRefreshSecret());
+    const decoded = jwt.verify(token, requireRefreshSecret(), { algorithms: ['HS256'] });
     if (typeof decoded !== 'object' || decoded === null) {
       throw AppError.unauthorized('Invalid refresh token');
     }

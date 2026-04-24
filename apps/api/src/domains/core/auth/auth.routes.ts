@@ -10,7 +10,7 @@ import {
 } from '@refnet/shared';
 import { validate } from '../../../middleware/validate.js';
 import { authenticate } from '../../../middleware/authenticate.js';
-import { authRateLimit, signupRateLimit } from '../../../middleware/rateLimit.js';
+import { authRateLimit, rateLimit, signupRateLimit } from '../../../middleware/rateLimit.js';
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
@@ -108,6 +108,7 @@ authRouter.post(
 
 authRouter.post(
   '/reset-password',
+  rateLimit({ windowMs: 60_000, max: 5, key: 'reset-password' }),
   validate(resetPasswordSchema),
   asyncHandler(async (req, res) => {
     await resetPassword(req.body);
@@ -118,6 +119,7 @@ authRouter.post(
 
 authRouter.get(
   '/verify-email/:token',
+  rateLimit({ windowMs: 60_000, max: 5, key: 'verify-email' }),
   asyncHandler(async (req, res) => {
     const parsed = verifyEmailSchema.parse({ token: req.params.token });
     await verifyEmailToken(parsed.token);

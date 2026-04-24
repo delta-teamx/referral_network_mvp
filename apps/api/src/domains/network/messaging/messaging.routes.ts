@@ -33,7 +33,7 @@ messagingRouter.get(
   '/:id/messages',
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
-    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 50) || 50));
     const messages = await listMessages(req.params.id ?? '', req.user.id, limit);
     const body: ApiResponse<typeof messages> = { success: true, data: messages };
     res.json(body);

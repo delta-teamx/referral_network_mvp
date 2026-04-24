@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
+import { assertExternalUrl } from '../../../utils/ssrf.js';
 
 /**
  * Video intro upload for member profiles.
@@ -98,6 +99,7 @@ export async function confirmVideoUpload(
   userId: string,
   input: { videoUrl: string; videoKey: string; durationSec?: number; demo?: boolean },
 ) {
+  assertExternalUrl(input.videoUrl);
   await prisma.memberProfile.update({
     where: { userId },
     data: {

@@ -140,6 +140,10 @@ export async function createBooking(input: CreateBookingInput) {
   if (input.endsAt <= input.startsAt) {
     throw AppError.badRequest('endsAt must be after startsAt');
   }
+  const maxDurationMs = 8 * 60 * 60 * 1000;
+  if (input.endsAt.getTime() - input.startsAt.getTime() > maxDurationMs) {
+    throw AppError.badRequest('Booking duration cannot exceed 8 hours');
+  }
   if (!BOOKING_REASONS.includes(input.reason)) {
     throw AppError.badRequest('Invalid booking reason');
   }

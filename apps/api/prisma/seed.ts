@@ -667,14 +667,11 @@ async function main() {
 
   console.log('[seed] all done!');
   console.log('');
-  console.log('=== Demo Accounts ===');
+  console.log('=== Seed Complete ===');
   if (adminEmails.length > 0) {
-    console.log(`Admin(s): ${adminEmails.join(', ')} / [ADMIN_PASSWORD]`);
+    console.log(`Admin(s): ${adminEmails.join(', ')} (password set via ADMIN_PASSWORD env var)`);
   }
-  console.log('Sarah:   sarah@johnsonrealty.com / Sarah123!');
-  console.log('Daniel:  daniel@tworiverscpa.com / Daniel123!');
-  console.log('Maya:    maya@stonegateweddings.com / Maya1234!');
-  console.log('Emma:    emma@bloomphoto.com / Emma1234!');
+  console.log('Demo members: sarah, daniel, maya, emma (passwords redacted from logs)');
   console.log('');
 }
 

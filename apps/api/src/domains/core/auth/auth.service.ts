@@ -46,7 +46,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   }
 
   const passwordHash = await hashPassword(input.password);
-  const emailVerifyToken = generateToken(24);
+  const emailVerifyToken = generateToken(32);
 
   const user = await prisma.user.create({
     data: {
@@ -56,7 +56,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
       lastName: input.lastName,
       phone: input.phone ?? null,
       role: input.role,
-      emailVerifyToken,
+      emailVerifyToken: hashToken(emailVerifyToken),
     },
   });
 
@@ -117,8 +117,9 @@ export async function refresh(refreshTokenRaw: string): Promise<AuthResult> {
 
 /** Email verification — consumes the token stored at signup. */
 export async function verifyEmailToken(token: string): Promise<void> {
+  const tokenHash = hashToken(token);
   const user = await prisma.user.findFirst({
-    where: { emailVerifyToken: token, deletedAt: null },
+    where: { emailVerifyToken: tokenHash, deletedAt: null },
   });
   if (!user) throw AppError.badRequest('Invalid or expired verification link');
 
