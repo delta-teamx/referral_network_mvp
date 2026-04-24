@@ -77,6 +77,12 @@ const envSchema = z.object({
 
   // Observability
   SENTRY_DSN: z.string().optional(),
+
+  // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
+  // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
+  // should change theirs immediately after first sign-in).
+  ADMIN_EMAILS: z.string().optional(),
+  ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

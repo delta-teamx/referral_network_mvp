@@ -10,6 +10,7 @@ import {
   approveListing,
   archiveGroup,
   featureListing,
+  impersonateUser,
   listAllGroups,
   listAllListings,
   listAllUsers,
@@ -59,6 +60,9 @@ adminRouter.post(
   validate(roleSchema),
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
+    if (req.user.id === req.params.id) {
+      throw AppError.badRequest('You cannot change your own role.');
+    }
     const data = await setUserRole(req.user.id, req.params.id ?? '', req.body.role);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
@@ -71,7 +75,23 @@ adminRouter.post(
   validate(suspendSchema),
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
+    if (req.user.id === req.params.id) {
+      throw AppError.badRequest('You cannot suspend your own account.');
+    }
     const data = await suspendUser(req.user.id, req.params.id ?? '', req.body.reason);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+adminRouter.post(
+  '/users/:id/impersonate',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    if (req.user.id === req.params.id) {
+      throw AppError.badRequest('You are already logged in as this user.');
+    }
+    const data = await impersonateUser(req.user.id, req.params.id ?? '');
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

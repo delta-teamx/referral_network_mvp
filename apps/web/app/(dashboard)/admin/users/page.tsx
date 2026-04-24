@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Ban, Search } from 'lucide-react';
+import { Ban, Eye, Search } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -47,8 +47,16 @@ export default function AdminUsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, q]);
 
+  const currentUser = useAuthStore((s) => s.user);
+
   async function setRole(id: string, role: string) {
     if (!accessToken) return;
+    if (id === currentUser?.id) {
+      setError('You cannot change your own role.');
+      return;
+    }
+    const label = role === 'ADMIN' ? 'Grant ADMIN access to this user?' : `Change this user's role to ${role}?`;
+    if (!window.confirm(label)) return;
     try {
       await api.post(`/api/v1/admin/users/${id}/role`, { role }, { accessToken: accessToken ?? undefined });
       await load();
@@ -70,6 +78,27 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Suspend failed');
+    }
+  }
+
+  async function viewAsUser(id: string, name: string) {
+    if (!accessToken) return;
+    if (!window.confirm(`View the dashboard as ${name}? You'll be switched to their session.`)) return;
+    try {
+      const data = await api.post<{ user: AdminUser; accessToken: string; expiresIn: number }>(
+        `/api/v1/admin/users/${id}/impersonate`,
+        {},
+        { accessToken: accessToken ?? undefined },
+      );
+      const setAuth = useAuthStore.getState().setAuth;
+      setAuth(
+        data.user as unknown as Parameters<typeof setAuth>[0],
+        data.accessToken,
+        Date.now() + data.expiresIn * 1000,
+      );
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Impersonation failed');
     }
   }
 
@@ -126,19 +155,23 @@ export default function AdminUsersPage() {
                 </td>
               </tr>
             ) : (
-              users.map((u) => (
+              users.map((u) => {
+                const isSelf = u.id === currentUser?.id;
+                return (
                 <tr key={u.id} className="border-t border-gray-800 hover:bg-gray-800/40">
                   <td className="px-4 py-3">
                     <p className="font-medium text-white">
                       {u.firstName} {u.lastName}
+                      {isSelf && <span className="ml-2 text-xs text-amber-400">(you)</span>}
                     </p>
                     <p className="text-xs text-gray-400">{u.email}</p>
                   </td>
                   <td className="px-4 py-3">
                     <select
                       value={u.role}
+                      disabled={isSelf}
                       onChange={(e) => void setRole(u.id, e.target.value)}
-                      className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-100"
+                      className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {['CONSUMER', 'BUSINESS_OWNER', 'GROUP_LEADER', 'CITY_CAPTAIN', 'ADMIN'].map(
                         (r) => (
@@ -165,15 +198,28 @@ export default function AdminUsersPage() {
                     {new Date(u.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => void suspend(u.id)}
-                      className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
-                    >
-                      <Ban size={12} /> Suspend
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      {!isSelf && (
+                        <button
+                          onClick={() => void viewAsUser(u.id, `${u.firstName} ${u.lastName}`)}
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+                        >
+                          <Eye size={12} /> View as
+                        </button>
+                      )}
+                      {!isSelf && (
+                        <button
+                          onClick={() => void suspend(u.id)}
+                          className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
+                        >
+                          <Ban size={12} /> Suspend
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

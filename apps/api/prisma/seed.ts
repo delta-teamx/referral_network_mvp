@@ -484,21 +484,38 @@ async function main() {
   const bcrypt = bcryptMod.default ?? bcryptMod;
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 
-  console.log('[seed] creating demo admin account');
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@virtualprosnetwork.app' },
-    create: {
-      email: 'admin@virtualprosnetwork.app',
-      passwordHash: hash('Admin123!'),
-      firstName: 'Platform',
-      lastName: 'Admin',
-      role: 'ADMIN',
-      emailVerified: true,
-      subscriptionTier: 'PREMIUM',
-    },
-    update: {},
-  });
-  console.log(`  admin id=${admin.id} email=admin@virtualprosnetwork.app pw=Admin123!`);
+  // Admin accounts from environment — no hardcoded credentials in the repo.
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const adminPassword = process.env.ADMIN_PASSWORD ?? '';
+
+  if (adminEmails.length > 0 && adminPassword.length >= 8) {
+    console.log(`[seed] creating ${adminEmails.length} admin account(s) from ADMIN_EMAILS`);
+    for (const email of adminEmails) {
+      const parts = email.split('@')[0]?.split('.') ?? ['Admin'];
+      const firstName = parts[0] ? parts[0][0]!.toUpperCase() + parts[0].slice(1) : 'Admin';
+      const lastName = parts[1] ? parts[1][0]!.toUpperCase() + parts[1].slice(1) : 'Admin';
+      const admin = await prisma.user.upsert({
+        where: { email },
+        create: {
+          email,
+          passwordHash: hash(adminPassword),
+          firstName,
+          lastName,
+          role: 'ADMIN',
+          emailVerified: true,
+          subscriptionTier: 'PREMIUM',
+        },
+        update: { role: 'ADMIN', passwordHash: hash(adminPassword) },
+      });
+      console.log(`  admin id=${admin.id} email=${email}`);
+    }
+  } else {
+    console.log('[seed] ADMIN_EMAILS or ADMIN_PASSWORD not set — skipping admin creation');
+    console.log('  Set ADMIN_EMAILS=a@x.com,b@x.com and ADMIN_PASSWORD=StrongPass123! in your .env');
+  }
 
   console.log('[seed] creating demo member accounts + profiles');
   const members = [
@@ -636,16 +653,24 @@ async function main() {
       update: {},
     });
   }
-  await prisma.groupMember.upsert({
-    where: { groupId_userId: { groupId: group.id, userId: admin.id } },
-    create: { groupId: group.id, userId: admin.id, role: 'LEADER' },
-    update: {},
-  });
+  // Make the first admin the group leader (if any admin was seeded)
+  if (adminEmails.length > 0) {
+    const firstAdmin = await prisma.user.findUnique({ where: { email: adminEmails[0] }, select: { id: true } });
+    if (firstAdmin) {
+      await prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId: group.id, userId: firstAdmin.id } },
+        create: { groupId: group.id, userId: firstAdmin.id, role: 'LEADER' },
+        update: {},
+      });
+    }
+  }
 
   console.log('[seed] all done!');
   console.log('');
   console.log('=== Demo Accounts ===');
-  console.log('Admin:   admin@virtualprosnetwork.app / Admin123!');
+  if (adminEmails.length > 0) {
+    console.log(`Admin(s): ${adminEmails.join(', ')} / [ADMIN_PASSWORD]`);
+  }
   console.log('Sarah:   sarah@johnsonrealty.com / Sarah123!');
   console.log('Daniel:  daniel@tworiverscpa.com / Daniel123!');
   console.log('Maya:    maya@stonegateweddings.com / Maya1234!');

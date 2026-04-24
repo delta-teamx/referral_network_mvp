@@ -1,6 +1,8 @@
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/AppError.js';
 import { eventBus } from '../core/events/index.js';
+import { signAccessToken } from '../../utils/tokens.js';
+import { toAuthenticatedUserDto } from '../core/users/users.service.js';
 
 /**
  * Admin operations. Thin wrapper over existing services — admins moderate,
@@ -106,6 +108,31 @@ export async function suspendUser(adminId: string, userId: string, reason: strin
     reason,
   });
   return updated;
+}
+
+export async function impersonateUser(adminId: string, targetUserId: string) {
+  const target = await prisma.user.findFirst({
+    where: { id: targetUserId, deletedAt: null },
+  });
+  if (!target) throw AppError.notFound('User not found');
+
+  const token = signAccessToken({
+    sub: target.id,
+    email: target.email,
+    role: target.role,
+    tier: target.subscriptionTier,
+  });
+
+  await eventBus.publish('admin.user_impersonated', {
+    adminId,
+    targetUserId,
+  });
+
+  return {
+    user: toAuthenticatedUserDto(target),
+    accessToken: token,
+    expiresIn: 3600,
+  };
 }
 
 export async function listPendingListings() {

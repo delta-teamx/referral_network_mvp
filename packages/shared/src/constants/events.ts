@@ -83,6 +83,7 @@ export interface DomainEventMap {
   'admin.listing_rejected': { adminId: string; listingId: string; reason: string };
   'admin.listing_featured': { adminId: string; listingId: string; featured: boolean };
   'admin.group_archived': { adminId: string; groupId: string };
+  'admin.user_impersonated': { adminId: string; targetUserId: string };
 }
 
 export type DomainEventType = keyof DomainEventMap;

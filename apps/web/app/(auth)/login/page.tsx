@@ -41,7 +41,12 @@ function LoginInner() {
     try {
       await login(parsed.data);
       const next = searchParams.get('next');
-      router.push(next && next.startsWith('/') ? next : '/dashboard');
+      if (next && next.startsWith('/')) {
+        router.push(next);
+      } else {
+        const role = useAuthStore.getState().user?.role;
+        router.push(role === 'ADMIN' ? '/admin' : '/dashboard');
+      }
     } catch {
       // globalError handled by the store
     }

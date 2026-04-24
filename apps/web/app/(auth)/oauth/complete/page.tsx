@@ -36,7 +36,7 @@ export default function OAuthCompletePage() {
       try {
         const me = await api.get<AuthenticatedUserDto>('/api/v1/auth/me', { accessToken });
         setAuth(me, accessToken, Date.now() + expiresIn * 1000);
-        router.replace('/dashboard');
+        router.replace(me.role === 'ADMIN' ? '/admin' : '/dashboard');
       } catch (err) {
         setError(err instanceof ApiError ? err.message : 'Sign-in failed');
       }
