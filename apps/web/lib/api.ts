@@ -109,6 +109,10 @@ export async function apiRequest<T>(
           new ApiError(envelope.error ?? `Request failed (${res.status})`, res.status, envelope.details),
         );
       }
+      if (res.status === 401) {
+        const mock = getMockResponse(method, fullPath);
+        if (mock !== undefined) return mock as T;
+      }
       throw new ApiError(
         envelope.error ?? `Request failed (${res.status})`,
         res.status,
@@ -142,8 +146,16 @@ export async function apiRequest<T>(
         return await doFetch(refreshed.tokens.accessToken);
       } catch {
         const { useAuthStore } = await import('../stores/auth');
-        useAuthStore.setState({ status: 'unauthenticated', user: null, accessToken: null });
-        throw err;
+        useAuthStore.setState({
+          status: 'unauthenticated',
+          user: null,
+          accessToken: null,
+          accessTokenExpiresAt: null,
+        });
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        }
+        return undefined as unknown as T;
       }
     }
     throw err;

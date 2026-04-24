@@ -825,7 +825,7 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url === '/api/v1/referrals/received' || url === '/api/v1/referrals/sent') {
       return [];
     }
-    if (url === '/api/v1/consumer-leads/owner' || url === '/api/v1/consumer-leads/consumer') {
+    if (url === '/api/v1/consumer-leads/owner' || url === '/api/v1/consumer-leads/consumer' || url === '/api/v1/consumer-leads/received') {
       return [];
     }
     if (url.startsWith('/api/v1/connect/')) {
@@ -1033,6 +1033,9 @@ export function getMockResponse(method: string, path: string): unknown {
     }
     if (url === '/api/v1/invitations/sent') {
       return MOCK_INVITATIONS;
+    }
+    if (url === '/api/v1/messages' || url === '/api/v1/messages/conversations') {
+      return [];
     }
     if (url.startsWith('/api/v1/invitations/public/')) {
       const token = url.replace('/api/v1/invitations/public/', '');
