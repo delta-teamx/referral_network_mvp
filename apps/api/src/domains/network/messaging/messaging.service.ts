@@ -1,5 +1,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
+import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
  * In-app messaging between two users.
@@ -71,7 +72,7 @@ export async function sendMessage(
     data: {
       conversationId,
       senderId,
-      text,
+      text: sanitizeText(text),
     },
     select: {
       id: true,

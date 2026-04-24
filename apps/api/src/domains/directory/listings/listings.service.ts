@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
  * Listings service — directory read/write.
@@ -190,11 +191,11 @@ export async function createListing(userId: string, input: CreateListingInput) {
       userId,
       categoryId: category.id,
       slug,
-      name: input.name,
-      description: input.description,
-      shortDescription: input.shortDescription ?? null,
-      address: input.address,
-      city: input.city,
+      name: sanitizeText(input.name),
+      description: sanitizeText(input.description),
+      shortDescription: input.shortDescription ? sanitizeText(input.shortDescription) : null,
+      address: sanitizeText(input.address),
+      city: sanitizeText(input.city),
       state: input.state.toUpperCase(),
       zipCode: input.zipCode,
       phone: input.phone ?? null,

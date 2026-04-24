@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
  * Reviews service — consumer reviews on listings.
@@ -41,9 +42,9 @@ export async function createReview(input: CreateReviewInput) {
     data: {
       listingId: listing.id,
       userId: input.userId,
-      rating: Math.round(input.rating),
-      title: input.title?.trim() || null,
-      text: input.text.trim(),
+      rating: Math.min(5, Math.max(1, Math.round(input.rating))),
+      title: input.title ? sanitizeText(input.title) || null : null,
+      text: sanitizeText(input.text),
     },
     select: {
       id: true,
@@ -69,7 +70,7 @@ export async function createReview(input: CreateReviewInput) {
 
 async function recomputeListingAggregates(listingId: string): Promise<void> {
   const agg = await prisma.review.aggregate({
-    where: { listingId, status: 'active' },
+    where: { listingId, status: 'active', user: { deletedAt: null } },
     _avg: { rating: true },
     _count: { _all: true },
   });

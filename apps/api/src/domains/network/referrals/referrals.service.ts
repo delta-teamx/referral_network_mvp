@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
  * B2B referrals — one business owner sending a client to another business.
@@ -38,10 +39,10 @@ export async function sendReferral(input: CreateReferralInput) {
       senderId: input.senderId,
       receiverId: listing.userId,
       listingId: listing.id,
-      clientName: input.clientName?.trim() || null,
+      clientName: input.clientName ? sanitizeText(input.clientName) || null : null,
       clientPhone: input.clientPhone?.trim() || null,
-      clientEmail: input.clientEmail?.trim() || null,
-      notes: input.notes?.trim() || null,
+      clientEmail: input.clientEmail?.trim().toLowerCase() || null,
+      notes: input.notes ? sanitizeText(input.notes) || null : null,
     },
     select: referralSelect,
   });

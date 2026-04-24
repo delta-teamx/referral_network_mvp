@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { sanitizeText, sanitizeArray } from '../../../utils/sanitize.js';
 
 /**
  * Member profiles — the "referral intelligence" layer that powers AI matching.
@@ -39,26 +40,26 @@ export interface UpsertProfileInput {
 
 export async function upsertMemberProfile(userId: string, input: UpsertProfileInput) {
   const data = {
-    businessName: input.businessName.trim(),
-    industry: input.industry.trim(),
-    headline: input.headline?.trim() || null,
-    bio: input.bio?.trim() || null,
-    keywords: (input.keywords ?? []).map((k) => k.trim().toLowerCase()).filter(Boolean),
-    servicesOffered: (input.servicesOffered ?? []).map((s) => s.trim()).filter(Boolean),
+    businessName: sanitizeText(input.businessName),
+    industry: sanitizeText(input.industry),
+    headline: input.headline ? sanitizeText(input.headline) || null : null,
+    bio: input.bio ? sanitizeText(input.bio) || null : null,
+    keywords: sanitizeArray((input.keywords ?? []).map((k) => k.toLowerCase())),
+    servicesOffered: sanitizeArray(input.servicesOffered ?? []),
     yearsInBusiness: input.yearsInBusiness ?? null,
-    icpIndustries: (input.icpIndustries ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
-    icpRoles: (input.icpRoles ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
-    icpProblems: (input.icpProblems ?? []).map((s) => s.trim()).filter(Boolean),
-    icpDealSize: input.icpDealSize?.trim() || null,
-    canReferIndustries: (input.canReferIndustries ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean),
-    canReferTypes: (input.canReferTypes ?? []).map((s) => s.trim()).filter(Boolean),
-    city: input.city?.trim() || null,
+    icpIndustries: sanitizeArray((input.icpIndustries ?? []).map((s) => s.toLowerCase())),
+    icpRoles: sanitizeArray((input.icpRoles ?? []).map((s) => s.toLowerCase())),
+    icpProblems: sanitizeArray(input.icpProblems ?? []),
+    icpDealSize: input.icpDealSize ? sanitizeText(input.icpDealSize) || null : null,
+    canReferIndustries: sanitizeArray((input.canReferIndustries ?? []).map((s) => s.toLowerCase())),
+    canReferTypes: sanitizeArray(input.canReferTypes ?? []),
+    city: input.city ? sanitizeText(input.city) || null : null,
     state: input.state?.trim().toUpperCase().slice(0, 2) || null,
     zipCode: input.zipCode?.trim() || null,
     openToBarter: input.openToBarter ?? false,
-    barterOfferings: (input.barterOfferings ?? []).map((s) => s.trim()).filter(Boolean),
-    barterWants: (input.barterWants ?? []).map((s) => s.trim()).filter(Boolean),
-    barterNotes: input.barterNotes?.trim() || null,
+    barterOfferings: sanitizeArray(input.barterOfferings ?? []),
+    barterWants: sanitizeArray(input.barterWants ?? []),
+    barterNotes: input.barterNotes ? sanitizeText(input.barterNotes) || null : null,
   };
 
   const profile = await prisma.memberProfile.upsert({
