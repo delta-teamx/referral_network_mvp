@@ -187,6 +187,7 @@ function buildAuthSuccess(user: User): AuthResult {
     email: user.email,
     role: user.role,
     tier: user.subscriptionTier,
+    ev: user.emailVerified,
   });
   const refreshToken = signRefreshToken({
     sub: user.id,

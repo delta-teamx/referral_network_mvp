@@ -12,6 +12,7 @@ declare global {
       email: string;
       role: UserRole;
       subscriptionTier: SubscriptionTier;
+      emailVerified: boolean;
     }
 
     interface Request {

@@ -30,6 +30,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
       email: claims.email,
       role: claims.role,
       subscriptionTier: claims.tier,
+      emailVerified: claims.ev === true,
     };
     next();
   } catch (err) {
@@ -55,6 +56,7 @@ export const optionalAuthenticate: RequestHandler = (req, _res, next) => {
       email: claims.email,
       role: claims.role,
       subscriptionTier: claims.tier,
+      emailVerified: claims.ev === true,
     };
   } catch {
     // swallow — route still runs, just anonymously

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
+import { requireVerified } from './middleware/requireVerified.js';
 import { disconnectPrisma } from './config/prisma.js';
 import { healthRouter } from './domains/health/health.routes.js';
 import { authRouter } from './domains/core/auth/auth.routes.js';
@@ -35,7 +36,7 @@ import { registerTrustSubscribers } from './domains/core/trust/trust.subscribers
 import { startScheduler } from './domains/core/jobs/scheduler.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
-import { mutationRateLimit } from './middleware/rateLimit.js';
+import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
 
 const app = express();
@@ -94,28 +95,38 @@ registerLeadSubscribers(eventBus);
 registerNotificationSubscribers(eventBus);
 registerTrustSubscribers(eventBus);
 
+// ---- Email verification gate ------------------------------------------------
+// Write operations on content-creation routes require a verified email.
+// Read routes (GET) are unaffected so unverified users can still browse.
+const verifiedWriteGate: express.RequestHandler = (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return requireVerified(req, res, next);
+  }
+  next();
+};
+
 // ---- Routes -----------------------------------------------------------------
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/onboarding', onboardingRouter);
-app.use('/api/v1/listings', listingsRouter);
-app.use('/api/v1/photos', photosRouter);
+app.use('/api/v1/listings', verifiedWriteGate, listingsRouter);
+app.use('/api/v1/photos', verifiedWriteGate, photosRouter);
 app.use('/api/v1/categories', categoriesRouter);
 app.use('/api/v1/connect', connectorRouter);
 app.use('/api/v1/consumer-leads', leadsRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
-app.use('/api/v1/reviews', reviewsRouter);
-app.use('/api/v1/referrals', referralsRouter);
-app.use('/api/v1/connections', connectionsRouter);
-app.use('/api/v1/invitations', invitationsRouter);
-app.use('/api/v1/groups', groupsRouter);
-app.use('/api/v1/profiles', profilesRouter);
+app.use('/api/v1/reviews', verifiedWriteGate, reviewsRouter);
+app.use('/api/v1/referrals', verifiedWriteGate, referralsRouter);
+app.use('/api/v1/connections', verifiedWriteGate, connectionsRouter);
+app.use('/api/v1/invitations', verifiedWriteGate, invitationsRouter);
+app.use('/api/v1/groups', verifiedWriteGate, groupsRouter);
+app.use('/api/v1/profiles', verifiedWriteGate, profilesRouter);
 app.use('/api/v1/ai', aiRouter);
 app.use('/api/v1/billing', billingRouter);
-app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/admin', rateLimit({ windowMs: 60_000, max: 30, key: 'admin' }), adminRouter);
 app.use('/api/v1/notifications', notificationsRouter);
-app.use('/api/v1/messages', messagingRouter);
-app.use('/api/v1/bookings', bookingsRouter);
+app.use('/api/v1/messages', verifiedWriteGate, messagingRouter);
+app.use('/api/v1/bookings', verifiedWriteGate, bookingsRouter);
 app.use('/api/v1/events', eventsRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so

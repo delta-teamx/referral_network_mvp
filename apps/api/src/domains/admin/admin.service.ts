@@ -121,6 +121,7 @@ export async function impersonateUser(adminId: string, targetUserId: string) {
     email: target.email,
     role: target.role,
     tier: target.subscriptionTier,
+    ev: target.emailVerified,
   });
 
   await eventBus.publish('admin.user_impersonated', {

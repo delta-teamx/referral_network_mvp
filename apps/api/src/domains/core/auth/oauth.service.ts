@@ -146,6 +146,7 @@ export async function completeGoogleOAuth(code: string): Promise<AuthResult> {
     email: user.email,
     role: user.role,
     tier: user.subscriptionTier,
+    ev: user.emailVerified,
   });
   const refresh = signRefreshToken({
     sub: user.id,
@@ -266,6 +267,7 @@ export async function completeFacebookOAuth(code: string): Promise<AuthResult> {
     email: user.email,
     role: user.role,
     tier: user.subscriptionTier,
+    ev: user.emailVerified,
   });
   const refresh = signRefreshToken({
     sub: user.id,

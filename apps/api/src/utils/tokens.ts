@@ -8,6 +8,7 @@ export interface AccessTokenClaims {
   email: string;
   role: UserRole;
   tier: SubscriptionTier;
+  ev?: boolean; // emailVerified — short key to keep JWT small
 }
 
 export interface RefreshTokenClaims {
