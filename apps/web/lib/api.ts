@@ -68,56 +68,86 @@ export async function apiRequest<T>(
     throw new ApiError('Demo mode: no mock for this endpoint', 0);
   }
 
-  const url = path.startsWith('http') ? new URL(path) : new URL(`${API_BASE}${path}`);
-  if (opts.query) {
-    for (const [k, v] of Object.entries(opts.query)) {
-      if (v !== undefined) url.searchParams.set(k, String(v));
+  const doFetch = async (token?: string): Promise<T> => {
+    const url = path.startsWith('http') ? new URL(path) : new URL(`${API_BASE}${path}`);
+    if (opts.query) {
+      for (const [k, v] of Object.entries(opts.query)) {
+        if (v !== undefined) url.searchParams.set(k, String(v));
+      }
     }
-  }
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (opts.json !== undefined) headers['Content-Type'] = 'application/json';
-  if (opts.accessToken) headers.Authorization = `Bearer ${opts.accessToken}`;
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (opts.json !== undefined) headers['Content-Type'] = 'application/json';
+    const activeToken = token ?? opts.accessToken;
+    if (activeToken) headers.Authorization = `Bearer ${activeToken}`;
 
-  let res: Response;
-  try {
-    res = await fetch(url.toString(), {
-      method,
-      headers,
-      credentials: opts.credentials ?? 'include',
-      body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
-      signal: opts.signal,
-    });
-  } catch (networkErr) {
-    // Network failure (DNS, CORS preflight, offline) — fall back to demo data
-    // if we have a mock for this endpoint.
-    return mockOrThrow<T>(method, fullPath, networkErr);
-  }
-
-  let envelope: ApiResponse<T>;
-  try {
-    envelope = (await res.json()) as ApiResponse<T>;
-  } catch {
-    return mockOrThrow<T>(method, fullPath, new ApiError(`Unexpected response (${res.status})`, res.status));
-  }
-
-  if (!res.ok || envelope.success === false) {
-    // 5xx / network-shaped errors → try mock fallback. 4xx is a real client
-    // error (validation, auth) and should bubble up.
-    if (res.status >= 500 || res.status === 0) {
-      return mockOrThrow<T>(
+    let res: Response;
+    try {
+      res = await fetch(url.toString(), {
         method,
-        fullPath,
-        new ApiError(envelope.error ?? `Request failed (${res.status})`, res.status, envelope.details),
+        headers,
+        credentials: opts.credentials ?? 'include',
+        body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
+        signal: opts.signal,
+      });
+    } catch (networkErr) {
+      return mockOrThrow<T>(method, fullPath, networkErr);
+    }
+
+    let envelope: ApiResponse<T>;
+    try {
+      envelope = (await res.json()) as ApiResponse<T>;
+    } catch {
+      return mockOrThrow<T>(method, fullPath, new ApiError(`Unexpected response (${res.status})`, res.status));
+    }
+
+    if (!res.ok || envelope.success === false) {
+      if (res.status >= 500 || res.status === 0) {
+        return mockOrThrow<T>(
+          method,
+          fullPath,
+          new ApiError(envelope.error ?? `Request failed (${res.status})`, res.status, envelope.details),
+        );
+      }
+      throw new ApiError(
+        envelope.error ?? `Request failed (${res.status})`,
+        res.status,
+        envelope.details,
       );
     }
-    throw new ApiError(
-      envelope.error ?? `Request failed (${res.status})`,
-      res.status,
-      envelope.details,
-    );
+    return envelope.data as T;
+  };
+
+  try {
+    return await doFetch();
+  } catch (err) {
+    if (
+      err instanceof ApiError &&
+      err.status === 401 &&
+      opts.accessToken &&
+      !path.includes('/auth/')
+    ) {
+      try {
+        const refreshed = await apiRequest<{ tokens: { accessToken: string; expiresIn: number }; user: unknown }>(
+          'POST',
+          '/api/v1/auth/refresh',
+        );
+        const { useAuthStore } = await import('../stores/auth');
+        const store = useAuthStore.getState();
+        store.setAuth(
+          refreshed.user as Parameters<typeof store.setAuth>[0],
+          refreshed.tokens.accessToken,
+          Date.now() + refreshed.tokens.expiresIn * 1000,
+        );
+        return await doFetch(refreshed.tokens.accessToken);
+      } catch {
+        const { useAuthStore } = await import('../stores/auth');
+        useAuthStore.setState({ status: 'unauthenticated', user: null, accessToken: null });
+        throw err;
+      }
+    }
+    throw err;
   }
-  return envelope.data as T;
 }
 
 export const api = {
