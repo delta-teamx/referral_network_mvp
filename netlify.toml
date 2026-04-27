@@ -9,6 +9,9 @@
   command = "echo 'Serving pre-built static export from apps/web/out/'"
   publish = "apps/web/out"
 
+[build.environment]
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+
 # SPA-style fallback: any unknown path falls back to the root index so the
 # Next.js client router can handle it.
 [[redirects]]
