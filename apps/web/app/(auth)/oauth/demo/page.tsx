@@ -13,8 +13,10 @@ import { useAuthStore } from '../../../../stores/auth';
 export default function OAuthDemoPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const existingUser = useAuthStore((s) => s.user);
 
   useEffect(() => {
+    const isReturning = !!existingUser;
     setAuth(
       {
         id: 'demo-google-user',
@@ -29,8 +31,8 @@ export default function OAuthDemoPage() {
       'demo-google-access-token',
       Date.now() + 900 * 1000,
     );
-    router.replace('/dashboard');
-  }, [router, setAuth]);
+    router.replace(isReturning ? '/dashboard' : '/onboarding');
+  }, [router, setAuth, existingUser]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
