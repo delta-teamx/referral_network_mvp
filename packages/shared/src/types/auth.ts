@@ -13,6 +13,7 @@ export interface AuthenticatedUserDto {
   subscriptionTier: SubscriptionTier;
   emailVerified: boolean;
   phoneVerified: boolean;
+  onboardingCompleted: boolean;
   createdAt: string;
 }
 

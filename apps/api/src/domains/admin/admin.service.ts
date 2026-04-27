@@ -130,7 +130,7 @@ export async function impersonateUser(adminId: string, targetUserId: string) {
   });
 
   return {
-    user: toAuthenticatedUserDto(target),
+    user: await toAuthenticatedUserDto(target),
     accessToken: token,
     expiresIn: 3600,
   };

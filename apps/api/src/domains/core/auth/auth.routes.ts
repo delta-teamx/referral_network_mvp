@@ -236,7 +236,7 @@ authRouter.get(
     if (!user) throw AppError.unauthorized('Account no longer exists');
     const body: ApiResponse<AuthenticatedUserDto> = {
       success: true,
-      data: toAuthenticatedUserDto(user),
+      data: await toAuthenticatedUserDto(user),
     };
     res.json(body);
   }),

@@ -2,11 +2,6 @@ import type { User } from '@prisma/client';
 import type { AuthenticatedUserDto } from '@refnet/shared';
 import { prisma } from '../../../config/prisma.js';
 
-/**
- * Users domain — thin wrapper around Prisma for user lookups and profile
- * shaping. No auth logic here; that lives in `domains/core/auth/`.
- */
-
 export async function findUserById(id: string): Promise<User | null> {
   return prisma.user.findFirst({ where: { id, deletedAt: null } });
 }
@@ -17,8 +12,12 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   });
 }
 
-/** Project a User row to the slim DTO the frontend consumes. */
-export function toAuthenticatedUserDto(user: User): AuthenticatedUserDto {
+export async function toAuthenticatedUserDto(user: User): Promise<AuthenticatedUserDto> {
+  const onboarding = await prisma.onboardingProgress.findUnique({
+    where: { userId: user.id },
+    select: { completedAt: true },
+  });
+
   return {
     id: user.id,
     email: user.email,
@@ -30,6 +29,7 @@ export function toAuthenticatedUserDto(user: User): AuthenticatedUserDto {
     subscriptionTier: user.subscriptionTier,
     emailVerified: user.emailVerified,
     phoneVerified: user.phoneVerified,
+    onboardingCompleted: onboarding?.completedAt != null,
     createdAt: user.createdAt.toISOString(),
   };
 }

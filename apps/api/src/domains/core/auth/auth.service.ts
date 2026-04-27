@@ -182,7 +182,7 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
 
 // ---- internals ---------------------------------------------------------------
 
-function buildAuthSuccess(user: User): AuthResult {
+async function buildAuthSuccess(user: User): Promise<AuthResult> {
   const accessToken = signAccessToken({
     sub: user.id,
     email: user.email,
@@ -196,7 +196,7 @@ function buildAuthSuccess(user: User): AuthResult {
   });
   return {
     dto: {
-      user: toAuthenticatedUserDto(user),
+      user: await toAuthenticatedUserDto(user),
       tokens: {
         accessToken,
         expiresIn: accessTokenSeconds(),

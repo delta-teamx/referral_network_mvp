@@ -154,7 +154,7 @@ export async function completeGoogleOAuth(code: string): Promise<AuthResult & { 
 
   return {
     dto: {
-      user: toAuthenticatedUserDto(user),
+      user: await toAuthenticatedUserDto(user),
       tokens: {
         accessToken: access,
         expiresIn: accessTokenSeconds(),
@@ -277,7 +277,7 @@ export async function completeFacebookOAuth(code: string): Promise<AuthResult & 
 
   return {
     dto: {
-      user: toAuthenticatedUserDto(user),
+      user: await toAuthenticatedUserDto(user),
       tokens: {
         accessToken: access,
         expiresIn: accessTokenSeconds(),

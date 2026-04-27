@@ -48,6 +48,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (status === 'unauthenticated') router.push('/login?next=/dashboard');
   }, [status, router]);
 
+  useEffect(() => {
+    if (user && !user.onboardingCompleted && user.role !== 'ADMIN') {
+      router.push('/onboarding');
+    }
+  }, [user, router]);
+
   if (status === 'loading' || status === 'idle') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
