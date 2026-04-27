@@ -100,19 +100,18 @@ async function fetchUserInfo(accessToken: string): Promise<GoogleUserInfo> {
   return (await res.json()) as GoogleUserInfo;
 }
 
-async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<User> {
+async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user: User; isNew: boolean }> {
   const email = profile.email.toLowerCase().trim();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    // Mark verified if Google says so — we trust Google more than our own
-    // email token on a first click.
     if (!existing.emailVerified && profile.email_verified) {
-      return prisma.user.update({
+      const updated = await prisma.user.update({
         where: { id: existing.id },
         data: { emailVerified: true, emailVerifyToken: null },
       });
+      return { user: updated, isNew: false };
     }
-    return existing;
+    return { user: existing, isNew: false };
   }
 
   const created = await prisma.user.create({
@@ -133,13 +132,13 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<User> {
     role: created.role,
   });
 
-  return created;
+  return { user: created, isNew: true };
 }
 
-export async function completeGoogleOAuth(code: string): Promise<AuthResult> {
+export async function completeGoogleOAuth(code: string): Promise<AuthResult & { isNew: boolean }> {
   const tokens = await exchangeCodeForTokens(code);
   const profile = await fetchUserInfo(tokens.access_token);
-  const user = await upsertFromGoogleProfile(profile);
+  const { user, isNew } = await upsertFromGoogleProfile(profile);
 
   const access = signAccessToken({
     sub: user.id,
@@ -162,6 +161,7 @@ export async function completeGoogleOAuth(code: string): Promise<AuthResult> {
       },
     },
     refreshToken: refresh,
+    isNew,
   };
 }
 
@@ -221,19 +221,20 @@ async function fbFetchProfile(accessToken: string): Promise<FbProfile> {
   return (await res.json()) as FbProfile;
 }
 
-async function upsertFromFbProfile(profile: FbProfile): Promise<User> {
+async function upsertFromFbProfile(profile: FbProfile): Promise<{ user: User; isNew: boolean }> {
   const email = (profile.email ?? '').toLowerCase().trim();
   if (!email) throw AppError.badRequest('Facebook account has no email. Please use email signup.');
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     if (!existing.emailVerified && profile.email) {
-      return prisma.user.update({
+      const updated = await prisma.user.update({
         where: { id: existing.id },
         data: { emailVerified: true, emailVerifyToken: null },
       });
+      return { user: updated, isNew: false };
     }
-    return existing;
+    return { user: existing, isNew: false };
   }
 
   const created = await prisma.user.create({
@@ -254,13 +255,13 @@ async function upsertFromFbProfile(profile: FbProfile): Promise<User> {
     role: created.role,
   });
 
-  return created;
+  return { user: created, isNew: true };
 }
 
-export async function completeFacebookOAuth(code: string): Promise<AuthResult> {
+export async function completeFacebookOAuth(code: string): Promise<AuthResult & { isNew: boolean }> {
   const tokens = await fbExchangeCode(code);
   const profile = await fbFetchProfile(tokens.access_token);
-  const user = await upsertFromFbProfile(profile);
+  const { user, isNew } = await upsertFromFbProfile(profile);
 
   const access = signAccessToken({
     sub: user.id,
@@ -283,5 +284,7 @@ export async function completeFacebookOAuth(code: string): Promise<AuthResult> {
       },
     },
     refreshToken: refresh,
+    isNew,
   };
 }
+

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 import { MobileNav } from '../../../components/layout/MobileNav';
+import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -102,6 +103,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Link>
           </div>
         )}
+        <UpgradeBanner />
         {children}
         <div className="h-16 md:hidden" aria-hidden />
       </main>

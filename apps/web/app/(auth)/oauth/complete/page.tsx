@@ -29,6 +29,7 @@ export default function OAuthCompletePage() {
       const frag = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const accessToken = frag.get('access_token');
       const expiresIn = Number(frag.get('expires_in') ?? 900);
+      const isNew = frag.get('is_new') === '1';
       if (!accessToken) {
         setError('Missing access token from Google. Please try signing in again.');
         return;
@@ -36,7 +37,13 @@ export default function OAuthCompletePage() {
       try {
         const me = await api.get<AuthenticatedUserDto>('/api/v1/auth/me', { accessToken });
         setAuth(me, accessToken, Date.now() + expiresIn * 1000);
-        router.replace(me.role === 'ADMIN' ? '/admin' : '/dashboard');
+        if (isNew) {
+          router.replace('/onboarding');
+        } else if (me.role === 'ADMIN') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
       } catch (err) {
         setError(err instanceof ApiError ? err.message : 'Sign-in failed');
       }

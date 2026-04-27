@@ -169,13 +169,12 @@ authRouter.get(
     const result = await completeGoogleOAuth(code);
     setRefreshCookie(res, result.refreshToken);
 
-    // Redirect to the web app with the access token in a fragment — the
-    // auth store's `consumeOAuthFragment` picks it up and hydrates.
     const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
     const fragment = new URLSearchParams({
       access_token: result.dto.tokens.accessToken,
       expires_in: String(result.dto.tokens.expiresIn),
       user_id: result.dto.user.id,
+      is_new: result.isNew ? '1' : '0',
     });
     res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
   }),
@@ -222,6 +221,7 @@ authRouter.get(
       access_token: result.dto.tokens.accessToken,
       expires_in: String(result.dto.tokens.expiresIn),
       user_id: result.dto.user.id,
+      is_new: result.isNew ? '1' : '0',
     });
     res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
   }),
