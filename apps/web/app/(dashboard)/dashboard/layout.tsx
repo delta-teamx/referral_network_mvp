@@ -99,6 +99,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+        <div className="mt-auto px-5 py-4 text-[10px] text-gray-400">
+          Powered by <span className="font-semibold text-gray-500">Referral Nova</span>
+        </div>
       </aside>
       <main className="min-w-0 flex-1">
         {user.role === 'ADMIN' && (

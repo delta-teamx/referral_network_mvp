@@ -84,7 +84,12 @@ export function Footer() {
 
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
-            <p>&copy; {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
+            <div>
+              <p>&copy; {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
+              <p className="mt-1 text-gray-600">
+                Powered by <span className="font-semibold text-gray-400">Referral Nova</span>
+              </p>
+            </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">
                 Privacy

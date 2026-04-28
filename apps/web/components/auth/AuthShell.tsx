@@ -22,6 +22,9 @@ export function AuthShell({ title, subtitle, footer, children }: Props) {
         {subtitle && <p className="mb-6 text-center text-sm text-gray-600">{subtitle}</p>}
         {children}
         {footer && <div className="mt-6 text-center text-sm text-gray-600">{footer}</div>}
+        <p className="mt-4 text-center text-[10px] text-gray-400">
+          Powered by <span className="font-semibold">Referral Nova</span>
+        </p>
       </div>
     </main>
   );
