@@ -260,7 +260,7 @@ function SearchInner() {
                     </span>
                     <span className="text-gray-300">·</span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
-                      Trust {Number(listing.trustScore).toFixed(1)}
+                      Trust {Math.min(10, Number(listing.trustScore)).toFixed(1)}
                     </span>
                   </div>
                 </Link>

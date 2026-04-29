@@ -7,6 +7,7 @@ import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  Calendar,
   Check,
   Clock,
   Globe,
@@ -21,6 +22,7 @@ import {
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { BookingModal } from '../../../../components/booking/BookingModal';
 
 type ConnectionState =
   | 'none'
@@ -76,6 +78,7 @@ export default function ListingDetailClient() {
   const [loading, setLoading] = useState(true);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [connState, setConnState] = useState<ConnectionState>('none');
   const [connBusy, setConnBusy] = useState(false);
 
@@ -214,10 +217,10 @@ export default function ListingDetailClient() {
               <span className="inline-flex items-center gap-1 text-gray-700">
                 <Star size={14} className="fill-amber-400 text-amber-400" />
                 {Number(listing.avgRating).toFixed(1)}
-                <span className="text-gray-400">({listing.reviewCount} reviews)</span>
+                <span className="text-gray-400">({reviews.length || listing.reviewCount} reviews)</span>
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
-                Trust {Number(listing.trustScore).toFixed(1)} / 10
+                Trust {Math.min(10, Number(listing.trustScore)).toFixed(1)} / 10
               </span>
               <span className="inline-flex items-center gap-1 text-gray-500">
                 <MapPin size={14} />
@@ -227,12 +230,17 @@ export default function ListingDetailClient() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/connect`}
-              className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
-            >
-              Request a quote
-            </Link>
+            {user && listing.userId !== user.id && (
+              <button
+                onClick={() => {
+                  if (!accessToken) router.push(`/login?next=/listing/${slug}`);
+                  else setBookingOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
+              >
+                <Calendar size={14} /> Book a call
+              </button>
+            )}
             <button
               onClick={() => {
                 if (!accessToken) router.push(`/login?next=/listing/${slug}`);
@@ -456,8 +464,14 @@ export default function ListingDetailClient() {
           }}
         />
       )}
-      {/* Force inclusion of `user` so eslint-no-unused-vars passes even when unused in UI. */}
-      {user && <span className="sr-only" />}
+      {bookingOpen && listing && (
+        <BookingModal
+          hostUserId={listing.userId}
+          hostName={listing.name}
+          open={bookingOpen}
+          onClose={() => setBookingOpen(false)}
+        />
+      )}
     </main>
   );
 }
