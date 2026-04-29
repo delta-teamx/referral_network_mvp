@@ -81,12 +81,20 @@ export default function BookingsPage() {
           <h1 className="mt-1 text-2xl font-bold text-gray-900">Your calls</h1>
           <p className="mt-1 text-sm text-gray-500">Zoom links are generated automatically.</p>
         </div>
-        <Link
-          href="/dashboard/availability"
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-primary"
-        >
-          <Calendar size={14} /> Set availability
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/search"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            <Video size={14} /> Book a call
+          </Link>
+          <Link
+            href="/dashboard/availability"
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-primary"
+          >
+            <Calendar size={14} /> Set availability
+          </Link>
+        </div>
       </header>
 
       <div className="mb-5 flex gap-2">

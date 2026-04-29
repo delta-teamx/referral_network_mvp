@@ -120,7 +120,7 @@ export default function AdminEventsPage() {
           onSubmit={create}
           className="mb-6 space-y-4 rounded-2xl border border-gray-800 bg-gray-900 p-5"
         >
-          <FormField label="Title" name="title" required className="text-gray-100" />
+          <FormField label="Title" name="title" required dark />
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">Description</label>
             <textarea
@@ -141,13 +141,13 @@ export default function AdminEventsPage() {
                 className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100"
               />
             </div>
-            <FormField label="Duration (min)" name="durationMin" type="number" defaultValue="60" />
-            <FormField label="Max attendees" name="maxAttendees" type="number" defaultValue="100" />
+            <FormField label="Duration (min)" name="durationMin" type="number" defaultValue="60" dark />
+            <FormField label="Max attendees" name="maxAttendees" type="number" defaultValue="100" dark />
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-300">
             <input type="checkbox" name="isRecurring" /> Recurring
           </label>
-          <FormField label="Recurrence rule (e.g. FREQ=WEEKLY;BYDAY=TU)" name="recurrenceRule" />
+          <FormField label="Recurrence rule (e.g. FREQ=WEEKLY;BYDAY=TU)" name="recurrenceRule" dark />
           <Button type="submit" loading={creating}>
             Create event + provision Zoom
           </Button>

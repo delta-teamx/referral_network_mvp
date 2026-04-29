@@ -199,8 +199,6 @@ class SendGridEmailProvider implements EmailProvider {
 async function createProvider(): Promise<EmailProvider> {
   if (!env.SENDGRID_API_KEY) return new ConsoleEmailProvider();
   try {
-    // @ts-expect-error — @sendgrid/mail is an optional runtime dep; tsc
-    // shouldn't demand its types when the import is dynamically gated.
     const mod = await import('@sendgrid/mail');
     const sgMail = mod.default ?? mod;
     sgMail.setApiKey(env.SENDGRID_API_KEY);

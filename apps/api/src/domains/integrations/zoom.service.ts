@@ -35,7 +35,12 @@ async function getZoomAccessToken(): Promise<string> {
     `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${env.ZOOM_ACCOUNT_ID}`,
     { method: 'POST', headers: { Authorization: `Basic ${basic}` } },
   );
-  if (!res.ok) throw new Error(`Zoom token request failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    // eslint-disable-next-line no-console
+    console.error('[zoom] token request failed:', res.status, text);
+    throw new Error(`Zoom token request failed: ${res.status}`);
+  }
   const data = (await res.json()) as { access_token: string };
   return data.access_token;
 }
@@ -53,9 +58,8 @@ export async function createZoomMeeting(
   }
 
   const token = await getZoomAccessToken();
-  const hostEmail = params.hostEmail ?? 'me';
   const res = await fetch(
-    `https://api.zoom.us/v2/users/${encodeURIComponent(hostEmail)}/meetings`,
+    'https://api.zoom.us/v2/users/me/meetings',
     {
       method: 'POST',
       headers: {
@@ -78,6 +82,8 @@ export async function createZoomMeeting(
   );
   if (!res.ok) {
     const err = await res.text();
+    // eslint-disable-next-line no-console
+    console.error('[zoom] meeting create failed:', res.status, err);
     throw new Error(`Zoom meeting create failed: ${res.status} ${err}`);
   }
   const data = (await res.json()) as {
