@@ -12,8 +12,19 @@
 [build.environment]
   NETLIFY_NEXT_PLUGIN_SKIP = "true"
 
-# SPA-style fallback: any unknown path falls back to the root index so the
-# Next.js client router can handle it.
+# Dynamic route fallbacks — serve a pre-rendered template page so the
+# client-side component can read the real slug from the URL and fetch data.
+[[redirects]]
+  from = "/listing/*"
+  to = "/listing/johnson-realty-group/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/connect/*"
+  to = "/connect/buying-a-home/index.html"
+  status = 200
+
+# SPA-style fallback for everything else
 [[redirects]]
   from = "/*"
   to = "/index.html"

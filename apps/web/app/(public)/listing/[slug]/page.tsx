@@ -6,8 +6,6 @@ export function generateStaticParams() {
   return MOCK_LISTINGS.map((l) => ({ slug: l.slug }));
 }
 
-export const dynamicParams = false;
-
 export default function Page() {
   return (
     <AuthGateServer>
