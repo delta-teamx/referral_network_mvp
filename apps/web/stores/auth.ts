@@ -4,12 +4,6 @@ import { create } from 'zustand';
 import type { AuthSuccessDto, AuthenticatedUserDto, LoginInput, SignupInput } from '@refnet/shared';
 import { api, ApiError } from '../lib/api';
 
-/**
- * Auth state — lives in memory (never localStorage). On hard refresh the
- * page calls `hydrate()`, which POSTs /auth/refresh; the HTTP-only refresh
- * cookie keeps the session alive across reloads.
- */
-
 export interface AuthState {
   user: AuthenticatedUserDto | null;
   accessToken: string | null;
@@ -22,8 +16,28 @@ export interface AuthState {
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
   clearError: () => void;
-  /** Used by the OAuth callback to seed state after an external redirect. */
   setAuth: (user: AuthenticatedUserDto, accessToken: string, expiresAt: number) => void;
+}
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleRefresh(set: (patch: Partial<AuthState>) => void): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  const state = useAuthStore.getState();
+  if (!state.accessTokenExpiresAt) return;
+
+  // Refresh 2 minutes before expiry (or immediately if less than 2 min left)
+  const msUntilExpiry = state.accessTokenExpiresAt - Date.now();
+  const refreshIn = Math.max(0, msUntilExpiry - 2 * 60 * 1000);
+
+  refreshTimer = setTimeout(async () => {
+    try {
+      const data = await api.post<AuthSuccessDto>('/api/v1/auth/refresh');
+      applyAuthSuccess(data, set);
+    } catch {
+      // Refresh failed — token will expire, next API call handles it
+    }
+  }, refreshIn);
 }
 
 function applyAuthSuccess(data: AuthSuccessDto, set: (patch: Partial<AuthState>) => void): void {
@@ -34,6 +48,7 @@ function applyAuthSuccess(data: AuthSuccessDto, set: (patch: Partial<AuthState>)
     status: 'authenticated',
     error: null,
   });
+  scheduleRefresh(set);
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -68,6 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   async logout() {
+    if (refreshTimer) clearTimeout(refreshTimer);
     try {
       await api.post('/api/v1/auth/logout');
     } finally {
@@ -83,15 +99,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   async hydrate() {
     const state = useAuthStore.getState();
-    // If we already have a valid in-memory token (e.g. just signed up or
-    // logged in this session), don't clobber it with a refresh call that
-    // may fail if the HTTP-only cookie wasn't set yet.
     if (
       state.accessToken &&
       state.accessTokenExpiresAt &&
       state.accessTokenExpiresAt > Date.now() + 30_000
     ) {
       if (state.status !== 'authenticated') set({ status: 'authenticated' });
+      scheduleRefresh(set);
       return;
     }
     set({ status: 'loading' });
@@ -115,5 +129,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       status: 'authenticated',
       error: null,
     });
+    scheduleRefresh(set);
   },
 }));
