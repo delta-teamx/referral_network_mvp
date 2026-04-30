@@ -178,7 +178,7 @@ export default function ListingDetailClient() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="relative h-56 bg-gradient-to-br from-primary via-[#174a6e] to-[#0d3650]">
+      <div className="relative h-44 bg-gradient-to-br from-primary via-[#174a6e] to-[#0d3650]">
         <div className="mx-auto flex h-full max-w-6xl items-end px-6 pb-6">
           <Link
             href="/search"
@@ -189,47 +189,48 @@ export default function ListingDetailClient() {
         </div>
       </div>
 
-      <div className="mx-auto -mt-16 max-w-6xl px-6 pb-16">
+      <div className="mx-auto -mt-10 max-w-6xl px-6 pb-16">
         <motion.div
           variants={fadeInUp}
           initial="hidden"
           animate="visible"
-          className="mb-6 flex flex-col items-start gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between"
+          className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
         >
-          <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
-              {listing.category.name}
-            </p>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900">{listing.name}</h1>
-              {listing.isVerified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
-                  <ShieldCheck size={12} /> Verified
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
+                {listing.category.name}
+              </p>
+              <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">{listing.name}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {listing.isVerified && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <ShieldCheck size={12} /> Verified
+                  </span>
+                )}
+                {listing.isFeatured && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                    Featured
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className="inline-flex items-center gap-1 text-gray-700">
+                  <Star size={14} className="fill-amber-400 text-amber-400" />
+                  {Number(listing.avgRating).toFixed(1)}
+                  <span className="text-gray-400">({reviews.length || listing.reviewCount} reviews)</span>
                 </span>
-              )}
-              {listing.isFeatured && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                  Featured
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
+                  Trust {Math.min(10, Number(listing.trustScore)).toFixed(1)} / 10
                 </span>
-              )}
+                <span className="inline-flex items-center gap-1 text-gray-500">
+                  <MapPin size={14} />
+                  {listing.city}, {listing.state} {listing.zipCode}
+                </span>
+              </div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="inline-flex items-center gap-1 text-gray-700">
-                <Star size={14} className="fill-amber-400 text-amber-400" />
-                {Number(listing.avgRating).toFixed(1)}
-                <span className="text-gray-400">({reviews.length || listing.reviewCount} reviews)</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
-                Trust {Math.min(10, Number(listing.trustScore)).toFixed(1)} / 10
-              </span>
-              <span className="inline-flex items-center gap-1 text-gray-500">
-                <MapPin size={14} />
-                {listing.city}, {listing.state} {listing.zipCode}
-              </span>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 md:flex-shrink-0">
             {user && listing.userId !== user.id && (
               <button
                 onClick={() => {
@@ -257,6 +258,7 @@ export default function ListingDetailClient() {
                 onRequest={() => void requestConnect()}
               />
             )}
+          </div>
           </div>
         </motion.div>
 

@@ -4,6 +4,8 @@ import { Montserrat } from 'next/font/google';
 import { DemoBanner } from '../components/layout/DemoBanner';
 import { Footer } from '../components/layout/Footer';
 import { TopNav } from '../components/layout/TopNav';
+import { SignupPopup } from '../components/marketing/SignupPopup';
+import { SignupBanner } from '../components/marketing/SignupBanner';
 import './globals.css';
 
 const montserrat = Montserrat({
@@ -32,6 +34,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TopNav />
         {children}
         <Footer />
+        <SignupPopup />
+        <SignupBanner />
       </body>
     </html>
   );

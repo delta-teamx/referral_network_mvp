@@ -6,6 +6,7 @@ import { Star, TrendingUp } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 interface Analytics {
   labels: string[];
@@ -51,6 +52,7 @@ export default function AnalyticsPage() {
   }, [accessToken]);
 
   return (
+    <UpgradeGate feature="Analytics Dashboard" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Analytics</p>
@@ -112,6 +114,7 @@ export default function AnalyticsPage() {
         </div>
       )}
     </div>
+    </UpgradeGate>
   );
 }
 
