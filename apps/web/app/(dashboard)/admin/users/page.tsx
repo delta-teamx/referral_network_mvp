@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Ban, Eye, Search } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
@@ -18,6 +19,7 @@ interface AdminUser {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -83,7 +85,7 @@ export default function AdminUsersPage() {
 
   async function viewAsUser(id: string, name: string) {
     if (!accessToken) return;
-    if (!window.confirm(`View the dashboard as ${name}? You'll be switched to their session.`)) return;
+    if (!window.confirm(`View the dashboard as ${name}? You'll be switched to their session. To return, log out and log back in as admin.`)) return;
     try {
       const data = await api.post<{ user: AdminUser; accessToken: string; expiresIn: number }>(
         `/api/v1/admin/users/${id}/impersonate`,
@@ -96,7 +98,7 @@ export default function AdminUsersPage() {
         data.accessToken,
         Date.now() + data.expiresIn * 1000,
       );
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impersonation failed');
     }
