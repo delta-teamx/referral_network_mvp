@@ -165,10 +165,12 @@ model MemberProfile {
   profileEmbedding Json?
   embeddingUpdatedAt DateTime?
 
-  // Location
+  // Location & service reach
   city    String?
   state   String?  @db.VarChar(2)
   zipCode String?
+  serviceArea    String   @default("local") // "local" | "remote" | "international"
+  serviceRadius  Int?     // miles for local (e.g. 50)
 
   // Bartering
   openToBarter       Boolean  @default(false)

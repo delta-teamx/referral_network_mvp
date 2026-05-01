@@ -7,6 +7,7 @@ import { ArrowDownLeft, ArrowUpRight, Calendar, Check, UserCheck, Video, XCircle
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 type Status = 'SENT' | 'ACCEPTED' | 'CONVERTED' | 'DECLINED';
 
@@ -73,6 +74,7 @@ export default function ReferralsPage() {
   const list = tab === 'received' ? received : sent;
 
   return (
+    <UpgradeGate feature="Referral Management" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Network</p>
@@ -232,6 +234,7 @@ export default function ReferralsPage() {
         </ul>
       )}
     </div>
+    </UpgradeGate>
   );
 }
 

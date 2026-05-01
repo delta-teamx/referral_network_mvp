@@ -7,6 +7,7 @@ import { Check, Inbox, Mail, Send, UserPlus, X } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 type Status = 'pending' | 'accepted' | 'declined' | 'archived';
 type Direction = 'inbound' | 'outbound';
@@ -101,6 +102,7 @@ export default function NetworkPage() {
   const pendingInvites = invitations.filter((i) => i.status === 'pending');
 
   return (
+    <UpgradeGate feature="My Network" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -160,6 +162,7 @@ export default function NetworkPage() {
         <SentInvitesList items={pendingInvites} onRevoke={(id) => void revoke(id)} />
       )}
     </div>
+    </UpgradeGate>
   );
 }
 

@@ -54,6 +54,8 @@ export default function OnboardingPage() {
   const [years, setYears] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  const [serviceArea, setServiceArea] = useState<'local' | 'remote' | 'international'>('local');
+  const [serviceRadius, setServiceRadius] = useState('50');
 
   const [icpIndustries, setIcpIndustries] = useState<string[]>([]);
   const [icpRoles, setIcpRoles] = useState('');
@@ -114,6 +116,8 @@ export default function OnboardingPage() {
         icpDealSize: icpDealSize || undefined,
         canReferIndustries, canReferTypes: canReferTypes.split('\n').map((t) => t.trim()).filter(Boolean),
         city: city || undefined, state: state || undefined, zipCode: zip || undefined,
+        serviceArea,
+        serviceRadius: serviceArea === 'local' ? Number(serviceRadius) || 50 : undefined,
         openToBarter,
         barterOfferings: barterOfferings.split(',').map((s) => s.trim()).filter(Boolean),
         barterWants: barterWants.split(',').map((s) => s.trim()).filter(Boolean),
@@ -200,6 +204,37 @@ export default function OnboardingPage() {
               <FormField label="City" name="city" value={city} onChange={(e) => setCity(e.target.value)} />
               <FormField label="State" name="state" maxLength={2} value={state} onChange={(e) => setState(e.target.value)} />
               <FormField label="Years" name="years" type="number" value={years} onChange={(e) => setYears(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-900">Service area *</label>
+              <div className="space-y-2">
+                <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 px-3 py-3 text-sm hover:border-primary">
+                  <input type="radio" name="serviceArea" value="local" checked={serviceArea === 'local'} onChange={() => setServiceArea('local')} className="mt-0.5" />
+                  <span>
+                    <span className="block font-semibold text-gray-900">Local only</span>
+                    <span className="block text-xs text-gray-500">I serve clients within a specific radius of my location</span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 px-3 py-3 text-sm hover:border-primary">
+                  <input type="radio" name="serviceArea" value="remote" checked={serviceArea === 'remote'} onChange={() => setServiceArea('remote')} className="mt-0.5" />
+                  <span>
+                    <span className="block font-semibold text-gray-900">Remote (nationwide)</span>
+                    <span className="block text-xs text-gray-500">I can serve clients anywhere in the US remotely</span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 px-3 py-3 text-sm hover:border-primary">
+                  <input type="radio" name="serviceArea" value="international" checked={serviceArea === 'international'} onChange={() => setServiceArea('international')} className="mt-0.5" />
+                  <span>
+                    <span className="block font-semibold text-gray-900">International</span>
+                    <span className="block text-xs text-gray-500">I work with clients globally, no geographic limits</span>
+                  </span>
+                </label>
+              </div>
+              {serviceArea === 'local' && (
+                <div className="mt-3">
+                  <FormField label="Service radius (miles)" name="serviceRadius" type="number" value={serviceRadius} onChange={(e) => setServiceRadius(e.target.value)} hint="How far from your location will you travel?" />
+                </div>
+              )}
             </div>
           </SC>
         )}

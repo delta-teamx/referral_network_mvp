@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,6 +157,7 @@ export default function MessagesPage() {
   // ---- Render -------------------------------------------------------------
 
   return (
+    <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       {/* Left panel — conversation list */}
       <aside className="w-80 shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
@@ -314,5 +316,6 @@ export default function MessagesPage() {
         )}
       </section>
     </div>
+    </UpgradeGate>
   );
 }

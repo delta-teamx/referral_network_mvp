@@ -17,6 +17,7 @@ import {
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
+import { UpgradeGate } from '../../../components/billing/UpgradeGate';
 
 interface IntroSuggestion {
   id: string;
@@ -103,6 +104,7 @@ export function AiFeed() {
   }
 
   return (
+    <UpgradeGate feature="AI-Powered Introductions" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -280,5 +282,6 @@ export function AiFeed() {
         </motion.ul>
       )}
     </div>
+    </UpgradeGate>
   );
 }

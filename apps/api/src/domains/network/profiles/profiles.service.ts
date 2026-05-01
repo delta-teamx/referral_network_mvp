@@ -32,6 +32,8 @@ export interface UpsertProfileInput {
   city?: string;
   state?: string;
   zipCode?: string;
+  serviceArea?: 'local' | 'remote' | 'international';
+  serviceRadius?: number;
   openToBarter?: boolean;
   barterOfferings?: string[];
   barterWants?: string[];
@@ -56,6 +58,8 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     city: input.city ? sanitizeText(input.city) || null : null,
     state: input.state?.trim().toUpperCase().slice(0, 2) || null,
     zipCode: input.zipCode?.trim() || null,
+    serviceArea: input.serviceArea ?? 'local',
+    serviceRadius: input.serviceRadius ?? null,
     openToBarter: input.openToBarter ?? false,
     barterOfferings: sanitizeArray(input.barterOfferings ?? []),
     barterWants: sanitizeArray(input.barterWants ?? []),

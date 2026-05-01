@@ -7,6 +7,7 @@ import { Calendar, Clock, Video, X } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 interface Booking {
   id: string;
@@ -74,6 +75,7 @@ export default function BookingsPage() {
   }
 
   return (
+    <UpgradeGate feature="Zoom Bookings" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -224,5 +226,6 @@ export default function BookingsPage() {
         </motion.ul>
       )}
     </div>
+    </UpgradeGate>
   );
 }
