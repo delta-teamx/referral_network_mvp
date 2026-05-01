@@ -129,25 +129,24 @@ authRouter.get(
 );
 
 // ---------- Google OAuth ----------------------------------------------------
-// In-memory state store (replaces cookies which fail cross-domain).
-// States expire after 10 minutes. Single-process safe; for multi-instance
-// deployments, swap to Redis.
-const oauthStateStore = new Map<string, number>();
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+// Stateless CSRF: the state parameter is a signed JWT containing a nonce.
+// On callback, we verify the signature — no cookies, no memory store,
+// survives process restarts and redeployments.
+import jwt from 'jsonwebtoken';
 
-function storeOAuthState(state: string): void {
-  oauthStateStore.set(state, Date.now() + OAUTH_STATE_TTL_MS);
-  // Cleanup expired entries
-  for (const [key, exp] of oauthStateStore) {
-    if (exp < Date.now()) oauthStateStore.delete(key);
-  }
+function createOAuthState(): string {
+  const secret = env.JWT_ACCESS_SECRET ?? 'oauth-fallback-secret';
+  return jwt.sign({ nonce: generateStateToken() }, secret, { expiresIn: '10m' });
 }
 
-function consumeOAuthState(state: string): boolean {
-  const exp = oauthStateStore.get(state);
-  if (!exp || exp < Date.now()) return false;
-  oauthStateStore.delete(state);
-  return true;
+function verifyOAuthState(state: string): boolean {
+  try {
+    const secret = env.JWT_ACCESS_SECRET ?? 'oauth-fallback-secret';
+    jwt.verify(state, secret, { algorithms: ['HS256'] });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 authRouter.get(
@@ -158,8 +157,7 @@ authRouter.get(
       res.redirect(`${origin}/oauth/demo`);
       return;
     }
-    const state = generateStateToken();
-    storeOAuthState(state);
+    const state = createOAuthState();
     res.redirect(buildGoogleAuthUrl(state));
   }),
 );
@@ -169,7 +167,7 @@ authRouter.get(
   asyncHandler(async (req, res) => {
     const code = typeof req.query.code === 'string' ? req.query.code : '';
     const state = typeof req.query.state === 'string' ? req.query.state : '';
-    if (!code || !state || !consumeOAuthState(state)) {
+    if (!code || !state || !verifyOAuthState(state)) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
 
@@ -197,8 +195,7 @@ authRouter.get(
       res.redirect(`${origin}/oauth/demo`);
       return;
     }
-    const state = generateStateToken();
-    storeOAuthState(state);
+    const state = createOAuthState();
     res.redirect(buildFacebookAuthUrl(state));
   }),
 );
@@ -208,7 +205,7 @@ authRouter.get(
   asyncHandler(async (req, res) => {
     const code = typeof req.query.code === 'string' ? req.query.code : '';
     const state = typeof req.query.state === 'string' ? req.query.state : '';
-    if (!code || !state || !consumeOAuthState(state)) {
+    if (!code || !state || !verifyOAuthState(state)) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
 
