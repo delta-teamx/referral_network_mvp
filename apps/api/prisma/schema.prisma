@@ -119,6 +119,8 @@ model User {
   bookingsAsHost         BookingCall[]      @relation("BookingHost")
   bookingsAsGuest        BookingCall[]      @relation("BookingGuest")
   eventRegistrations     EventRegistration[] @relation("EventRegUser")
+  podMemberships         PodMember[]         @relation("PodMemberUser")
+  podFeedback            PodFeedback[]       @relation("PodFeedbackUser")
 
   @@index([email])
   @@index([role])
@@ -741,4 +743,74 @@ model EventRegistration {
 
   @@unique([eventId, userId])
   @@index([userId])
+}
+
+// ============================================================================
+// AI Zoom Matchmaking
+// ============================================================================
+
+/// A pod is a group of 15-20 members matched by AI for a live Zoom session.
+model MatchmakingPod {
+  id             String   @id @default(uuid())
+  scheduledAt    DateTime // When the Zoom meeting is scheduled
+  zoomMeetingId  String?
+  zoomJoinUrl    String?
+  zoomStartUrl   String?
+  status         String   @default("scheduled") // scheduled | completed | canceled
+  podSize        Int      @default(0)
+  matchCriteria  Json?    // Summary of why these members were grouped
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  members  PodMember[]
+  feedback PodFeedback[]
+
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+/// A member assigned to a matchmaking pod.
+model PodMember {
+  id        String   @id @default(uuid())
+  podId     String
+  userId    String
+  invited   Boolean  @default(true)
+  attended  Boolean  @default(false)
+  invitedBy String?  // userId of who invited them (null = AI-selected)
+  createdAt DateTime @default(now())
+
+  pod  MatchmakingPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user User           @relation("PodMemberUser", fields: [userId], references: [id])
+
+  @@unique([podId, userId])
+  @@index([userId])
+}
+
+/// Tracks who has met whom — prevents repeat groupings.
+model MeetingHistory {
+  id        String   @id @default(uuid())
+  userAId   String
+  userBId   String
+  podId     String
+  metAt     DateTime @default(now())
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+}
+
+/// Post-meeting feedback from a pod member.
+model PodFeedback {
+  id          String   @id @default(uuid())
+  podId       String
+  userId      String
+  rating      Int      // 1-5
+  wouldMeetAgain Boolean @default(false)
+  highlights  String?  // What was valuable
+  createdAt   DateTime @default(now())
+
+  pod  MatchmakingPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  user User           @relation("PodFeedbackUser", fields: [userId], references: [id])
+
+  @@unique([podId, userId])
 }

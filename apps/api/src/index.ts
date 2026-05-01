@@ -35,6 +35,8 @@ import { registerNotificationSubscribers } from './domains/core/notifications/no
 import { registerTrustSubscribers } from './domains/core/trust/trust.subscribers.js';
 import { startScheduler } from './domains/core/jobs/scheduler.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
+import { podsRouter } from './domains/matching/pods/pods.routes.js';
+import { startMatchmakingScheduler } from './domains/matching/pods/pods.scheduler.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -128,6 +130,7 @@ app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/messages', verifiedWriteGate, messagingRouter);
 app.use('/api/v1/bookings', verifiedWriteGate, bookingsRouter);
 app.use('/api/v1/events', eventsRouter);
+app.use('/api/v1/pods', podsRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -152,6 +155,7 @@ async function start(): Promise<void> {
 
   // Background jobs — BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();
+  startMatchmakingScheduler();
 
   app.listen(env.PORT, () => {
     // eslint-disable-next-line no-console
