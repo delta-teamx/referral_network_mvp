@@ -146,8 +146,8 @@ authRouter.get(
     const state = generateStateToken();
     res.cookie(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
       path: '/api/v1/auth',
     });
@@ -164,7 +164,7 @@ authRouter.get(
     if (!code || !state || state !== cookieState) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth' });
+    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth', secure: true, sameSite: 'none' });
 
     const result = await completeGoogleOAuth(code);
     setRefreshCookie(res, result.refreshToken);
@@ -193,8 +193,8 @@ authRouter.get(
     const state = generateStateToken();
     res.cookie(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
       path: '/api/v1/auth',
     });
@@ -211,7 +211,7 @@ authRouter.get(
     if (!code || !state || state !== cookieState) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth' });
+    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth', secure: true, sameSite: 'none' });
 
     const result = await completeFacebookOAuth(code);
     setRefreshCookie(res, result.refreshToken);
