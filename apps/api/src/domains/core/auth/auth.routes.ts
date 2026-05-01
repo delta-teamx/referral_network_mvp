@@ -129,28 +129,37 @@ authRouter.get(
 );
 
 // ---------- Google OAuth ----------------------------------------------------
-const OAUTH_STATE_COOKIE = 'oauth_state';
-const OAUTH_STATE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+// In-memory state store (replaces cookies which fail cross-domain).
+// States expire after 10 minutes. Single-process safe; for multi-instance
+// deployments, swap to Redis.
+const oauthStateStore = new Map<string, number>();
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
+function storeOAuthState(state: string): void {
+  oauthStateStore.set(state, Date.now() + OAUTH_STATE_TTL_MS);
+  // Cleanup expired entries
+  for (const [key, exp] of oauthStateStore) {
+    if (exp < Date.now()) oauthStateStore.delete(key);
+  }
+}
+
+function consumeOAuthState(state: string): boolean {
+  const exp = oauthStateStore.get(state);
+  if (!exp || exp < Date.now()) return false;
+  oauthStateStore.delete(state);
+  return true;
+}
 
 authRouter.get(
   '/oauth/google',
   asyncHandler(async (_req, res) => {
     if (!isGoogleOAuthConfigured()) {
-      // Demo mode: send them to the web app's demo-login page which fakes
-      // a logged-in state. Keeps the "Continue with Google" button visible
-      // and clickable in preview deploys without real credentials.
       const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
       res.redirect(`${origin}/oauth/demo`);
       return;
     }
     const state = generateStateToken();
-    res.cookie(OAUTH_STATE_COOKIE, state, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
-      path: '/api/v1/auth',
-    });
+    storeOAuthState(state);
     res.redirect(buildGoogleAuthUrl(state));
   }),
 );
@@ -160,11 +169,9 @@ authRouter.get(
   asyncHandler(async (req, res) => {
     const code = typeof req.query.code === 'string' ? req.query.code : '';
     const state = typeof req.query.state === 'string' ? req.query.state : '';
-    const cookieState = (req.cookies as Record<string, string | undefined>)?.[OAUTH_STATE_COOKIE];
-    if (!code || !state || state !== cookieState) {
+    if (!code || !state || !consumeOAuthState(state)) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth', secure: true, sameSite: 'none' });
 
     const result = await completeGoogleOAuth(code);
     setRefreshCookie(res, result.refreshToken);
@@ -191,13 +198,7 @@ authRouter.get(
       return;
     }
     const state = generateStateToken();
-    res.cookie(OAUTH_STATE_COOKIE, state, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
-      path: '/api/v1/auth',
-    });
+    storeOAuthState(state);
     res.redirect(buildFacebookAuthUrl(state));
   }),
 );
@@ -207,11 +208,9 @@ authRouter.get(
   asyncHandler(async (req, res) => {
     const code = typeof req.query.code === 'string' ? req.query.code : '';
     const state = typeof req.query.state === 'string' ? req.query.state : '';
-    const cookieState = (req.cookies as Record<string, string | undefined>)?.[OAUTH_STATE_COOKIE];
-    if (!code || !state || state !== cookieState) {
+    if (!code || !state || !consumeOAuthState(state)) {
       throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
     }
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: '/api/v1/auth', secure: true, sameSite: 'none' });
 
     const result = await completeFacebookOAuth(code);
     setRefreshCookie(res, result.refreshToken);
