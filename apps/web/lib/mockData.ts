@@ -1037,6 +1037,9 @@ export function getMockResponse(method: string, path: string): unknown {
         },
       ];
     }
+    if (url === '/api/v1/pods') {
+      return [];
+    }
     if (url.startsWith('/api/v1/connections/state/')) {
       return { state: 'none' };
     }

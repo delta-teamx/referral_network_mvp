@@ -44,7 +44,9 @@ export default function AdminPodsPage() {
       });
       setPods(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Load failed');
+      if (err instanceof ApiError && err.status !== 401) {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

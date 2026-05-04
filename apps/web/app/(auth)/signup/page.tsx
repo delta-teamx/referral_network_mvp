@@ -44,16 +44,25 @@ export default function SignupPage() {
     }
     try {
       await signup(parsed.data);
-      // Send OTP for email verification
-      try {
-        await api.post('/api/v1/auth/send-otp', { email: parsed.data.email });
-      } catch {
-        // OTP send failed — user can resend from the verify page
-      }
-      router.push(`/verify-otp?email=${encodeURIComponent(parsed.data.email)}`);
     } catch {
       // globalError is already set by the store
+      return;
     }
+    // Account created — send OTP and redirect
+    const email = parsed.data.email;
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/auth/send-otp`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        },
+      );
+    } catch {
+      // OTP send failed — user can resend from the verify page
+    }
+    window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
   }
 
   return (
@@ -138,9 +147,16 @@ export default function SignupPage() {
         </div>
 
         {globalError && (
-          <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-            {globalError}
-          </p>
+          <div className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+            <p>{globalError}</p>
+            {globalError.toLowerCase().includes('already') && (
+              <p className="mt-1">
+                <Link href="/login" className="font-semibold text-primary hover:underline">
+                  Log in instead →
+                </Link>
+              </p>
+            )}
+          </div>
         )}
 
         <Button type="submit" loading={status === 'loading'} className="w-full">
