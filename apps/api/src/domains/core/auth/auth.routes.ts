@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { Response } from 'express';
+import { z } from 'zod';
 import type { ApiResponse, AuthSuccessDto, AuthenticatedUserDto } from '@refnet/shared';
 import {
   forgotPasswordSchema,
@@ -22,6 +23,7 @@ import {
   signup,
   verifyEmailToken,
 } from './auth.service.js';
+import { sendOtp, verifyOtp } from './otp.service.js';
 import {
   buildGoogleAuthUrl,
   completeGoogleOAuth,
@@ -124,6 +126,37 @@ authRouter.get(
     const parsed = verifyEmailSchema.parse({ token: req.params.token });
     await verifyEmailToken(parsed.token);
     const body: ApiResponse<{ verified: true }> = { success: true, data: { verified: true } };
+    res.json(body);
+  }),
+);
+
+// ---------- Email OTP --------------------------------------------------------
+
+const sendOtpSchema = z.object({ email: z.string().trim().toLowerCase().email() });
+
+authRouter.post(
+  '/send-otp',
+  rateLimit({ windowMs: 60_000, max: 3, key: 'send-otp' }),
+  validate(sendOtpSchema),
+  asyncHandler(async (req, res) => {
+    await sendOtp(req.body.email);
+    const body: ApiResponse<{ sent: true }> = { success: true, data: { sent: true } };
+    res.json(body);
+  }),
+);
+
+const verifyOtpSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  code: z.string().trim().length(6),
+});
+
+authRouter.post(
+  '/verify-otp',
+  rateLimit({ windowMs: 60_000, max: 5, key: 'verify-otp' }),
+  validate(verifyOtpSchema),
+  asyncHandler(async (req, res) => {
+    const result = await verifyOtp(req.body.email, req.body.code);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );

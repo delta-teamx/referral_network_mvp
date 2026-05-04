@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { signupSchema } from '@refnet/shared';
 import type { SignupInput } from '@refnet/shared';
+import { api } from '../../../lib/api';
 import { AuthShell } from '../../../components/auth/AuthShell';
 import { FacebookButton } from '../../../components/auth/FacebookButton';
 import { GoogleButton } from '../../../components/auth/GoogleButton';
@@ -43,7 +44,13 @@ export default function SignupPage() {
     }
     try {
       await signup(parsed.data);
-      router.push('/onboarding');
+      // Send OTP for email verification
+      try {
+        await api.post('/api/v1/auth/send-otp', { email: parsed.data.email });
+      } catch {
+        // OTP send failed — user can resend from the verify page
+      }
+      router.push(`/verify-otp?email=${encodeURIComponent(parsed.data.email)}`);
     } catch {
       // globalError is already set by the store
     }

@@ -87,6 +87,8 @@ model User {
   stripeCustomerId String?          @unique
   emailVerified    Boolean          @default(false)
   emailVerifyToken String?
+  otpCode          String?
+  otpExpiresAt     DateTime?
   phoneVerified    Boolean          @default(false)
   resetToken       String?
   resetTokenExpiry DateTime?

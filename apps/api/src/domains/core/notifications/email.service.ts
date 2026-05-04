@@ -13,6 +13,7 @@ import { env } from '../../../config/env.js';
 
 export type EmailTemplate =
   | 'verify_email'
+  | 'otp'
   | 'password_reset'
   | 'welcome'
   | 'invitation'
@@ -55,6 +56,20 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: basicLayout(
           'Verify your email',
           `<p>Welcome to ${appName}.</p><p>Confirm your email to unlock your account:</p>${cta('Verify email', String(d.verifyUrl))}`,
+        ),
+      };
+    case 'otp':
+      return {
+        subject: `${d.otpCode} is your ${appName} verification code`,
+        text: `Your verification code is: ${d.otpCode}. It expires in 10 minutes.`,
+        html: basicLayout(
+          'Your verification code',
+          `<p>Hi ${d.firstName ?? 'there'},</p>
+           <p>Enter this code to verify your email:</p>
+           <div style="margin:24px 0;text-align:center">
+             <span style="display:inline-block;font-size:32px;font-weight:bold;letter-spacing:8px;background:#f3f4f6;padding:16px 32px;border-radius:12px;color:#111">${d.otpCode}</span>
+           </div>
+           <p style="color:#888;font-size:13px">This code expires in 10 minutes. If you didn’t request this, ignore this email.</p>`,
         ),
       };
     case 'password_reset':

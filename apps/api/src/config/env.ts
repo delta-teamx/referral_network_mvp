@@ -58,16 +58,11 @@ const envSchema = z.object({
   AWS_REGION: z.string().default('us-east-1'),
   AWS_S3_BUCKET: z.string().optional(),
 
-  // Email — Branch 2
+  // Email (SendGrid) — handles notifications, OTP, and all transactional email
   EMAIL_FROM: z.string().email().default('noreply@virtualprosnetwork.com'),
   SENDGRID_API_KEY: z.string().optional(),
 
-  // SMS — Branch 3/4
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_PHONE_NUMBER: z.string().optional(),
-
-  // Maps — Branch 3
+  // Maps
   GOOGLE_MAPS_API_KEY: z.string().optional(),
 
   // Zoom (Server-to-Server OAuth)

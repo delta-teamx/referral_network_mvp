@@ -2,7 +2,7 @@ import type { EventBus } from '../events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
 import { env } from '../../../config/env.js';
 import { sendEmail } from './email.service.js';
-import { formatLeadSms, formatReferralSms, sendSms } from './sms.service.js';
+// SMS removed — all notifications via email (SendGrid)
 import { generateIcs } from '../../integrations/ics.service.js';
 
 /**
@@ -58,17 +58,7 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
         referralUrl: `${origin}/dashboard/referrals`,
       },
     });
-    // SMS to receiver if they have a phone
-    const receiver = await prisma.user.findFirst({
-      where: { email: ref.receiver.email },
-      select: { phone: true },
-    });
-    if (receiver?.phone) {
-      await sendSms({
-        to: receiver.phone,
-        body: formatReferralSms(`${ref.sender.firstName} ${ref.sender.lastName}`),
-      });
-    }
+    // Email notification already sent above
   });
 
   eventBus.subscribe('consumer_lead.created', async ({ leadId, listingId, eventType }) => {
@@ -86,9 +76,7 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
         leadUrl: `${origin}/dashboard/leads`,
       },
     });
-    if (listing.user.phone) {
-      await sendSms({ to: listing.user.phone, body: formatLeadSms(eventType) });
-    }
+    // Email notification already sent above
   });
 
   // Booking confirmation emails to BOTH host and guest with .ics attachment
