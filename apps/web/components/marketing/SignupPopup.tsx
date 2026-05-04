@@ -49,23 +49,27 @@ export function SignupPopup() {
         </div>
 
         <h2 className="mb-2 text-xl font-bold text-gray-900">
-          Get AI-matched with local pros
+          Grow your business through AI-matched referrals
         </h2>
         <p className="mb-2 text-sm text-gray-600">
-          Join 500+ business owners getting warm referrals and live networking introductions — powered by AI.
+          Join VirtualProsNetwork &mdash; where business owners (local, remote, and international) get warm introductions powered by AI.
         </p>
         <ul className="mb-5 space-y-1.5 text-sm text-gray-600">
           <li className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success text-xs">✓</span>
-            Free to join — no credit card needed
+            Free to join — no credit card required
           </li>
           <li className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success text-xs">✓</span>
-            AI matches you with complementary businesses
+            AI matches you with complementary businesses worldwide
           </li>
           <li className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success text-xs">✓</span>
-            Book 1-on-1 Zoom calls with your matches
+            Live Zoom networking pods — meet real people, close real deals
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success text-xs">✓</span>
+            Works for local, remote, and international businesses
           </li>
         </ul>
 

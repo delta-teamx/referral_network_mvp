@@ -15,8 +15,7 @@ export function SignupBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-primary/20 bg-white/95 px-4 py-3 shadow-lg backdrop-blur md:px-6">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <p className="text-sm text-gray-700">
-          <span className="font-semibold text-gray-900">Join 500+ pros</span> getting AI-matched referrals.
-          Free to start.
+          <span className="font-semibold text-gray-900">Join VirtualProsNetwork</span> &mdash; AI-matched referrals for local, remote &amp; international businesses. Free to start.
         </p>
         <div className="flex items-center gap-2">
           <Link

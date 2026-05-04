@@ -39,26 +39,33 @@ export default function HomePage() {
               animate="visible"
             >
               <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
-                <Sparkles size={14} /> Referral Nova — AI-Powered Networking
+                <Sparkles size={14} /> Built by Referral Nova
               </motion.div>
 
               <motion.h1
                 variants={fadeInUp}
                 className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
               >
-                The{' '}
+                We build{' '}
                 <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  AI engine
+                  AI-powered
                 </span>{' '}
-                behind smarter referrals
+                referral networks
               </motion.h1>
 
               <motion.p
                 variants={fadeInUp}
-                className="mb-8 max-w-lg text-lg leading-relaxed text-gray-300"
+                className="mb-4 max-w-lg text-lg leading-relaxed text-gray-300"
               >
-                Referral Nova learns every member&rsquo;s profile — who they serve, who they want to meet,
-                who they can refer — and <strong className="text-white">automatically connects the right people</strong>.
+                Referral Nova is the technology company behind{' '}
+                <strong className="text-white">VirtualProsNetwork</strong> &mdash; an AI-powered platform
+                where business owners get matched, meet live on Zoom, and exchange warm referrals automatically.
+              </motion.p>
+              <motion.p
+                variants={fadeInUp}
+                className="mb-8 max-w-lg text-base leading-relaxed text-gray-400"
+              >
+                Whether you serve clients locally, remotely, or internationally &mdash; our AI finds your perfect referral partners.
               </motion.p>
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
@@ -66,7 +73,7 @@ export default function HomePage() {
                   href="/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
-                  Join the network <ArrowRight size={16} />
+                  Join VirtualProsNetwork free <ArrowRight size={16} />
                 </Link>
                 <Link
                   href="/how-it-works"
@@ -433,11 +440,11 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-6">
           <Sparkles size={32} className="mx-auto mb-4 text-primary" />
           <h2 className="mb-4 text-3xl font-bold md:text-5xl">
-            Your next best referral partner is already on the platform
+            Your next referral partner is waiting on VirtualProsNetwork
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
-            The AI knows who they are. Sign up, complete your profile, and get your first
-            introduction in under 5 minutes.
+            Built by Referral Nova, powered by AI. Sign up, complete your profile, and get your first
+            introduction in under 5 minutes &mdash; whether you serve clients locally or worldwide.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
