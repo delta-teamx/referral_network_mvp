@@ -101,7 +101,7 @@ function SearchInner() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Member directory</p>
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Browse the network</h1>
           <p className="mb-4 text-sm text-gray-500">
-            Discover professionals in the VirtualProsNetwork. Every member has a verified profile,
+            Discover professionals on Referral Nova. Every member has a verified profile,
             AI-matched connections, and booking availability.
           </p>
           <form

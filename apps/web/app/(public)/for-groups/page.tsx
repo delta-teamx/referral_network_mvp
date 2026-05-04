@@ -33,7 +33,7 @@ const groupBenefits = [
   {
     icon: Globe,
     title: 'Branded Instance',
-    description: 'Your own VirtualProsNetwork hub with your logo, colors, and welcome message. Members see your brand first.',
+    description: 'Your own Referral Nova hub with your logo, colors, and welcome message. Members see your brand first.',
   },
   {
     icon: LayoutDashboard,
@@ -137,7 +137,7 @@ export default function ForGroupsPage() {
             Power your networking group with AI
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
-            Whether you run a BNI chapter, a Chamber of Commerce, or a private mastermind, VirtualProsNetwork
+            Whether you run a BNI chapter, a Chamber of Commerce, or a private mastermind, Referral Nova
             gives your members AI-powered referral matching, Zoom scheduling, and analytics — under your brand.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -318,7 +318,7 @@ export default function ForGroupsPage() {
             Request a demo
           </motion.h2>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-lg text-center text-gray-600">
-            See how VirtualProsNetwork can transform your networking group. Fill out the form and we will be in
+            See how Referral Nova can transform your networking group. Fill out the form and we will be in
             touch within one business day.
           </motion.p>
 
@@ -425,7 +425,7 @@ export default function ForGroupsPage() {
             Trusted by 20+ networking organizations
           </motion.h2>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-gray-600">
-            From local BNI chapters to national industry associations, group leaders rely on VirtualProsNetwork to
+            From local BNI chapters to national industry associations, group leaders rely on Referral Nova to
             keep their members engaged and referring.
           </motion.p>
 

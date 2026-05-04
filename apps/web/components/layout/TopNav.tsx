@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { BrandLogo } from '../ui/BrandLogo';
+import { ReferralNovaLogo } from '../ui/ReferralNovaLogo';
 import { NotificationBell } from './NotificationBell';
 
 const NAV_LINKS = [
@@ -16,6 +18,7 @@ const NAV_LINKS = [
 ];
 
 export function TopNav() {
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -26,11 +29,14 @@ export function TopNav() {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
+  const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  const Logo = isDashboard ? BrandLogo : ReferralNovaLogo;
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <Link href="/">
-          <BrandLogo />
+          <Logo />
         </Link>
 
         {/* Desktop nav */}

@@ -43,8 +43,8 @@ export default function PrivacyPage() {
             <p>
               You can update or delete your profile at any time from your dashboard settings.
               You can request a full export or deletion of your data by emailing{' '}
-              <a href="mailto:privacy@virtualprosnetwork.com" className="font-semibold text-primary">
-                privacy@virtualprosnetwork.com
+              <a href="mailto:privacy@referralnova.com" className="font-semibold text-primary">
+                privacy@referralnova.com
               </a>.
             </p>
           </section>
@@ -61,8 +61,8 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold text-gray-900">6. Contact</h2>
             <p>
               Questions about this policy? Email{' '}
-              <a href="mailto:privacy@virtualprosnetwork.com" className="font-semibold text-primary">
-                privacy@virtualprosnetwork.com
+              <a href="mailto:privacy@referralnova.com" className="font-semibold text-primary">
+                privacy@referralnova.com
               </a>.
             </p>
           </section>

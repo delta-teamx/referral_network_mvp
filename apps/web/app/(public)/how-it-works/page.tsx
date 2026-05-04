@@ -57,7 +57,7 @@ const steps = [
     number: '04',
     title: 'Book & Close',
     description:
-      'Found a strong match? Send an intro request. Once accepted, book a Zoom call right inside VirtualProsNetwork. After the call, log the outcome so the AI can learn and refine future matches.',
+      'Found a strong match? Send an intro request. Once accepted, book a Zoom call right inside Referral Nova. After the call, log the outcome so the AI can learn and refine future matches.',
     visual: ['One-click intro request', 'Built-in Zoom scheduling', 'Outcome tracking', 'Smarter matches over time'],
   },
 ];
@@ -80,7 +80,7 @@ const afterMatch = [
 
 const faqs = [
   {
-    q: 'Is VirtualProsNetwork free to join?',
+    q: 'Is Referral Nova free to join?',
     a: 'Yes. The Free plan gives you a profile, up to 3 qualified leads per month, and access to 2 networking groups. Upgrade anytime to unlock more matches and premium features.',
   },
   {
@@ -92,12 +92,12 @@ const faqs = [
     a: 'It is strongly recommended. Members with videos receive 3x more intro requests. However, you can still participate and get matched based on your text profile alone.',
   },
   {
-    q: 'Can I use VirtualProsNetwork with my existing BNI or networking group?',
+    q: 'Can I use Referral Nova with my existing BNI or networking group?',
     a: 'Absolutely. Group admins can create a branded instance and invite members. AI matching can be scoped to your group, your region, or the entire network.',
   },
   {
     q: 'How is this different from LinkedIn?',
-    a: 'LinkedIn is a broad social network. VirtualProsNetwork is purpose-built for B2B referrals — every feature, from matching to scheduling, is designed to turn connections into revenue.',
+    a: 'LinkedIn is a broad social network. Referral Nova is purpose-built for B2B referrals — every feature, from matching to scheduling, is designed to turn connections into revenue.',
   },
   {
     q: 'What happens to my data?',
@@ -151,7 +151,7 @@ export default function HowItWorksPage() {
             How It Works
           </motion.p>
           <motion.h1 variants={fadeInUp} className="mt-3 text-3xl font-bold text-gray-900 md:text-4xl">
-            How VirtualProsNetwork Works
+            How Referral Nova Works
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
             From sign-up to signed deal in four simple steps. Our AI does the matchmaking so you can focus on
@@ -268,7 +268,7 @@ export default function HowItWorksPage() {
             What happens after a match?
           </motion.h2>
           <motion.p variants={fadeInUp} className="mt-4 max-w-2xl text-gray-600">
-            A match is just the beginning. Here is how VirtualProsNetwork guides you from introduction to outcome.
+            A match is just the beginning. Here is how Referral Nova guides you from introduction to outcome.
           </motion.p>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">

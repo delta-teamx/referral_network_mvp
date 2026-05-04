@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
-import { BrandLogoWhite } from '../ui/BrandLogo';
+import { ReferralNovaLogoWhite } from '../ui/ReferralNovaLogo';
 
 const LINK_GROUPS = [
   {
@@ -48,16 +48,14 @@ export function Footer() {
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
             <Link href="/">
-              <BrandLogoWhite />
+              <ReferralNovaLogoWhite />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
-              AI-powered referral networking. Stop relying on memory — our engine makes the right
-              introductions automatically.
+              The AI-powered referral networking platform. Build real relationships, get warm introductions, close more deals.
             </p>
-            <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
-              <Sparkles size={12} className="text-primary" />
-              Powered by AI matching
-            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Powering <span className="font-semibold text-gray-400">VirtualProsNetwork</span> and other referral communities.
+            </p>
           </div>
 
           {/* Link columns */}
@@ -85,10 +83,7 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <div>
-              <p>&copy; {new Date().getFullYear()} VirtualProsNetwork. All rights reserved.</p>
-              <p className="mt-1 text-gray-600">
-                Powered by <span className="font-semibold text-gray-400">Referral Nova</span>
-              </p>
+              <p>&copy; {new Date().getFullYear()} Referral Nova. All rights reserved.</p>
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">

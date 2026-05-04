@@ -39,25 +39,25 @@ export default function HomePage() {
               animate="visible"
             >
               <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
-                <Sparkles size={14} /> AI-Powered Referral Networking
+                <Sparkles size={14} /> Referral Nova — AI-Powered Networking
               </motion.div>
 
               <motion.h1
                 variants={fadeInUp}
                 className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
               >
-                Stop relying on{' '}
+                The{' '}
                 <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  memory
+                  AI engine
                 </span>{' '}
-                for referrals
+                behind smarter referrals
               </motion.h1>
 
               <motion.p
                 variants={fadeInUp}
                 className="mb-8 max-w-lg text-lg leading-relaxed text-gray-300"
               >
-                Our AI learns every member&rsquo;s profile — who they serve, who they want to meet,
+                Referral Nova learns every member&rsquo;s profile — who they serve, who they want to meet,
                 who they can refer — and <strong className="text-white">automatically connects the right people</strong>.
               </motion.p>
 
@@ -314,7 +314,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">STL Virtual Pros</p>
-                  <p className="text-xs text-gray-500">Powered by VirtualProsNetwork</p>
+                  <p className="text-xs text-gray-500">Powered by Referral Nova</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -444,7 +444,7 @@ export default function HomePage() {
               href="/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
-              Join VirtualProsNetwork <ArrowRight size={16} />
+              Get started free <ArrowRight size={16} />
             </Link>
             <Link
               href="/events"

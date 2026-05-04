@@ -132,7 +132,7 @@ export default function ForMembersPage() {
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
             No more rubber-chicken dinners. No more swapping cards with people who will never refer you.
-            VirtualProsNetwork uses AI to connect you with the right partners — fast.
+            Referral Nova uses AI to connect you with the right partners — fast.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8">
             <Link
@@ -206,7 +206,7 @@ export default function ForMembersPage() {
                 Your profile is your 24/7 salesperson
               </motion.h2>
               <motion.p variants={fadeInUp} className="mt-4 text-gray-600 leading-relaxed">
-                While you sleep, your VirtualProsNetwork profile is working. It tells the AI what you do, who you
+                While you sleep, your Referral Nova profile is working. It tells the AI what you do, who you
                 serve, and what makes you different. Other members discover you through the match feed and can
                 request an intro with a single click.
               </motion.p>
@@ -300,7 +300,7 @@ export default function ForMembersPage() {
             Book calls directly
           </motion.h2>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-gray-600">
-            Stop copying Calendly links and juggling time zones. VirtualProsNetwork integrates with your calendar
+            Stop copying Calendly links and juggling time zones. Referral Nova integrates with your calendar
             and generates a Zoom meeting in one click. Accept an intro, pick a time, and show up.
           </motion.p>
           <motion.div variants={fadeInUp} className="mx-auto mt-10 grid max-w-2xl gap-6 sm:grid-cols-3">
@@ -339,7 +339,7 @@ export default function ForMembersPage() {
             Why Switch
           </motion.p>
           <motion.h2 variants={fadeInUp} className="mt-3 text-3xl font-bold md:text-4xl">
-            VirtualProsNetwork vs. Traditional networking groups
+            Referral Nova vs. Traditional networking groups
           </motion.h2>
 
           <motion.div variants={fadeInUp} className="mt-10 overflow-hidden rounded-2xl border border-gray-800">
@@ -347,7 +347,7 @@ export default function ForMembersPage() {
               <thead>
                 <tr className="border-b border-gray-800 bg-gray-900">
                   <th className="px-6 py-4 font-semibold text-gray-400">Feature</th>
-                  <th className="px-6 py-4 font-semibold text-primary">VirtualProsNetwork</th>
+                  <th className="px-6 py-4 font-semibold text-primary">Referral Nova</th>
                   <th className="px-6 py-4 font-semibold text-gray-400">Traditional Groups</th>
                 </tr>
               </thead>

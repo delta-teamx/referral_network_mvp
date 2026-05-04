@@ -9,7 +9,7 @@ export default function AboutPage() {
 
         <div className="prose prose-lg max-w-none text-gray-700">
           <p className="text-lg leading-relaxed">
-            VirtualProsNetwork is an AI-powered referral network built on a simple
+            Referral Nova is an AI-powered referral network built on a simple
             observation: the best referrals come from people who <em>know</em> what you do and
             who you want to meet — but in a room of 50 business owners, no one can remember
             everyone&rsquo;s specialty, ideal client, or referral capability.

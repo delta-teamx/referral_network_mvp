@@ -37,8 +37,8 @@ export default function ContactPage() {
                 <h3 className="font-semibold">Email</h3>
               </div>
               <p className="text-gray-700">
-                <a href="mailto:hello@virtualprosnetwork.com" className="hover:text-primary">
-                  hello@virtualprosnetwork.com
+                <a href="mailto:hello@referralnova.com" className="hover:text-primary">
+                  hello@referralnova.com
                 </a>
               </p>
             </div>
