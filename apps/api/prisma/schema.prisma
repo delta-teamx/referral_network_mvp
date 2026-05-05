@@ -93,6 +93,8 @@ model User {
   resetToken       String?
   resetTokenExpiry DateTime?
   lastLoginAt      DateTime?
+  referredByUserId String?
+  referralRewardMonths Int @default(0)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   deletedAt        DateTime?
@@ -123,6 +125,8 @@ model User {
   eventRegistrations     EventRegistration[] @relation("EventRegUser")
   podMemberships         PodMember[]         @relation("PodMemberUser")
   podFeedback            PodFeedback[]       @relation("PodFeedbackUser")
+  referralsMade          ReferralTracking[]  @relation("ReferralsMade")
+  referralsReceived      ReferralTracking[]  @relation("ReferralsReceived")
 
   @@index([email])
   @@index([role])
@@ -815,4 +819,30 @@ model PodFeedback {
   user User           @relation("PodFeedbackUser", fields: [userId], references: [id])
 
   @@unique([podId, userId])
+}
+
+/// Tracks member-to-non-member referrals and rewards.
+model ReferralTracking {
+  id              String   @id @default(uuid())
+  referrerUserId  String
+  inviteeEmail    String
+  inviteeUserId   String?  // null until they sign up
+  source          String   @default("direct") // direct | event | webinar | link
+  eventId         String?  // which event/webinar triggered this
+  status          String   @default("invited") // invited | signed_up | onboarded | paid | churned
+  inviteeJoinedAt DateTime?
+  inviteePaidAt   DateTime?
+  inviteeTier     String?  // PRO | PREMIUM when they paid
+  rewardGranted   Boolean  @default(false)
+  rewardMonths    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  referrer User @relation("ReferralsMade", fields: [referrerUserId], references: [id])
+  invitee  User? @relation("ReferralsReceived", fields: [inviteeUserId], references: [id])
+
+  @@unique([referrerUserId, inviteeEmail])
+  @@index([referrerUserId])
+  @@index([inviteeEmail])
+  @@index([inviteeUserId])
 }

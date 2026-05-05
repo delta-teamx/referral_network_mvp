@@ -37,6 +37,8 @@ import { startScheduler } from './domains/core/jobs/scheduler.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
 import { podsRouter } from './domains/matching/pods/pods.routes.js';
 import { startMatchmakingScheduler } from './domains/matching/pods/pods.scheduler.js';
+import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
+import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -96,6 +98,7 @@ registerOnboardingSubscribers(eventBus);
 registerLeadSubscribers(eventBus);
 registerNotificationSubscribers(eventBus);
 registerTrustSubscribers(eventBus);
+registerReferralTrackingSubscribers(eventBus);
 
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.
@@ -131,6 +134,7 @@ app.use('/api/v1/messages', verifiedWriteGate, messagingRouter);
 app.use('/api/v1/bookings', verifiedWriteGate, bookingsRouter);
 app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/pods', podsRouter);
+app.use('/api/v1/referral-tracking', referralTrackingRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.

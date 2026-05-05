@@ -88,6 +88,10 @@ export interface DomainEventMap {
   // Matchmaking pods
   'matchmaking.pod_created': { podId: string; memberCount: number; scheduledAt: string };
   'matchmaking.feedback_submitted': { podId: string; userId: string; rating: number };
+
+  // Referral tracking
+  'referral_tracking.signup': { referrerUserId: string; inviteeUserId: string };
+  'referral_tracking.reward_granted': { referrerUserId: string; inviteeUserId: string; tier: string; rewardMonths: number };
 }
 
 export type DomainEventType = keyof DomainEventMap;
