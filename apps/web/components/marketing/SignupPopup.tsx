@@ -75,7 +75,7 @@ export function SignupPopup() {
 
         <div className="flex flex-col gap-2">
           <Link
-            href="/signup"
+            href="https://virtualprosnetwork.com/signup"
             onClick={dismiss}
             className="w-full rounded-full bg-primary px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
           >

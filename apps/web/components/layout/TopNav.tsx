@@ -31,6 +31,7 @@ export function TopNav() {
 
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   const Logo = isDashboard ? BrandLogo : ReferralNovaLogo;
+  const vpnBase = isDashboard ? '' : 'https://virtualprosnetwork.com';
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
@@ -56,12 +57,12 @@ export function TopNav() {
           {status === 'authenticated' && user ? (
             <>
               <NotificationBell />
-              <Link
-                href="/dashboard"
+              <a
+                href={`${vpnBase}/dashboard`}
                 className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
                 Dashboard
-              </Link>
+              </a>
               <button
                 onClick={() => void logout()}
                 className="hidden rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 md:inline"
@@ -71,18 +72,18 @@ export function TopNav() {
             </>
           ) : (
             <>
-              <Link
-                href="/login"
+              <a
+                href={`${vpnBase}/login`}
                 className="hidden rounded-md px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 md:inline"
               >
                 Log in
-              </Link>
-              <Link
-                href="/signup"
+              </a>
+              <a
+                href={`${vpnBase}/signup`}
                 className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
                 Join free
-              </Link>
+              </a>
             </>
           )}
           <button
@@ -110,22 +111,22 @@ export function TopNav() {
               </Link>
             ))}
             {!user ? (
-              <Link
-                href="/login"
+              <a
+                href={`${vpnBase}/login`}
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
               >
                 Log in
-              </Link>
+              </a>
             ) : (
               <>
-                <Link
-                  href="/dashboard"
+                <a
+                  href={`${vpnBase}/dashboard`}
                   onClick={() => setMobileOpen(false)}
                   className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
                 >
                   Dashboard
-                </Link>
+                </a>
                 <button
                   onClick={() => {
                     setMobileOpen(false);

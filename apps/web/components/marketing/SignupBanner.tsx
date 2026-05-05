@@ -19,7 +19,7 @@ export function SignupBanner() {
         </p>
         <div className="flex items-center gap-2">
           <Link
-            href="/signup"
+            href="https://virtualprosnetwork.com/signup"
             className="whitespace-nowrap rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white hover:bg-primary/90"
           >
             Sign up free
