@@ -23,7 +23,7 @@ export function AuthShell({ title, subtitle, footer, children }: Props) {
         {children}
         {footer && <div className="mt-6 text-center text-sm text-gray-600">{footer}</div>}
         <p className="mt-4 text-center text-[10px] text-gray-400">
-          Powered by <span className="font-semibold">Referral Nova</span>
+          Virtual<span className="font-semibold">Pros</span>Network &middot; Powered by Referral Nova
         </p>
       </div>
     </main>

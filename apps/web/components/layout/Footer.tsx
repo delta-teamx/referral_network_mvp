@@ -1,6 +1,8 @@
+'use client';
+
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
 import { ReferralNovaLogoWhite } from '../ui/ReferralNovaLogo';
+import { BrandLogoWhite } from '../ui/BrandLogo';
 
 const LINK_GROUPS = [
   {
@@ -41,6 +43,9 @@ const LINK_GROUPS = [
 ];
 
 export function Footer() {
+  const isVpn = typeof window !== 'undefined' &&
+    (window.location.hostname === 'virtualprosnetwork.com' || window.location.hostname === 'www.virtualprosnetwork.com');
+
   return (
     <footer className="bg-gray-950 px-6 py-16 text-gray-300">
       <div className="mx-auto max-w-6xl">
@@ -48,7 +53,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
             <Link href="/">
-              <ReferralNovaLogoWhite />
+              {isVpn ? <BrandLogoWhite /> : <ReferralNovaLogoWhite />}
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
               The AI-powered referral networking platform. Build real relationships, get warm introductions, close more deals.
@@ -83,7 +88,8 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <div>
-              <p>&copy; {new Date().getFullYear()} Referral Nova. All rights reserved.</p>
+              <p>&copy; {new Date().getFullYear()} {isVpn ? 'VirtualProsNetwork' : 'Referral Nova'}. All rights reserved.</p>
+              {!isVpn && <p className="mt-1 text-gray-600">Powering <span className="font-semibold text-gray-400">VirtualProsNetwork</span></p>}
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">

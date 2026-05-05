@@ -76,6 +76,14 @@ export function TopNav() {
             </>
           ) : (
             <>
+              {!isVpnDomain && (
+                <a
+                  href="/demo"
+                  className="hidden rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white md:inline"
+                >
+                  Live Demo
+                </a>
+              )}
               <a
                 href={`${vpnBase}/login`}
                 className="hidden rounded-md px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 md:inline"

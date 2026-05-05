@@ -6,6 +6,7 @@ import { Footer } from '../components/layout/Footer';
 import { TopNav } from '../components/layout/TopNav';
 import { SignupPopup } from '../components/marketing/SignupPopup';
 import { SignupBanner } from '../components/marketing/SignupBanner';
+import { DomainHead } from '../components/layout/DomainHead';
 import './globals.css';
 
 const montserrat = Montserrat({
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={montserrat.variable}>
       <body className="bg-white text-gray-900 antialiased">
+        <DomainHead />
         <DemoBanner />
         <TopNav />
         {children}
