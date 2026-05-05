@@ -29,16 +29,20 @@ export function TopNav() {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
+  const isVpnDomain = typeof window !== 'undefined' &&
+    (window.location.hostname === 'virtualprosnetwork.com' || window.location.hostname === 'www.virtualprosnetwork.com');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot') || pathname.startsWith('/verify') || pathname.startsWith('/onboarding');
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-  const Logo = isDashboard ? BrandLogo : ReferralNovaLogo;
-  const vpnBase = isDashboard ? '' : 'https://virtualprosnetwork.com';
+  const Logo = (isDashboard || isVpnDomain) ? BrandLogo : ReferralNovaLogo;
+  const vpnBase = (isDashboard || isVpnDomain) ? '' : 'https://virtualprosnetwork.com';
+  const logoHref = isVpnDomain ? (user ? '/dashboard' : '/login') : '/';
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <Link href="/">
+        <a href={logoHref}>
           <Logo />
-        </Link>
+        </a>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">

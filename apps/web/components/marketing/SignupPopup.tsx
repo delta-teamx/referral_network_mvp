@@ -15,6 +15,12 @@ export function SignupPopup() {
     if (user || dismissed) return;
     if (status === 'loading' || status === 'idle') return;
 
+    // Only show on referralnova.com, not on VPN (auth/dashboard pages)
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com') return;
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (path.startsWith('/login') || path.startsWith('/signup') || path.startsWith('/verify') || path.startsWith('/onboarding') || path.startsWith('/dashboard') || path.startsWith('/admin')) return;
+
     const alreadyShown = sessionStorage.getItem('signup_popup_dismissed');
     if (alreadyShown) {
       setDismissed(true);
