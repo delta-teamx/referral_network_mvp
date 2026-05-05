@@ -22,6 +22,12 @@ import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 
 export default function HomePage() {
+  // On virtualprosnetwork.com, redirect to login (product domain = app only)
+  if (typeof window !== 'undefined' && window.location.hostname === 'virtualprosnetwork.com') {
+    window.location.href = '/login';
+    return null;
+  }
+
   return (
     <>
       {/* ═══ HERO ═══ */}
