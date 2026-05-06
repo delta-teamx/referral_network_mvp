@@ -174,13 +174,13 @@ const FB_TOKEN_URL = 'https://graph.facebook.com/v19.0/oauth/access_token';
 const FB_ME_URL = 'https://graph.facebook.com/v19.0/me';
 
 export function isFacebookOAuthConfigured(): boolean {
-  return Boolean(env.FACEBOOK_CLIENT_ID && env.FACEBOOK_CLIENT_SECRET && env.FACEBOOK_CALLBACK_URL);
+  return false; // Facebook OAuth removed
 }
 
 export function buildFacebookAuthUrl(state: string): string {
   const params = new URLSearchParams({
-    client_id: env.FACEBOOK_CLIENT_ID ?? '',
-    redirect_uri: env.FACEBOOK_CALLBACK_URL ?? '',
+    client_id: '',
+    redirect_uri: '',
     response_type: 'code',
     scope: 'email,public_profile',
     state,
@@ -204,9 +204,9 @@ interface FbProfile {
 
 async function fbExchangeCode(code: string): Promise<FbTokenResponse> {
   const params = new URLSearchParams({
-    client_id: env.FACEBOOK_CLIENT_ID ?? '',
-    client_secret: env.FACEBOOK_CLIENT_SECRET ?? '',
-    redirect_uri: env.FACEBOOK_CALLBACK_URL ?? '',
+    client_id: '',
+    client_secret: '',
+    redirect_uri: '',
     code,
   });
   const res = await fetch(`${FB_TOKEN_URL}?${params.toString()}`);

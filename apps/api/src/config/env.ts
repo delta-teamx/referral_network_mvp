@@ -42,9 +42,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().url().optional(),
-  FACEBOOK_CLIENT_ID: z.string().optional(),
-  FACEBOOK_CLIENT_SECRET: z.string().optional(),
-  FACEBOOK_CALLBACK_URL: z.string().url().optional(),
+  // Facebook OAuth removed — using Google only
 
   // Stripe — Branch 5
   STRIPE_SECRET_KEY: z.string().optional(),

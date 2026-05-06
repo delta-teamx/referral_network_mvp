@@ -78,10 +78,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <div className="space-y-3">
-        <GoogleButton label="Sign up with Google" />
-        <FacebookButton label="Sign up with Facebook" />
-      </div>
+      <GoogleButton label="Sign up with Google" />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />
         <span>or with email</span>
