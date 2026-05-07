@@ -112,8 +112,8 @@ export default function OnboardingPage() {
     setSaving(true); setError(null);
     try {
       await api.post('/api/v1/profiles', {
-        businessName: businessName || `${user?.firstName ?? 'My'}'s Business`,
-        industry: industry || 'Other',
+        businessName: businessName.trim() || `${user?.firstName ?? 'My'}'s Business`,
+        industry: industry.trim() || 'Other',
         headline: headline || undefined, bio: bio || undefined,
         keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
         servicesOffered: services.split(',').map((s) => s.trim()).filter(Boolean),
@@ -124,14 +124,17 @@ export default function OnboardingPage() {
         canReferIndustries, canReferTypes: canReferTypes.split('\n').map((t) => t.trim()).filter(Boolean),
         city: city || undefined, state: state || undefined, zipCode: zip || undefined,
         serviceArea,
-        serviceRadius: serviceArea === 'local' ? Number(serviceRadius) || 50 : undefined,
+        serviceRadius: serviceArea === 'local' ? Math.max(1, Number(serviceRadius) || 50) : undefined,
         openToBarter,
         barterOfferings: barterOfferings.split(',').map((s) => s.trim()).filter(Boolean),
         barterWants: barterWants.split(',').map((s) => s.trim()).filter(Boolean),
         barterNotes: barterNotes || undefined,
       }, { accessToken: accessToken ?? undefined });
       setStep('video');
-    } catch (err) { setError(err instanceof ApiError ? err.message : 'Save failed. Please go back and fill in all required fields.'); } finally { setSaving(false); }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Save failed.';
+      setError(msg);
+    } finally { setSaving(false); }
   }
 
   function next() {
