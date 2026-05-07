@@ -125,7 +125,7 @@ app.use('/api/v1/referrals', verifiedWriteGate, referralsRouter);
 app.use('/api/v1/connections', verifiedWriteGate, connectionsRouter);
 app.use('/api/v1/invitations', verifiedWriteGate, invitationsRouter);
 app.use('/api/v1/groups', verifiedWriteGate, groupsRouter);
-app.use('/api/v1/profiles', verifiedWriteGate, profilesRouter);
+app.use('/api/v1/profiles', profilesRouter);
 app.use('/api/v1/ai', aiRouter);
 app.use('/api/v1/billing', billingRouter);
 app.use('/api/v1/admin', rateLimit({ windowMs: 60_000, max: 30, key: 'admin' }), adminRouter);

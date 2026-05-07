@@ -31,11 +31,6 @@ export function VideoRecorder({ maxDurationSec = 60, onRecorded, uploading }: Pr
         audio: true,
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.muted = true;
-        void videoRef.current.play();
-      }
       setState('preview');
     } catch {
       setError('Camera access denied. Please allow camera and microphone in your browser settings.');
@@ -97,6 +92,15 @@ export function VideoRecorder({ maxDurationSec = 60, onRecorded, uploading }: Pr
     setSeconds(0);
     setState('idle');
   }, []);
+
+  // Connect stream to video element after render
+  useEffect(() => {
+    if (stream && videoRef.current && state !== 'recorded') {
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
+      void videoRef.current.play().catch(() => {});
+    }
+  }, [stream, state]);
 
   useEffect(() => {
     return () => {
