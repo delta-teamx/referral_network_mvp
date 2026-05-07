@@ -8,6 +8,8 @@ import { CATEGORY_SEEDS } from '@refnet/shared';
 import { fadeInUp } from '../../../lib/animations';
 import { Button } from '../../../components/ui/Button';
 import { FormField } from '../../../components/ui/FormField';
+import { VideoRecorder } from '../../../components/ui/VideoRecorder';
+import { PhotoUpload } from '../../../components/ui/PhotoUpload';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
 
@@ -64,6 +66,11 @@ export default function OnboardingPage() {
 
   const [canReferIndustries, setCanReferIndustries] = useState<string[]>([]);
   const [canReferTypes, setCanReferTypes] = useState('');
+
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploaded, setVideoUploaded] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const [openToBarter, setOpenToBarter] = useState(false);
   const [barterOfferings, setBarterOfferings] = useState('');
@@ -323,11 +330,52 @@ export default function OnboardingPage() {
         )}
 
         {step === 'video' && (
-          <SC icon={<Video size={20} />} title="Record your 60-second intro" sub="3x more intros accepted when people see your face.">
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-              <Video size={48} className="mx-auto mb-3 text-gray-300" />
-              <p className="mb-4 text-sm text-gray-600">Video upload available after onboarding. Your profile is enough to start matching.</p>
-              <Button onClick={() => setStep('done')}>Skip for now →</Button>
+          <SC icon={<Video size={20} />} title="Introduce yourself" sub="A 60-second video + a business photo. Members with media get 3x more intros.">
+            <VideoRecorder
+              maxDurationSec={60}
+              uploading={videoUploading}
+              onRecorded={async (blob) => {
+                if (!accessToken) return;
+                setVideoUploading(true);
+                try {
+                  const presign = await api.post<{ uploadUrl: string; videoUrl: string; videoKey: string; demo: boolean }>(
+                    '/api/v1/profiles/video/presign',
+                    { contentType: 'video/webm', sizeBytes: blob.size },
+                    { accessToken: accessToken ?? undefined },
+                  );
+                  if (!presign.demo) {
+                    await fetch(presign.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'video/webm' }, body: blob });
+                  }
+                  await api.post('/api/v1/profiles/video/confirm',
+                    { videoUrl: presign.videoUrl, videoKey: presign.videoKey, durationSec: 60, demo: presign.demo },
+                    { accessToken: accessToken ?? undefined },
+                  );
+                  setVideoUploaded(true);
+                } catch { setError('Video upload failed. You can try again from Profile Settings.'); }
+                finally { setVideoUploading(false); }
+              }}
+            />
+            {videoUploaded && (
+              <p className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+                <Check size={14} /> Video uploaded!
+              </p>
+            )}
+
+            <div className="border-t border-gray-200 pt-5">
+              <PhotoUpload
+                label="Business photo"
+                hint="Logo or a photo of your business. Shows on your profile card."
+                onSelected={(file) => setPhotoFile(file)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-4">
+              <button onClick={() => setStep('done')} className="text-sm text-gray-500 hover:text-primary">
+                Skip for now →
+              </button>
+              <Button onClick={() => setStep('done')} loading={videoUploading || photoUploading}>
+                Continue →
+              </Button>
             </div>
           </SC>
         )}
