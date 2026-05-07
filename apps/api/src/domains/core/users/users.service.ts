@@ -13,10 +13,21 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 }
 
 export async function toAuthenticatedUserDto(user: User): Promise<AuthenticatedUserDto> {
-  const onboarding = await prisma.onboardingProgress.findUnique({
-    where: { userId: user.id },
-    select: { completedAt: true },
-  });
+  const [onboarding, profile] = await Promise.all([
+    prisma.onboardingProgress.findUnique({
+      where: { userId: user.id },
+      select: { completedAt: true },
+    }),
+    prisma.memberProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    }),
+  ]);
+
+  // Onboarding is complete if either:
+  // 1. OnboardingProgress.completedAt is set, OR
+  // 2. A MemberProfile exists (they finished the profile steps)
+  const onboardingCompleted = onboarding?.completedAt != null || profile != null;
 
   return {
     id: user.id,
@@ -29,7 +40,7 @@ export async function toAuthenticatedUserDto(user: User): Promise<AuthenticatedU
     subscriptionTier: user.subscriptionTier,
     emailVerified: user.emailVerified,
     phoneVerified: user.phoneVerified,
-    onboardingCompleted: onboarding?.completedAt != null,
+    onboardingCompleted,
     createdAt: user.createdAt.toISOString(),
   };
 }
