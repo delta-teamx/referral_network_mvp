@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const hydrate = useAuthStore((s) => s.hydrate);
+  const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
     if (status === 'idle') void hydrate();
@@ -99,8 +100,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="mt-auto px-5 py-4 text-[10px] text-gray-400">
-          Powered by <span className="font-semibold text-gray-500">Referral Nova</span>
+        <div className="mt-auto border-t border-gray-200 px-3 py-3">
+          <button
+            onClick={() => void logout()}
+            className="mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-500 transition hover:bg-gray-50 hover:text-gray-900"
+          >
+            Log out
+          </button>
+          <div className="px-3 text-[10px] text-gray-400">
+            Powered by <span className="font-semibold text-gray-500">Referral Nova</span>
+          </div>
         </div>
       </aside>
       <main className="min-w-0 flex-1">

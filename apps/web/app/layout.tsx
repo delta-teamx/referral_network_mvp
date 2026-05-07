@@ -1,19 +1,15 @@
-import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
-import { Montserrat } from 'next/font/google';
-import { DemoBanner } from '../components/layout/DemoBanner';
-import { Footer } from '../components/layout/Footer';
-import { TopNav } from '../components/layout/TopNav';
-import { SignupPopup } from '../components/marketing/SignupPopup';
-import { SignupBanner } from '../components/marketing/SignupBanner';
-import { DomainHead } from '../components/layout/DomainHead';
-import './globals.css';
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { Montserrat } from "next/font/google";
+import { DomainHead } from "../components/layout/DomainHead";
+import { LayoutShell } from "../components/layout/LayoutShell";
+import "./globals.css";
 
 const montserrat = Montserrat({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-montserrat',
-  weight: ['400', '500', '600', '700', '800', '900'],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-montserrat",
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Referral Nova",
   },
   description:
-    "Referral Nova is the AI-powered referral networking platform. Our engine learns every member’s profile and automatically connects the right people.",
+    "Referral Nova is the AI-powered referral networking platform.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -30,12 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={montserrat.variable}>
       <body className="bg-white text-gray-900 antialiased">
         <DomainHead />
-        <DemoBanner />
-        <TopNav />
-        {children}
-        <Footer />
-        <SignupPopup />
-        <SignupBanner />
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

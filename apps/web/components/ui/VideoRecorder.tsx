@@ -124,6 +124,8 @@ export function VideoRecorder({ maxDurationSec = 60, onRecorded, uploading }: Pr
               ref={videoRef}
               className="aspect-video w-full bg-black object-cover"
               playsInline
+              autoPlay
+              muted={state !== 'recorded'}
               loop={state === 'recorded'}
             />
             {state === 'recording' && (

@@ -73,6 +73,13 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     select: profileSelect,
   });
 
+  // Mark onboarding complete directly — don't rely on event subscriber
+  await prisma.onboardingProgress.upsert({
+    where: { userId },
+    create: { userId, completedSteps: ['profile_submitted'], completedAt: new Date() },
+    update: { completedAt: new Date() },
+  });
+
   await eventBus.publish('onboarding.completed', { userId });
   return profile;
 }

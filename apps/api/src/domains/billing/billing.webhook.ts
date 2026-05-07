@@ -34,7 +34,6 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     return;
   }
 
-  // @ts-expect-error — stripe SDK is optional.
   const stripeMod = await import('stripe').catch(() => null);
   if (!stripeMod) {
     res.status(503).json({ success: false, error: 'Stripe SDK not installed' });
