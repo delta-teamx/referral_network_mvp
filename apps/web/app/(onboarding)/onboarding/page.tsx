@@ -117,7 +117,7 @@ export default function OnboardingPage() {
         headline: headline || undefined, bio: bio || undefined,
         keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
         servicesOffered: services.split(',').map((s) => s.trim()).filter(Boolean),
-        yearsInBusiness: years ? Number(years) : undefined,
+        yearsInBusiness: years && Number(years) >= 0 && Number(years) <= 150 ? Number(years) : undefined,
         icpIndustries, icpRoles: icpRoles.split(',').map((r) => r.trim()).filter(Boolean),
         icpProblems: icpProblems.split('\n').map((p) => p.trim()).filter(Boolean),
         icpDealSize: icpDealSize || undefined,
