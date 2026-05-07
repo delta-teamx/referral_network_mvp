@@ -44,8 +44,6 @@ export async function createCheckoutSession(
   }
 
   // Real Stripe: lazy-import so we don't require the SDK unless configured.
-  // @ts-expect-error — stripe is an optional runtime dependency; tsc shouldn't
-  // demand its types when the import is dynamically gated.
   const StripeModule = await import('stripe').catch(() => null);
   if (!StripeModule) {
     throw AppError.badRequest('Stripe SDK not installed but STRIPE_SECRET_KEY is set');
