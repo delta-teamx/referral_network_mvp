@@ -38,7 +38,7 @@ export function UpgradeGate({ feature, requiredTier, children }: Props) {
             This feature requires the {requiredTier === 'PRO' ? 'Pro ($49/mo)' : 'Premium ($149/mo)'} plan.
           </p>
           <Link
-            href="/pricing"
+            href="/billing"
             className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
           >
             Upgrade to {requiredTier} →

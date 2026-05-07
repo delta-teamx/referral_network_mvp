@@ -29,7 +29,7 @@ export function UpgradeBanner() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/pricing"
+            href="/billing"
             className="whitespace-nowrap rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
           >
             Upgrade now →

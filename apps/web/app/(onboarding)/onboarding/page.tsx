@@ -386,8 +386,10 @@ export default function OnboardingPage() {
             <h2 className="mb-2 text-2xl font-bold text-gray-900">You&rsquo;re all set!</h2>
             <p className="mb-6 text-sm text-gray-600">The AI is scanning the network. Check your dashboard for introductions, and explore the directory for life-event matching.</p>
             <div className="flex flex-col gap-2">
-              <Button onClick={() => router.push('/dashboard')}>Go to dashboard →</Button>
-              <button onClick={() => router.push('/connect')} className="text-sm text-primary hover:underline">Explore life-event matching →</button>
+              <Button onClick={async () => {
+                await hydrate();
+                window.location.href = '/dashboard';
+              }}>Go to dashboard →</Button>
             </div>
           </motion.div>
         )}
