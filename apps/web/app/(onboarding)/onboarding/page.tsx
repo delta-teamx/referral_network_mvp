@@ -132,8 +132,13 @@ export default function OnboardingPage() {
       }, { accessToken: accessToken ?? undefined });
       setStep('video');
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Save failed.';
-      setError(msg);
+      if (err instanceof ApiError) {
+        const details = (err.details as Array<{ field?: string; message: string }>) ?? [];
+        const fieldMsgs = details.map((d) => `${d.field ?? 'field'}: ${d.message}`).join('. ');
+        setError(fieldMsgs || err.message);
+      } else {
+        setError('Save failed.');
+      }
     } finally { setSaving(false); }
   }
 
