@@ -1,19 +1,32 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export function DomainHead() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const host = window.location.hostname;
-    const isVpn = host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com';
+    const isVpn = host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com' || host === 'localhost';
 
     if (isVpn) {
-      document.title = document.title
-        .replace('Referral Nova', 'VirtualProsNetwork')
-        .replace('referral nova', 'VirtualProsNetwork');
+      const fixTitle = () => {
+        if (document.title.includes('Referral Nova')) {
+          document.title = document.title.replace(/Referral Nova/gi, 'VirtualProsNetwork');
+        }
+      };
+      fixTitle();
+      const observer = new MutationObserver(fixTitle);
+      observer.observe(document.querySelector('title')!, { childList: true });
+      return () => observer.disconnect();
     }
+  }, [pathname]);
 
-    // Set favicon based on domain
+  useEffect(() => {
+    const host = window.location.hostname;
+    const isVpn = host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com' || host === 'localhost';
+
     const existing = document.querySelector('link[rel="icon"]');
     if (existing) existing.remove();
     const link = document.createElement('link');
