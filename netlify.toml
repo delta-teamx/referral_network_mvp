@@ -1,19 +1,17 @@
-# Netlify config — NO-BUILD mode.
-#
-# The static site is pre-built to apps/web/out/ and committed directly to the
-# repo. Netlify's job is literally just to serve those static files. No pnpm,
-# no node, no build step — nothing that can fail.
+# Netlify config — builds Next.js static export on every deploy.
 
 [build]
   base = "."
-  command = "echo 'Serving pre-built static export from apps/web/out/'"
+  command = "corepack enable && pnpm install --no-frozen-lockfile && NEXT_PUBLIC_API_URL=https://api.virtualprosnetwork.com NEXT_PUBLIC_APP_NAME=ReferralNova pnpm --filter @refnet/web build"
   publish = "apps/web/out"
 
 [build.environment]
   NETLIFY_NEXT_PLUGIN_SKIP = "true"
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_API_URL = "https://api.virtualprosnetwork.com"
+  NEXT_PUBLIC_APP_NAME = "ReferralNova"
 
-# Dynamic route fallbacks — serve a pre-rendered template page so the
-# client-side component can read the real slug from the URL and fetch data.
+# Dynamic route fallbacks
 [[redirects]]
   from = "/listing/*"
   to = "/listing/johnson-realty-group/index.html"
