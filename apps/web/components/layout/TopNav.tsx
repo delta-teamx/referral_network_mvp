@@ -35,7 +35,10 @@ export function TopNav() {
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   const Logo = (isDashboard || isVpnDomain) ? BrandLogo : ReferralNovaLogo;
   const vpnBase = (isDashboard || isVpnDomain) ? '' : 'https://virtualprosnetwork.com';
-  const logoHref = isVpnDomain ? (user ? '/dashboard' : '/login') : '/';
+  const logoHref = isDashboard ? (user ? '/dashboard' : '/login')
+    : isAuthPage ? 'https://referralnova.com'
+    : isVpnDomain ? '/login'
+    : '/';
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">

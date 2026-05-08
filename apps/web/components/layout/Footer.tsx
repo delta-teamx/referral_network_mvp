@@ -52,9 +52,9 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
-            <Link href="/">
+            <a href={isVpn ? 'https://referralnova.com' : '/'}>
               {isVpn ? <BrandLogoWhite /> : <ReferralNovaLogoWhite />}
-            </Link>
+            </a>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
               The AI-powered referral networking platform. Build real relationships, get warm introductions, close more deals.
             </p>
