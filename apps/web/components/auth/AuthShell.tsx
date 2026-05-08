@@ -9,7 +9,7 @@ interface Props {
 
 export function AuthShell({ title, subtitle, footer, children }: Props) {
   return (
-    <main className="flex flex-1 items-center justify-center bg-primary-light px-6 py-12">
+    <main className="flex min-h-[calc(100vh-64px-400px)] items-center justify-center bg-primary-light px-6 py-16">
       <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
         <a
           href="https://referralnova.com"
