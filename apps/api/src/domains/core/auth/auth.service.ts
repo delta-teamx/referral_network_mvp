@@ -72,7 +72,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     template: 'verify_email',
     data: {
       firstName: user.firstName,
-      verifyUrl: `${env.FRONTEND_URL}/verify-email?token=${emailVerifyToken}`,
+      verifyUrl: `${env.FRONTEND_URL.split(',')[0]}/verify-email?token=${emailVerifyToken}`,
     },
   });
 
@@ -153,7 +153,7 @@ export async function requestPasswordReset(input: ForgotPasswordInput): Promise<
     template: 'password_reset',
     data: {
       firstName: user.firstName,
-      resetUrl: `${env.FRONTEND_URL}/reset-password?token=${token}`,
+      resetUrl: `${env.FRONTEND_URL.split(',')[0]}/reset-password?token=${token}`,
     },
   });
 }

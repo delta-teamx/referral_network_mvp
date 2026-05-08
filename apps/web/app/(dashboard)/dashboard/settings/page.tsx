@@ -13,6 +13,7 @@ import { useAuthStore } from '../../../../stores/auth';
 import { FormField } from '../../../../components/ui/FormField';
 import { Button } from '../../../../components/ui/Button';
 import { VideoRecorder } from '../../../../components/ui/VideoRecorder';
+import { PhotoUpload } from '../../../../components/ui/PhotoUpload';
 
 interface Profile {
   id: string;
@@ -323,6 +324,11 @@ export default function SettingsPage() {
           <section>
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Business identity</h2>
             <div className="space-y-4">
+              <PhotoUpload
+                label="Business photo"
+                hint="Logo or photo of your business"
+                onSelected={() => {}}
+              />
               <FormField label="Business name *" name="businessName" defaultValue={profile.businessName} required />
               <FormField label="Industry *" name="industry" defaultValue={profile.industry} required />
               <FormField label="Headline" name="headline" defaultValue={profile.headline ?? ''} />

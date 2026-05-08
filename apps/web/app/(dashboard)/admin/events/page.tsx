@@ -141,7 +141,7 @@ export default function AdminEventsPage() {
                 className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100"
               />
             </div>
-            <FormField label="Duration (min)" name="durationMin" type="number" defaultValue="60" dark />
+            <FormField label="Duration (min)" name="durationMin" type="number" defaultValue="30" dark />
             <FormField label="Max attendees" name="maxAttendees" type="number" defaultValue="100" dark />
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-300">

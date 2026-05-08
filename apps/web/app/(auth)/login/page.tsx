@@ -43,10 +43,10 @@ function LoginInner() {
       const next = searchParams.get('next');
       const safeNext = next && /^\/[a-zA-Z]/.test(next) ? next : null;
       if (safeNext) {
-        router.push(safeNext);
+        window.location.href = safeNext;
       } else {
         const role = useAuthStore.getState().user?.role;
-        router.push(role === 'ADMIN' ? '/admin' : '/dashboard');
+        window.location.href = role === 'ADMIN' ? '/admin' : '/dashboard';
       }
     } catch {
       // globalError handled by the store
