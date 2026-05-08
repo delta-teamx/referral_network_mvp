@@ -1,6 +1,7 @@
 import type { EventBus } from '../events/EventBus.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { prisma } from '../../../config/prisma.js';
+import { env } from '../../../config/env.js';
 import { ensureOnboardingRecord } from './onboarding.service.js';
 import { findUserById } from '../users/users.service.js';
 
@@ -22,7 +23,7 @@ export function registerOnboardingSubscribers(bus: EventBus): void {
         template: 'welcome',
         data: {
           firstName: user.firstName,
-          nextStep: 'Complete your profile to get matched with local pros.',
+          onboardingUrl: `${env.FRONTEND_URL.split(',')[0]}/onboarding`,
         },
       });
     }

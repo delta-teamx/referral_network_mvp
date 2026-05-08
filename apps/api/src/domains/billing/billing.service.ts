@@ -34,11 +34,13 @@ export async function createCheckoutSession(
   const priceId = env[priceKey];
   const secretKey = env.STRIPE_SECRET_KEY;
 
-  // Demo mode: no Stripe credentials → return a mock URL that lands the user
-  // on our own /billing/success page as if they'd paid. Simplifies preview
-  // deploys and developer workflow.
+  // eslint-disable-next-line no-console
+  console.log(`[billing] tier=${tier} priceKey=${priceKey} priceId=${priceId ? 'set' : 'MISSING'} secretKey=${secretKey ? 'set' : 'MISSING'}`);
+
   if (!secretKey || !priceId) {
     const fakeUrl = `${env.FRONTEND_URL.split(',')[0]}/billing/success?tier=${tier}&demo=1`;
+    // eslint-disable-next-line no-console
+    console.log(`[billing] demo mode — missing: ${!secretKey ? 'STRIPE_SECRET_KEY' : ''} ${!priceId ? priceKey : ''}`);
     await eventBus.publish('subscription.activated', { userId, tier });
     return { url: fakeUrl, demo: true };
   }
@@ -70,7 +72,7 @@ export async function createCheckoutSession(
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/billing/success?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/pricing?canceled=1`,
+    cancel_url: `${origin}/dashboard/billing?canceled=1`,
     metadata: { userId: user.id, tier },
   });
 
