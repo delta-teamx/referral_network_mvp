@@ -4,16 +4,8 @@ import { AppError } from '../../utils/AppError.js';
 import { eventBus } from '../core/events/index.js';
 import { TIERS, type Tier } from './billing.tiers.js';
 
-/**
- * Stripe checkout session creation. Kept dependency-free of the Stripe SDK
- * here so the app boots without STRIPE_SECRET_KEY set. When the env var IS
- * set, we lazy-load the SDK and hit the real API. When it's not, we return
- * a deterministic fake URL so the frontend flow is demoable end-to-end.
- */
-
 export interface CheckoutSessionResult {
   url: string;
-  demo: boolean;
 }
 
 export async function createCheckoutSession(
@@ -34,22 +26,11 @@ export async function createCheckoutSession(
   const priceId = env[priceKey];
   const secretKey = env.STRIPE_SECRET_KEY;
 
-  // eslint-disable-next-line no-console
-  console.log(`[billing] tier=${tier} priceKey=${priceKey} priceId=${priceId ? 'set' : 'MISSING'} secretKey=${secretKey ? 'set' : 'MISSING'}`);
+  if (!secretKey) throw AppError.badRequest('Stripe is not configured. Contact support.');
+  if (!priceId) throw AppError.badRequest(`Price not configured for ${tier} plan. Contact support.`);
 
-  if (!secretKey || !priceId) {
-    const fakeUrl = `${env.FRONTEND_URL.split(',')[0]}/billing/success?tier=${tier}&demo=1`;
-    // eslint-disable-next-line no-console
-    console.log(`[billing] demo mode — missing: ${!secretKey ? 'STRIPE_SECRET_KEY' : ''} ${!priceId ? priceKey : ''}`);
-    await eventBus.publish('subscription.activated', { userId, tier });
-    return { url: fakeUrl, demo: true };
-  }
-
-  // Real Stripe: lazy-import so we don't require the SDK unless configured.
   const StripeModule = await import('stripe').catch(() => null);
-  if (!StripeModule) {
-    throw AppError.badRequest('Stripe SDK not installed but STRIPE_SECRET_KEY is set');
-  }
+  if (!StripeModule) throw AppError.badRequest('Stripe SDK not available');
   const Stripe = StripeModule.default;
   const stripe = new Stripe(secretKey);
 
@@ -77,15 +58,10 @@ export async function createCheckoutSession(
   });
 
   if (!session.url) throw AppError.badRequest('Stripe did not return a checkout URL');
-  return { url: session.url, demo: false };
+  return { url: session.url };
 }
 
-/**
- * Demo-mode "finalise": used by the frontend success page when Stripe is
- * not configured. Flips the user to the purchased tier so the UI can show
- * unlocked features. Real Stripe would do this via webhook instead.
- */
-export async function finaliseDemoUpgrade(userId: string, tier: Tier): Promise<void> {
+export async function finaliseUpgrade(userId: string, tier: Tier): Promise<void> {
   if (tier === 'FREE') return;
   await prisma.user.update({
     where: { id: userId },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Eye, Search } from 'lucide-react';
+import { Ban, Eye, Search, X } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -18,14 +18,26 @@ interface AdminUser {
   _count: { listings: number; referralsSent: number };
 }
 
+interface UserProfile {
+  businessName?: string;
+  industry?: string;
+  headline?: string;
+  city?: string;
+  state?: string;
+  servicesOffered?: string[];
+  keywords?: string[];
+}
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewingUser, setViewingUser] = useState<(AdminUser & { profile?: UserProfile }) | null>(null);
 
   async function load() {
     if (!accessToken) return;
@@ -46,10 +58,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, q]);
-
-  const currentUser = useAuthStore((s) => s.user);
 
   async function setRole(id: string, role: string) {
     if (!accessToken) return;
@@ -83,24 +92,14 @@ export default function AdminUsersPage() {
     }
   }
 
-  async function viewAsUser(id: string, name: string) {
-    if (!accessToken) return;
-    if (!window.confirm(`View the dashboard as ${name}? You'll be switched to their session. To return, log out and log back in as admin.`)) return;
+  async function viewUser(user: AdminUser) {
     try {
-      const data = await api.post<{ user: AdminUser; accessToken: string; expiresIn: number }>(
-        `/api/v1/admin/users/${id}/impersonate`,
-        {},
-        { accessToken: accessToken ?? undefined },
-      );
-      const setAuth = useAuthStore.getState().setAuth;
-      setAuth(
-        data.user as unknown as Parameters<typeof setAuth>[0],
-        data.accessToken,
-        Date.now() + data.expiresIn * 1000,
-      );
-      router.push('/dashboard');
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impersonation failed');
+      const profile = await api.get<UserProfile>(`/api/v1/profiles/public/${user.id}`, {
+        accessToken: accessToken ?? undefined,
+      }).catch(() => undefined);
+      setViewingUser({ ...user, profile });
+    } catch {
+      setViewingUser({ ...user });
     }
   }
 
@@ -129,6 +128,94 @@ export default function AdminUsersPage() {
         <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
           {error}
         </p>
+      )}
+
+      {/* View User Modal */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-gray-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">{viewingUser.firstName} {viewingUser.lastName}</h2>
+                <p className="text-sm text-gray-400">{viewingUser.email}</p>
+              </div>
+              <button onClick={() => setViewingUser(null)} className="rounded p-1 text-gray-400 hover:bg-gray-800">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Role</span>
+                <span className="text-gray-200">{viewingUser.role}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Tier</span>
+                <span className="text-gray-200">{viewingUser.subscriptionTier}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Email verified</span>
+                <span className="text-gray-200">{viewingUser.emailVerified ? 'Yes' : 'No'}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Listings</span>
+                <span className="text-gray-200">{viewingUser._count.listings}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Referrals sent</span>
+                <span className="text-gray-200">{viewingUser._count.referralsSent}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-800 pb-2">
+                <span className="text-gray-500">Joined</span>
+                <span className="text-gray-200">{new Date(viewingUser.createdAt).toLocaleDateString()}</span>
+              </div>
+              {viewingUser.profile && (
+                <>
+                  <h3 className="mt-4 font-semibold text-amber-400">Business Profile</h3>
+                  {viewingUser.profile.businessName && (
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <span className="text-gray-500">Business</span>
+                      <span className="text-gray-200">{viewingUser.profile.businessName}</span>
+                    </div>
+                  )}
+                  {viewingUser.profile.industry && (
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <span className="text-gray-500">Industry</span>
+                      <span className="text-gray-200">{viewingUser.profile.industry}</span>
+                    </div>
+                  )}
+                  {viewingUser.profile.headline && (
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <span className="text-gray-500">Headline</span>
+                      <span className="text-gray-200">{viewingUser.profile.headline}</span>
+                    </div>
+                  )}
+                  {viewingUser.profile.city && (
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                      <span className="text-gray-500">Location</span>
+                      <span className="text-gray-200">{viewingUser.profile.city}, {viewingUser.profile.state}</span>
+                    </div>
+                  )}
+                  {viewingUser.profile.servicesOffered && viewingUser.profile.servicesOffered.length > 0 && (
+                    <div className="border-b border-gray-800 pb-2">
+                      <span className="text-gray-500">Services</span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {viewingUser.profile.servicesOffered.map((s) => (
+                          <span key={s} className="rounded-full bg-gray-800 px-2 py-0.5 text-xs text-gray-300">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setViewingUser(null)}
+              className="mt-6 w-full rounded-full bg-gray-800 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-gray-900">
@@ -203,10 +290,10 @@ export default function AdminUsersPage() {
                     <div className="flex items-center justify-end gap-2">
                       {!isSelf && (
                         <button
-                          onClick={() => void viewAsUser(u.id, `${u.firstName} ${u.lastName}`)}
+                          onClick={() => void viewUser(u)}
                           className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
                         >
-                          <Eye size={12} /> View as
+                          <Eye size={12} /> View
                         </button>
                       )}
                       {!isSelf && (

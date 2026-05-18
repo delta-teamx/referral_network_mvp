@@ -5,12 +5,11 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AppError } from '../../utils/AppError.js';
-import { createCheckoutSession, finaliseDemoUpgrade } from './billing.service.js';
+import { createCheckoutSession, finaliseUpgrade } from './billing.service.js';
 import { canReceiveMoreLeads, TIERS, type Tier } from './billing.tiers.js';
 
 export const billingRouter: Router = Router();
 
-// Public plan catalogue — powers /pricing page
 billingRouter.get(
   '/plans',
   asyncHandler(async (_req, res) => {
@@ -33,7 +32,6 @@ billingRouter.get(
   }),
 );
 
-// Authed endpoints below
 billingRouter.use(authenticate);
 
 const checkoutSchema = z.object({ tier: z.enum(['PRO', 'PREMIUM']) });
@@ -56,7 +54,7 @@ billingRouter.post(
   validate(finaliseSchema),
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
-    await finaliseDemoUpgrade(req.user.id, req.body.tier as Tier);
+    await finaliseUpgrade(req.user.id, req.body.tier as Tier);
     const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
     res.json(body);
   }),
