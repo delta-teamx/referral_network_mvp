@@ -8,7 +8,6 @@ import { Filter, MapPin, Search as SearchIcon, ShieldCheck, Star } from 'lucide-
 import { CATEGORY_SEEDS } from '@refnet/shared';
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
-import { AuthGate } from '../../../components/auth/AuthGate';
 
 interface ListingCard {
   id: string;
@@ -63,8 +62,6 @@ function SearchInner() {
         });
         if (!cancelled) {
           setListings(results);
-          // The API envelope meta.total isn't returned by the typed wrapper today,
-          // but we surface the array length as a fallback.
           setTotal(results.length);
         }
       } catch (err) {
@@ -275,10 +272,8 @@ function SearchInner() {
 
 export default function SearchPage() {
   return (
-    <AuthGate>
-      <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
-        <SearchInner />
-      </Suspense>
-    </AuthGate>
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <SearchInner />
+    </Suspense>
   );
 }
