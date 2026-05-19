@@ -12,6 +12,10 @@ vi.mock('../src/domains/matching/ai/llm-scorer.service.js', () => ({
   isLlmEnabled: vi.fn(() => false),
 }));
 
+vi.mock('../src/domains/matching/ai/onboarding-referrals.service.js', () => ({
+  topUpOnboardingReferralsForAllMembers: vi.fn(async () => ({ membersTouched: 0, assigned: 0 })),
+}));
+
 vi.mock('../src/config/prisma.js', () => ({
   prisma: {
     memberProfile: {

@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { refreshSuggestionsForUser } from './ai-matching.service.js';
 import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
+import { topUpOnboardingReferralsForAllMembers } from './onboarding-referrals.service.js';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let lastRunUtcDate: string | null = null;
@@ -30,6 +31,8 @@ export interface DailyMatchesRun {
   usersScanned: number;
   rulesRefreshed: number;
   llmRefined: number;
+  onboardingMembersTouched: number;
+  onboardingReferralsAssigned: number;
   errors: number;
 }
 
@@ -41,6 +44,8 @@ export async function runDailyMatchesRefresh(
     usersScanned: 0,
     rulesRefreshed: 0,
     llmRefined: 0,
+    onboardingMembersTouched: 0,
+    onboardingReferralsAssigned: 0,
     errors: 0,
   };
 
@@ -78,6 +83,16 @@ export async function runDailyMatchesRefresh(
         await new Promise((resolve) => setTimeout(resolve, perUserDelayMs));
       }
     }
+  }
+
+  try {
+    const onboarding = await topUpOnboardingReferralsForAllMembers();
+    stats.onboardingMembersTouched = onboarding.membersTouched;
+    stats.onboardingReferralsAssigned = onboarding.assigned;
+  } catch (err) {
+    stats.errors++;
+    // eslint-disable-next-line no-console
+    console.error('[matches-scheduler] onboarding top-up failed:', err);
   }
 
   // eslint-disable-next-line no-console

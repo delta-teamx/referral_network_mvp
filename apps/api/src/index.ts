@@ -41,6 +41,7 @@ import { startMatchesScheduler } from './domains/matching/ai/matches.scheduler.j
 import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
 import { registerIntroSubscribers } from './domains/matching/ai/intro.subscribers.js';
+import { registerOnboardingReferralSubscribers } from './domains/matching/ai/onboarding-referrals.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -102,6 +103,7 @@ registerNotificationSubscribers(eventBus);
 registerTrustSubscribers(eventBus);
 registerReferralTrackingSubscribers(eventBus);
 registerIntroSubscribers(eventBus);
+registerOnboardingReferralSubscribers(eventBus);
 
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.

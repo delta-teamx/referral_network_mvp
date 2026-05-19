@@ -12,6 +12,11 @@ import { isLlmEnabled } from './llm-scorer.service.js';
 import { runDailyMatchesRefresh } from './matches.scheduler.js';
 import { getMemberProfileForViewing } from './profile.service.js';
 import { getMemberAnalytics } from './analytics.service.js';
+import {
+  ONBOARDING_MONTH_COUNT,
+  ONBOARDING_TARGET_PER_MONTH,
+  assignOnboardingReferrals,
+} from './onboarding-referrals.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -172,6 +177,29 @@ aiRouter.post(
     if (!req.user) throw AppError.unauthorized();
     const intro = await completeIntro(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof intro> = { success: true, data: intro };
+    res.json(body);
+  }),
+);
+
+// Admin: manually trigger an onboarding referral assignment for a specific
+// member and month. Used by the admin override panel (Feature 2 brief).
+// `count` defaults to ONBOARDING_TARGET_PER_MONTH (10); pass a smaller value
+// to top-up a partial month.
+const assignOnboardingSchema = z.object({
+  month: z.number().int().min(1).max(ONBOARDING_MONTH_COUNT),
+  count: z.number().int().min(1).max(ONBOARDING_TARGET_PER_MONTH).optional(),
+});
+aiRouter.post(
+  '/admin/members/:userId/onboarding-referrals',
+  validate(assignOnboardingSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const result = await assignOnboardingReferrals(req.params.userId ?? '', {
+      month: req.body.month,
+      count: req.body.count,
+      batch: 'admin',
+    });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );
