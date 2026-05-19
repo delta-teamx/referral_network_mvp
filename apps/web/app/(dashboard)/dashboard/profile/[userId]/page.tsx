@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, MapPin, Sparkles, Users, Video } from 'lucide-react';
 import { api, ApiError } from '../../../../../lib/api';
 import { useAuthStore } from '../../../../../stores/auth';
+import { NetworkGraph } from '../../../../../components/profile/NetworkGraph';
 
 type ViewerRelationship =
   | { kind: 'self' }
@@ -231,6 +232,22 @@ export default function MemberProfilePage() {
               <Stat label="Intros sent" value={stats.introsSent} />
               <Stat label="Accepted" value={stats.introsAccepted} />
             </div>
+          </Section>
+
+          <Section title="Network map">
+            <NetworkGraph
+              center={{
+                firstName: user.firstName,
+                lastName: user.lastName,
+                businessName: profile.businessName,
+              }}
+              connections={recentConnections.map((c) => ({
+                userId: c.userId,
+                firstName: c.firstName,
+                lastName: c.lastName,
+                businessName: c.businessName,
+              }))}
+            />
           </Section>
 
           <Section title="Recent connections" icon={<Users className="h-4 w-4" />}>
