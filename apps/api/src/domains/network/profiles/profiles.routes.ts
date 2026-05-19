@@ -15,7 +15,6 @@ import { confirmVideoUpload, presignVideoUpload } from './video.service.js';
 
 export const profilesRouter: Router = Router();
 
-// Public: search members + view individual profiles
 profilesRouter.get(
   '/search',
   asyncHandler(async (req, res) => {
@@ -42,7 +41,6 @@ profilesRouter.get(
   }),
 );
 
-// Authed: manage own profile
 profilesRouter.use(authenticate);
 
 const upsertSchema = z.object({
@@ -50,6 +48,7 @@ const upsertSchema = z.object({
   industry: z.string().trim().min(1).max(80),
   headline: z.string().trim().max(200).optional(),
   bio: z.string().trim().max(2000).optional(),
+  photoUrl: z.string().url().optional(),
   keywords: z.array(z.string().trim().max(50)).max(20).optional(),
   servicesOffered: z.array(z.string().trim().max(100)).max(15).optional(),
   yearsInBusiness: z.number().int().min(0).max(150).optional(),
@@ -91,7 +90,6 @@ profilesRouter.get(
   }),
 );
 
-// Video upload
 const videoPresignSchema = z.object({
   contentType: z.string().min(1),
   sizeBytes: z.number().int().positive(),
