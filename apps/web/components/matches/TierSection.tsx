@@ -3,6 +3,13 @@
 import Link from 'next/link';
 import { MapPin, Sparkles } from 'lucide-react';
 
+export interface LlmSignals {
+  industryFit: number;
+  referralPotential: number;
+  geographicFit: number;
+  networkValue: number;
+}
+
 export interface EnrichedTieredMatch {
   targetUserId: string;
   rawScore: number;
@@ -10,6 +17,8 @@ export interface EnrichedTieredMatch {
   tier: 'level1' | 'level2' | 'level3';
   reason: string;
   factors: Record<string, number>;
+  enrichedBy: 'rules' | 'llm';
+  llmSignals: LlmSignals | null;
   target: {
     id: string;
     firstName: string;
@@ -109,19 +118,31 @@ function MatchCard({
             <p className="truncate text-xs text-gray-500">{target.businessName}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+        <div
+          className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+          title={match.enrichedBy === 'llm' ? 'AI-scored by Claude' : 'Rules-based score'}
+        >
           <Sparkles className="h-3 w-3" />
           {match.normalizedScore}%
         </div>
       </div>
 
-      <p className="text-xs uppercase tracking-wide text-gray-500">{target.industry}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs uppercase tracking-wide text-gray-500">{target.industry}</p>
+        {match.enrichedBy === 'llm' && (
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-700">
+            AI-scored
+          </span>
+        )}
+      </div>
 
       {target.headline && (
         <p className="line-clamp-2 text-sm text-gray-700">{target.headline}</p>
       )}
 
       <p className="line-clamp-3 text-xs text-gray-600">{match.reason}</p>
+
+      {match.llmSignals && <SignalBars signals={match.llmSignals} />}
 
       {location && (
         <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -147,5 +168,31 @@ function MatchCard({
         </button>
       </div>
     </article>
+  );
+}
+
+const SIGNAL_LABELS: { key: keyof LlmSignals; label: string }[] = [
+  { key: 'industryFit', label: 'Industry' },
+  { key: 'referralPotential', label: 'Referral' },
+  { key: 'geographicFit', label: 'Geo' },
+  { key: 'networkValue', label: 'Network' },
+];
+
+function SignalBars({ signals }: { signals: LlmSignals }) {
+  return (
+    <div className="grid grid-cols-4 gap-1.5">
+      {SIGNAL_LABELS.map(({ key, label }) => {
+        const value = signals[key];
+        const pct = Math.max(0, Math.min(100, (value / 10) * 100));
+        return (
+          <div key={key} title={`${label}: ${value}/10`}>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-gray-100">
+              <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="mt-0.5 text-[10px] text-gray-500">{label}</p>
+          </div>
+        );
+      })}
+    </div>
   );
 }
