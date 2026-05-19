@@ -11,6 +11,7 @@ import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
 import { runDailyMatchesRefresh } from './matches.scheduler.js';
 import { getMemberProfileForViewing } from './profile.service.js';
+import { getMemberAnalytics } from './analytics.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -32,6 +33,19 @@ aiRouter.get(
     const groupId = typeof req.query.groupId === 'string' ? req.query.groupId : undefined;
     const matches = await generateMatchesForUser(req.user.id, { groupId, limit: 10 });
     const body: ApiResponse<typeof matches> = { success: true, data: matches };
+    res.json(body);
+  }),
+);
+
+// Per-member networking analytics (intros, meetings, connections by month).
+aiRouter.get(
+  '/analytics/me',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const months =
+      typeof req.query.months === 'string' ? Math.max(1, Math.min(24, Number(req.query.months))) : 6;
+    const analytics = await getMemberAnalytics(req.user.id, { months });
+    const body: ApiResponse<typeof analytics> = { success: true, data: analytics };
     res.json(body);
   }),
 );

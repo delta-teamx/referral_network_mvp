@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import {
+  Activity,
   BarChart3,
   Calendar,
   Clock,
@@ -24,6 +25,7 @@ import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/matches', label: 'Matches', icon: Sparkles },
+  { href: '/dashboard/activity', label: 'Activity', icon: Activity },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },
