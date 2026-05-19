@@ -40,6 +40,7 @@ import { startMatchmakingScheduler } from './domains/matching/pods/pods.schedule
 import { startMatchesScheduler } from './domains/matching/ai/matches.scheduler.js';
 import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
+import { registerIntroSubscribers } from './domains/matching/ai/intro.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -100,6 +101,7 @@ registerLeadSubscribers(eventBus);
 registerNotificationSubscribers(eventBus);
 registerTrustSubscribers(eventBus);
 registerReferralTrackingSubscribers(eventBus);
+registerIntroSubscribers(eventBus);
 
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.

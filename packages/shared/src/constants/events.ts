@@ -61,6 +61,19 @@ export interface DomainEventMap {
     resultCount: number;
   };
 
+  // AI-suggested introductions
+  'intro.accepted': {
+    introId: string;
+    senderId: string;
+    targetId: string;
+  };
+  'intro.auto_booking_skipped': {
+    introId: string;
+    hostUserId: string;
+    guestUserId: string;
+    reason: 'no_overlap' | 'no_availability' | 'error';
+  };
+
   // Payments
   'subscription.activated': { userId: string; tier: string };
   'subscription.canceled': { userId: string };

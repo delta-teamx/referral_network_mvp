@@ -174,6 +174,11 @@ export async function respondToIntro(
       initiatorId: intro.senderId,
       targetId: userId,
     });
+    await eventBus.publish('intro.accepted', {
+      introId: intro.id,
+      senderId: intro.senderId,
+      targetId: userId,
+    });
   }
 
   return updated;
