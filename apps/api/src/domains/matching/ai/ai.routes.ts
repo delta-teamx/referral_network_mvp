@@ -10,6 +10,7 @@ import { generateTieredMatchesForUser } from './tiered-matches.service.js';
 import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
 import { runDailyMatchesRefresh } from './matches.scheduler.js';
+import { getMemberProfileForViewing } from './profile.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -31,6 +32,17 @@ aiRouter.get(
     const groupId = typeof req.query.groupId === 'string' ? req.query.groupId : undefined;
     const matches = await generateMatchesForUser(req.user.id, { groupId, limit: 10 });
     const body: ApiResponse<typeof matches> = { success: true, data: matches };
+    res.json(body);
+  }),
+);
+
+// Member profile view — drives the "view profile" page off a match card.
+aiRouter.get(
+  '/profile/:userId',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const profile = await getMemberProfileForViewing(req.user.id, req.params.userId ?? '');
+    const body: ApiResponse<typeof profile> = { success: true, data: profile };
     res.json(body);
   }),
 );

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { MapPin, Sparkles } from 'lucide-react';
 
 export interface EnrichedTieredMatch {
@@ -129,14 +130,22 @@ function MatchCard({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={onRequest}
-        disabled={busy}
-        className="mt-1 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {busy ? 'Requesting…' : 'Request intro'}
-      </button>
+      <div className="mt-1 flex gap-2">
+        <Link
+          href={`/dashboard/profile/${target.id}`}
+          className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-center text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        >
+          View profile
+        </Link>
+        <button
+          type="button"
+          onClick={onRequest}
+          disabled={busy}
+          className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy ? 'Requesting…' : 'Request intro'}
+        </button>
+      </div>
     </article>
   );
 }
