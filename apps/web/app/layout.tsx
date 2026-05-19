@@ -14,11 +14,11 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: {
-    default: "Referral Nova - AI-Powered Referral Networking Platform",
-    template: "%s | Referral Nova",
+    default: "NRG - AI-Powered Referral Networking Platform",
+    template: "%s | NRG",
   },
   description:
-    "Referral Nova is the AI-powered referral networking platform.",
+    "NRG is the AI-powered referral networking platform.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

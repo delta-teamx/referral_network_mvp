@@ -56,7 +56,7 @@ function LoginInner() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your VirtualProsNetwork account"
+      subtitle="Sign in to your NRG account"
       footer={
         <>
           Need an account?{' '}

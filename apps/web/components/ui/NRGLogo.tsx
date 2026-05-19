@@ -1,4 +1,4 @@
-export function ReferralNovaLogo({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) {
+export function NRGLogo({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) {
   const dims = size === 'small' ? 24 : size === 'large' ? 40 : 32;
   return (
     <div className="flex items-center gap-2">
@@ -28,13 +28,13 @@ export function ReferralNovaLogo({ size = 'default' }: { size?: 'small' | 'defau
           size === 'small' ? 'text-base' : size === 'large' ? 'text-xl' : 'text-lg'
         }`}
       >
-        Referral<span className="text-primary">Nova</span>
+        NRG
       </span>
     </div>
   );
 }
 
-export function ReferralNovaLogoWhite({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) {
+export function NRGLogoWhite({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) {
   const dims = size === 'small' ? 24 : size === 'large' ? 40 : 32;
   return (
     <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export function ReferralNovaLogoWhite({ size = 'default' }: { size?: 'small' | '
         <path d="M29 29 L24 24" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
       </svg>
       <span className={`font-bold text-white ${size === 'small' ? 'text-base' : 'text-lg'}`}>
-        Referral<span className="text-blue-300">Nova</span>
+        NRG
       </span>
     </div>
   );

@@ -8,12 +8,12 @@ export function DomainHead() {
 
   useEffect(() => {
     const host = window.location.hostname;
-    const isVpn = host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com' || host === 'localhost';
+    const isVpn = host === 'nrg-ai.com' || host === 'www.nrg-ai.com' || host === 'localhost';
 
     if (isVpn) {
       const fixTitle = () => {
-        if (document.title.includes('Referral Nova')) {
-          document.title = document.title.replace(/Referral Nova/gi, 'VirtualProsNetwork');
+        if (document.title.includes('NRG')) {
+          document.title = document.title.replace(/NRG/gi, 'NRG');
         }
       };
       fixTitle();
@@ -25,7 +25,7 @@ export function DomainHead() {
 
   useEffect(() => {
     const host = window.location.hostname;
-    const isVpn = host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com' || host === 'localhost';
+    const isVpn = host === 'nrg-ai.com' || host === 'www.nrg-ai.com' || host === 'localhost';
 
     const existing = document.querySelector('link[rel="icon"]');
     if (existing) existing.remove();

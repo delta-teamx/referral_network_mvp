@@ -22,8 +22,8 @@ import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 
 export default function HomePage() {
-  // On virtualprosnetwork.com, redirect to login (product domain = app only)
-  if (typeof window !== 'undefined' && window.location.hostname === 'virtualprosnetwork.com') {
+  // On nrg-ai.com, redirect to login (product domain = app only)
+  if (typeof window !== 'undefined' && window.location.hostname === 'nrg-ai.com') {
     window.location.href = '/login';
     return null;
   }
@@ -45,7 +45,7 @@ export default function HomePage() {
               animate="visible"
             >
               <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
-                <Sparkles size={14} /> Built by Referral Nova
+                <Sparkles size={14} /> Built by NRG
               </motion.div>
 
               <motion.h1
@@ -63,8 +63,8 @@ export default function HomePage() {
                 variants={fadeInUp}
                 className="mb-4 max-w-lg text-lg leading-relaxed text-gray-300"
               >
-                Referral Nova is the technology company behind{' '}
-                <strong className="text-white">VirtualProsNetwork</strong> &mdash; an AI-powered platform
+                NRG is the technology company behind{' '}
+                <strong className="text-white">NRG</strong> &mdash; an AI-powered platform
                 where business owners get matched, meet live on Zoom, and exchange warm referrals automatically.
               </motion.p>
               <motion.p
@@ -76,10 +76,10 @@ export default function HomePage() {
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
                 <Link
-                  href="https://virtualprosnetwork.com/signup"
+                  href="https://nrg-ai.com/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
-                  Join VirtualProsNetwork free <ArrowRight size={16} />
+                  Join NRG free <ArrowRight size={16} />
                 </Link>
                 <Link
                   href="/how-it-works"
@@ -326,8 +326,8 @@ export default function HomePage() {
                   <Network size={24} />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">STL Virtual Pros</p>
-                  <p className="text-xs text-gray-500">Powered by Referral Nova</p>
+                  <p className="font-semibold text-gray-900">STL NRG</p>
+                  <p className="text-xs text-gray-500">Powered by NRG</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -446,15 +446,15 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-6">
           <Sparkles size={32} className="mx-auto mb-4 text-primary" />
           <h2 className="mb-4 text-3xl font-bold md:text-5xl">
-            Your next referral partner is waiting on VirtualProsNetwork
+            Your next referral partner is waiting on NRG
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
-            Built by Referral Nova, powered by AI. Sign up, complete your profile, and get your first
+            Built by NRG, powered by AI. Sign up, complete your profile, and get your first
             introduction in under 5 minutes &mdash; whether you serve clients locally or worldwide.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="https://virtualprosnetwork.com/signup"
+              href="https://nrg-ai.com/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
               Get started free <ArrowRight size={16} />

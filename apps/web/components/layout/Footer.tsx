@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ReferralNovaLogoWhite } from '../ui/ReferralNovaLogo';
+import { NRGLogoWhite } from '../ui/NRGLogo';
 import { BrandLogoWhite } from '../ui/BrandLogo';
 
 const LINK_GROUPS = [
@@ -44,7 +44,7 @@ const LINK_GROUPS = [
 
 export function Footer() {
   const isVpn = typeof window !== 'undefined' &&
-    (window.location.hostname === 'virtualprosnetwork.com' || window.location.hostname === 'www.virtualprosnetwork.com');
+    (window.location.hostname === 'nrg-ai.com' || window.location.hostname === 'www.nrg-ai.com');
 
   return (
     <footer className="bg-gray-950 px-6 py-16 text-gray-300">
@@ -52,14 +52,14 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
-            <a href={isVpn ? 'https://referralnova.com' : '/'}>
-              {isVpn ? <BrandLogoWhite /> : <ReferralNovaLogoWhite />}
+            <a href={isVpn ? 'https://nrg-ai.com' : '/'}>
+              {isVpn ? <BrandLogoWhite /> : <NRGLogoWhite />}
             </a>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
               The AI-powered referral networking platform. Build real relationships, get warm introductions, close more deals.
             </p>
             <p className="mt-2 text-xs text-gray-500">
-              Powering <span className="font-semibold text-gray-400">VirtualProsNetwork</span> and other referral communities.
+              Powering <span className="font-semibold text-gray-400">NRG</span> and other referral communities.
             </p>
           </div>
 
@@ -88,8 +88,8 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <div>
-              <p>&copy; {new Date().getFullYear()} {isVpn ? 'VirtualProsNetwork' : 'Referral Nova'}. All rights reserved.</p>
-              {!isVpn && <p className="mt-1 text-gray-600">Powering <span className="font-semibold text-gray-400">VirtualProsNetwork</span></p>}
+              <p>&copy; {new Date().getFullYear()} {isVpn ? 'NRG' : 'NRG'}. All rights reserved.</p>
+              {!isVpn && <p className="mt-1 text-gray-600">Powering <span className="font-semibold text-gray-400">NRG</span></p>}
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">

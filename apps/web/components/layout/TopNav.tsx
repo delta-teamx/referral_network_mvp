@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { BrandLogo } from '../ui/BrandLogo';
-import { ReferralNovaLogo } from '../ui/ReferralNovaLogo';
+import { NRGLogo } from '../ui/NRGLogo';
 import { NotificationBell } from './NotificationBell';
 
 const NAV_LINKS = [
@@ -30,13 +30,13 @@ export function TopNav() {
   }, [status, hydrate]);
 
   const isVpnDomain = typeof window !== 'undefined' &&
-    (window.location.hostname === 'virtualprosnetwork.com' || window.location.hostname === 'www.virtualprosnetwork.com');
+    (window.location.hostname === 'nrg-ai.com' || window.location.hostname === 'www.nrg-ai.com');
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot') || pathname.startsWith('/verify') || pathname.startsWith('/onboarding');
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-  const Logo = (isDashboard || isVpnDomain) ? BrandLogo : ReferralNovaLogo;
-  const vpnBase = (isDashboard || isVpnDomain) ? '' : 'https://virtualprosnetwork.com';
+  const Logo = (isDashboard || isVpnDomain) ? BrandLogo : NRGLogo;
+  const vpnBase = (isDashboard || isVpnDomain) ? '' : 'https://nrg-ai.com';
   const logoHref = isDashboard ? (user ? '/dashboard' : '/login')
-    : isAuthPage ? 'https://referralnova.com'
+    : isAuthPage ? 'https://nrg-ai.com'
     : isVpnDomain ? '/login'
     : '/';
 

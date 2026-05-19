@@ -10,7 +10,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900">1. Acceptance of terms</h2>
             <p>
-              By creating an account on Referral Nova, you agree to these terms. If you
+              By creating an account on NRG, you agree to these terms. If you
               don&rsquo;t agree, don&rsquo;t use the service.
             </p>
           </section>
@@ -82,8 +82,8 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-gray-900">9. Contact</h2>
             <p>
               Questions? Email{' '}
-              <a href="mailto:legal@virtualprosnetwork.com" className="font-semibold text-primary">
-                legal@virtualprosnetwork.com
+              <a href="mailto:legal@nrg-ai.com" className="font-semibold text-primary">
+                legal@nrg-ai.com
               </a>.
             </p>
           </section>

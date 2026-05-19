@@ -246,7 +246,7 @@ export default function PricingPage() {
       <section className="bg-gray-950 py-20 text-white">
         <div className="mx-auto max-w-4xl px-6">
           <h2 className="mb-10 text-center text-2xl font-bold md:text-3xl">
-            Referral Nova vs. traditional networking
+            NRG vs. traditional networking
           </h2>
           <div className="overflow-x-auto rounded-2xl border border-gray-800">
             <table className="w-full text-sm">

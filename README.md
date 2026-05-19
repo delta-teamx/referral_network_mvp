@@ -1,4 +1,4 @@
-# ReferralNetworkUSA
+# NRG
 
 A local business referral network platform — businesses list themselves, consumers find them through **life-event** matching (buying a house, getting married, starting a business…), and businesses exchange referrals inside networking groups.
 
@@ -50,7 +50,7 @@ Now open:
 ## Repository layout
 
 ```
-referral_network_mvp/
+nrg-ai/
 ├── apps/
 │   ├── api/          # Express + Prisma backend
 │   └── web/          # Next.js 14 frontend

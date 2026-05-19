@@ -44,7 +44,7 @@ export function BrandLogo({ size = 'default' }: { size?: 'small' | 'default' | '
           size === 'small' ? 'text-base' : size === 'large' ? 'text-xl' : 'text-lg'
         }`}
       >
-        Virtual<span className="text-primary">Pros</span>
+        NRG
       </span>
     </div>
   );
@@ -84,7 +84,7 @@ export function BrandLogoWhite({ size = 'default' }: { size?: 'small' | 'default
         <circle cx="20" cy="20" r="1.5" fill="white" />
       </svg>
       <span className={`font-bold text-white ${size === 'small' ? 'text-base' : 'text-lg'}`}>
-        Virtual<span className="text-blue-300">Pros</span>
+        NRG
       </span>
     </div>
   );

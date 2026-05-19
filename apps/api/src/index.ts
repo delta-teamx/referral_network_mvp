@@ -66,7 +66,7 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (/^https:\/\/[a-z0-9-]+--(refnet|referral-network|virtualpros)[a-z0-9-]*\.netlify\.app$/i.test(origin)) {
+      if (/^https:\/\/[a-z0-9-]+--(refnet|referral-network|nrg)[a-z0-9-]*\.netlify\.app$/i.test(origin)) {
         return cb(null, true);
       }
       return cb(new Error(`CORS blocked: ${origin}`));

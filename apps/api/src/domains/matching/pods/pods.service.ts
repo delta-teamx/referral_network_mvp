@@ -47,7 +47,7 @@ export async function runDailyMatchmaking(): Promise<{ podsCreated: number; memb
     const tomorrow9am = getNextMeetingTime();
     try {
       const zoom = await createZoomMeeting({
-        topic: `VirtualProsNetwork — AI-Matched Networking Pod`,
+        topic: `NRG — AI-Matched Networking Pod`,
         startsAt: tomorrow9am,
         durationMin: 60,
       });
@@ -84,7 +84,7 @@ export async function runDailyMatchmaking(): Promise<{ podsCreated: number; memb
       }
 
       // Send invitations
-      const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://virtualprosnetwork.com';
+      const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://nrg-ai.com';
       for (const member of pod) {
         const otherMembers = pod
           .filter((m) => m.userId !== member.userId)

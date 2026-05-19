@@ -376,9 +376,9 @@ async function main() {
 
   console.log('[seed] ensuring demo business owner');
   const owner = await prisma.user.upsert({
-    where: { email: 'demo-owner@virtualprosnetwork.local' },
+    where: { email: 'demo-owner@nrg-ai.local' },
     create: {
-      email: 'demo-owner@virtualprosnetwork.local',
+      email: 'demo-owner@nrg-ai.local',
       firstName: 'Demo',
       lastName: 'Owner',
       role: 'BUSINESS_OWNER',
@@ -631,9 +631,9 @@ async function main() {
   const group = await prisma.group.upsert({
     where: { slug: 'stl-virtual-pros' },
     create: {
-      name: 'STL Virtual Pros',
+      name: 'STL NRG',
       slug: 'stl-virtual-pros',
-      description: 'Virtual Pros St. Louis chapter — the AI-powered referral network.',
+      description: 'NRG St. Louis chapter — the AI-powered referral network.',
       city: 'St. Louis',
       state: 'MO',
       meetingSchedule: 'Every Tuesday 7am (virtual)',

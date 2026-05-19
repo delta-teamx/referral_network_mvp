@@ -2,14 +2,14 @@
 
 [build]
   base = "."
-  command = "corepack enable && pnpm install --no-frozen-lockfile && NEXT_PUBLIC_API_URL=https://api.virtualprosnetwork.com NEXT_PUBLIC_APP_NAME=ReferralNova pnpm --filter @refnet/web build"
+  command = "corepack enable && pnpm install --no-frozen-lockfile && NEXT_PUBLIC_API_URL=https://api.nrg-ai.com NEXT_PUBLIC_APP_NAME=NRG pnpm --filter @refnet/web build"
   publish = "apps/web/out"
 
 [build.environment]
   NETLIFY_NEXT_PLUGIN_SKIP = "true"
   NODE_VERSION = "20"
-  NEXT_PUBLIC_API_URL = "https://api.virtualprosnetwork.com"
-  NEXT_PUBLIC_APP_NAME = "ReferralNova"
+  NEXT_PUBLIC_API_URL = "https://api.nrg-ai.com"
+  NEXT_PUBLIC_APP_NAME = "NRG"
 
 # Dynamic route fallbacks
 [[redirects]]

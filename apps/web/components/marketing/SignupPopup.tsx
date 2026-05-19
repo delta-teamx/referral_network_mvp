@@ -15,9 +15,9 @@ export function SignupPopup() {
     if (user || dismissed) return;
     if (status === 'loading' || status === 'idle') return;
 
-    // Only show on referralnova.com, not on VPN (auth/dashboard pages)
+    // Only show on nrg-ai.com, not on VPN (auth/dashboard pages)
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
-    if (host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com') return;
+    if (host === 'nrg-ai.com' || host === 'www.nrg-ai.com') return;
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     if (path.startsWith('/login') || path.startsWith('/signup') || path.startsWith('/verify') || path.startsWith('/onboarding') || path.startsWith('/dashboard') || path.startsWith('/admin')) return;
 
@@ -58,7 +58,7 @@ export function SignupPopup() {
           Grow your business through AI-matched referrals
         </h2>
         <p className="mb-2 text-sm text-gray-600">
-          Join VirtualProsNetwork &mdash; where business owners (local, remote, and international) get warm introductions powered by AI.
+          Join NRG &mdash; where business owners (local, remote, and international) get warm introductions powered by AI.
         </p>
         <ul className="mb-5 space-y-1.5 text-sm text-gray-600">
           <li className="flex items-center gap-2">
@@ -81,7 +81,7 @@ export function SignupPopup() {
 
         <div className="flex flex-col gap-2">
           <Link
-            href="https://virtualprosnetwork.com/signup"
+            href="https://nrg-ai.com/signup"
             onClick={dismiss}
             className="w-full rounded-full bg-primary px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
           >
@@ -96,7 +96,7 @@ export function SignupPopup() {
         </div>
 
         <p className="mt-4 text-center text-[10px] text-gray-400">
-          Powered by <span className="font-semibold">Referral Nova</span>
+          Powered by <span className="font-semibold">NRG</span>
         </p>
       </div>
     </div>
