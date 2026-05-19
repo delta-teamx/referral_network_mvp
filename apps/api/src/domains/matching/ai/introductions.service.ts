@@ -84,6 +84,56 @@ export async function listCompletedIntros(userId: string) {
   });
 }
 
+export async function requestIntroByTarget(senderId: string, targetUserId: string) {
+  if (senderId === targetUserId) throw AppError.badRequest('Cannot request intro to yourself');
+
+  const targetExists = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true, deletedAt: true },
+  });
+  if (!targetExists || targetExists.deletedAt) throw AppError.notFound('Member not found');
+
+  const existing = await prisma.introduction.findFirst({
+    where: {
+      senderId,
+      targetId: targetUserId,
+      status: { in: ['suggested', 'requested', 'accepted'] },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (existing) {
+    if (existing.status === 'suggested') {
+      return prisma.introduction.update({
+        where: { id: existing.id },
+        data: { status: 'requested', requestedAt: new Date() },
+        select: introSelect,
+      });
+    }
+    return prisma.introduction.findUnique({
+      where: { id: existing.id },
+      select: introSelect,
+    });
+  }
+
+  const { generateMatchesForUser } = await import('./ai-matching.service.js');
+  const matches = await generateMatchesForUser(senderId, { limit: 200 });
+  const match = matches.find((m) => m.targetUserId === targetUserId);
+
+  return prisma.introduction.create({
+    data: {
+      senderId,
+      targetId: targetUserId,
+      reason: match?.reason ?? 'Member-initiated intro request',
+      matchScore: match?.score ?? 0,
+      matchFactors: match?.factors ?? {},
+      status: 'requested',
+      requestedAt: new Date(),
+    },
+    select: introSelect,
+  });
+}
+
 export async function requestIntro(introId: string, userId: string) {
   const intro = await prisma.introduction.findFirst({
     where: { id: introId, senderId: userId, status: 'suggested' },

@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Network,
   Settings,
+  Sparkles,
   Store,
   Users,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/matches', label: 'Matches', icon: Sparkles },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },

@@ -6,12 +6,14 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import { generateMatchesForUser, refreshSuggestionsForUser } from './ai-matching.service.js';
+import { generateTieredMatchesForUser } from './tiered-matches.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
   listCompletedIntros,
   listSuggestionsForUser,
   requestIntro,
+  requestIntroByTarget,
   respondToIntro,
 } from './introductions.service.js';
 
@@ -26,6 +28,18 @@ aiRouter.get(
     const groupId = typeof req.query.groupId === 'string' ? req.query.groupId : undefined;
     const matches = await generateMatchesForUser(req.user.id, { groupId, limit: 10 });
     const body: ApiResponse<typeof matches> = { success: true, data: matches };
+    res.json(body);
+  }),
+);
+
+// Tiered match view (Level 1 / Level 2 / Level 3) — powers the member dashboard
+aiRouter.get(
+  '/matches/tiered',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const groupId = typeof req.query.groupId === 'string' ? req.query.groupId : undefined;
+    const buckets = await generateTieredMatchesForUser(req.user.id, { groupId, limit: 60 });
+    const body: ApiResponse<typeof buckets> = { success: true, data: buckets };
     res.json(body);
   }),
 );
@@ -59,6 +73,17 @@ aiRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const intros = await listCompletedIntros(req.user.id);
     const body: ApiResponse<typeof intros> = { success: true, data: intros };
+    res.json(body);
+  }),
+);
+
+// Request an intro by target user id (creates Introduction on the fly or upgrades suggested → requested)
+aiRouter.post(
+  '/intros/by-target/:targetUserId/request',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const intro = await requestIntroByTarget(req.user.id, req.params.targetUserId ?? '');
+    const body: ApiResponse<typeof intro> = { success: true, data: intro };
     res.json(body);
   }),
 );
