@@ -7,6 +7,8 @@ import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import { generateMatchesForUser, refreshSuggestionsForUser } from './ai-matching.service.js';
 import { generateTieredMatchesForUser } from './tiered-matches.service.js';
+import { refineSuggestionsForUser } from './llm-refinement.service.js';
+import { isLlmEnabled } from './llm-scorer.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -51,6 +53,24 @@ aiRouter.post(
     if (!req.user) throw AppError.unauthorized();
     const created = await refreshSuggestionsForUser(req.user.id);
     const body: ApiResponse<{ created: number }> = { success: true, data: { created } };
+    res.json(body);
+  }),
+);
+
+// LLM refinement — upgrades the user's persisted Introduction suggestions with
+// Claude-derived scores and narrative reasons. Returns 503 when ANTHROPIC_API_KEY
+// is unset so callers can fall back gracefully.
+aiRouter.post(
+  '/refine',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    if (!isLlmEnabled()) {
+      throw new AppError('LLM scoring is not configured', 503, 'AI_LLM_DISABLED');
+    }
+    const limit =
+      typeof req.query.limit === 'string' ? Math.max(1, Math.min(50, Number(req.query.limit))) : 30;
+    const result = await refineSuggestionsForUser(req.user.id, { limit });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );

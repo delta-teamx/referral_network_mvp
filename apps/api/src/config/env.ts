@@ -71,6 +71,11 @@ const envSchema = z.object({
   // Observability
   SENTRY_DSN: z.string().optional(),
 
+  // AI providers — optional. When ANTHROPIC_API_KEY is set, LLM-based scoring
+  // is enabled; otherwise the rules engine is the only path.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).
