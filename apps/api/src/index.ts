@@ -37,6 +37,7 @@ import { startScheduler } from './domains/core/jobs/scheduler.js';
 import { seedRbac } from './domains/core/rbac/rbac.seed.js';
 import { podsRouter } from './domains/matching/pods/pods.routes.js';
 import { startMatchmakingScheduler } from './domains/matching/pods/pods.scheduler.js';
+import { startMatchesScheduler } from './domains/matching/ai/matches.scheduler.js';
 import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -160,6 +161,7 @@ async function start(): Promise<void> {
   // Background jobs — BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();
   startMatchmakingScheduler();
+  startMatchesScheduler();
 
   app.listen(env.PORT, () => {
     // eslint-disable-next-line no-console

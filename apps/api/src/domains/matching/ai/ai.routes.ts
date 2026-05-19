@@ -9,6 +9,7 @@ import { generateMatchesForUser, refreshSuggestionsForUser } from './ai-matching
 import { generateTieredMatchesForUser } from './tiered-matches.service.js';
 import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
+import { runDailyMatchesRefresh } from './matches.scheduler.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -145,6 +146,18 @@ aiRouter.post(
     if (!req.user) throw AppError.unauthorized();
     const intro = await completeIntro(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof intro> = { success: true, data: intro };
+    res.json(body);
+  }),
+);
+
+// Admin: manually trigger the daily matches refresh (used for ops before the
+// scheduler has fired, or to backfill after a deploy). Idempotent.
+aiRouter.post(
+  '/admin/run-daily',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const stats = await runDailyMatchesRefresh();
+    const body: ApiResponse<typeof stats> = { success: true, data: stats };
     res.json(body);
   }),
 );
