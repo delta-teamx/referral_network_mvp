@@ -20,7 +20,9 @@ export type EmailTemplate =
   | 'lead_received'
   | 'referral_received'
   | 'booking_confirmed'
-  | 'event_registered';
+  | 'event_registered'
+  | 'intro_requested_target'
+  | 'intro_requested_sender';
 
 export interface EmailAttachment {
   filename: string;
@@ -140,6 +142,27 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
           `<p>You\u2019re registered for <strong>${d.title ?? ''}</strong>.</p>
            <p><strong>When:</strong> ${d.whenLabel ?? ''}</p>
            ${cta('Add to calendar & Zoom link', String(d.eventUrl ?? '#'))}`,
+        ),
+      };
+    case 'intro_requested_target':
+      return {
+        subject: `${d.senderName ?? 'A member'} wants an intro on ${appName}`,
+        text: `${d.senderName ?? 'A member'} (${d.senderBusiness ?? ''}) would like an intro. Why: ${d.reason ?? ''}. Respond: ${d.respondUrl ?? ''}`,
+        html: basicLayout(
+          `Intro request from ${escapeHtml(String(d.senderName ?? 'a member'))}`,
+          `<p><strong>${escapeHtml(String(d.senderName ?? 'A member'))}</strong>${d.senderBusiness ? ` of ${escapeHtml(String(d.senderBusiness))}` : ''} would like to connect with you.</p>
+           ${d.reason ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2563eb;background:#f9fafb;color:#374151;">${escapeHtml(String(d.reason))}</blockquote>` : ''}
+           ${cta('Accept or decline', String(d.respondUrl ?? '#'))}`,
+        ),
+      };
+    case 'intro_requested_sender':
+      return {
+        subject: `Intro request sent to ${d.targetName ?? 'them'}`,
+        text: `Your intro request to ${d.targetName ?? 'them'} is on its way. We'll notify you the moment they respond.`,
+        html: basicLayout(
+          `Intro request sent`,
+          `<p>Your intro request to <strong>${escapeHtml(String(d.targetName ?? 'them'))}</strong>${d.targetBusiness ? ` (${escapeHtml(String(d.targetBusiness))})` : ''} is on its way.</p>
+           <p>We\u2019ll notify you the moment they respond \u2014 and if they accept, we\u2019ll auto-book a Zoom call at the earliest time you\u2019re both free.</p>`,
         ),
       };
   }

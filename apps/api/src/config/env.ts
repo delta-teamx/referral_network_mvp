@@ -76,6 +76,12 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
 
+  // SMS (Twilio) — optional. When all three are set, real SMS is sent;
+  // otherwise notifications log to the console (dev / non-SMS deployments).
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

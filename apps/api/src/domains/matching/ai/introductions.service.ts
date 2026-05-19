@@ -104,11 +104,17 @@ export async function requestIntroByTarget(senderId: string, targetUserId: strin
 
   if (existing) {
     if (existing.status === 'suggested') {
-      return prisma.introduction.update({
+      const updated = await prisma.introduction.update({
         where: { id: existing.id },
         data: { status: 'requested', requestedAt: new Date() },
         select: introSelect,
       });
+      await eventBus.publish('intro.requested', {
+        introId: existing.id,
+        senderId,
+        targetId: targetUserId,
+      });
+      return updated;
     }
     return prisma.introduction.findUnique({
       where: { id: existing.id },
@@ -120,7 +126,7 @@ export async function requestIntroByTarget(senderId: string, targetUserId: strin
   const matches = await generateMatchesForUser(senderId, { limit: 200 });
   const match = matches.find((m) => m.targetUserId === targetUserId);
 
-  return prisma.introduction.create({
+  const created = await prisma.introduction.create({
     data: {
       senderId,
       targetId: targetUserId,
@@ -132,20 +138,36 @@ export async function requestIntroByTarget(senderId: string, targetUserId: strin
     },
     select: introSelect,
   });
+
+  await eventBus.publish('intro.requested', {
+    introId: created.id,
+    senderId,
+    targetId: targetUserId,
+  });
+
+  return created;
 }
 
 export async function requestIntro(introId: string, userId: string) {
   const intro = await prisma.introduction.findFirst({
     where: { id: introId, senderId: userId, status: 'suggested' },
-    select: { id: true },
+    select: { id: true, targetId: true },
   });
   if (!intro) throw AppError.notFound('Suggestion not found');
 
-  return prisma.introduction.update({
+  const updated = await prisma.introduction.update({
     where: { id: intro.id },
     data: { status: 'requested', requestedAt: new Date() },
     select: introSelect,
   });
+
+  await eventBus.publish('intro.requested', {
+    introId: intro.id,
+    senderId: userId,
+    targetId: intro.targetId,
+  });
+
+  return updated;
 }
 
 export async function respondToIntro(

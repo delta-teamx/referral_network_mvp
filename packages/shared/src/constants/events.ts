@@ -67,6 +67,11 @@ export interface DomainEventMap {
     senderId: string;
     targetId: string;
   };
+  'intro.requested': {
+    introId: string;
+    senderId: string;
+    targetId: string;
+  };
   'intro.auto_booking_skipped': {
     introId: string;
     hostUserId: string;
