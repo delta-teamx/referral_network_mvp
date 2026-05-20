@@ -87,6 +87,12 @@ const envSchema = z.object({
   // header against this HMAC secret before creating the user.
   NRG_ONLINE_WEBHOOK_SECRET: z.string().optional(),
 
+  // Web Push (Feature 6). All three must be set for push to be enabled.
+  // Generate via `npx web-push generate-vapid-keys`.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:admin@nrg-ai.com'),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

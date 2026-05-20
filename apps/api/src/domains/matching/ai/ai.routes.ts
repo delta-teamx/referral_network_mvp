@@ -18,6 +18,7 @@ import {
   assignOnboardingReferrals,
 } from './onboarding-referrals.service.js';
 import { listOnboardingMembers } from './onboarding-admin.service.js';
+import { listMemberCrm } from './member-crm.service.js';
 import { computeEngagement, listEngagementForAllMembers } from './engagement.service.js';
 import { runReengagementCampaign } from './reengagement.service.js';
 import {
@@ -255,6 +256,17 @@ aiRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const data = await computeEngagement(req.user.id);
     const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Admin: consolidated member CRM (signup, payment, engagement, activity).
+aiRouter.get(
+  '/admin/crm',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const rows = await listMemberCrm();
+    const body: ApiResponse<typeof rows> = { success: true, data: rows };
     res.json(body);
   }),
 );

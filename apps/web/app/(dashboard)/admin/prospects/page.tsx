@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Linkedin, Sparkles, TrendingUp } from 'lucide-react';
+import { FastForward, Linkedin, Sparkles, TrendingUp, Wand2 } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -74,6 +74,32 @@ export default function AdminProspectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, mode, statusFilter]);
 
+  async function seed() {
+    if (!accessToken) return;
+    setBusy('seed');
+    try {
+      await api.post('/api/v1/linkedin-prospects/simulator/seed', {}, { accessToken });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Seed failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function simulate() {
+    if (!accessToken) return;
+    setBusy('simulate');
+    try {
+      await api.post('/api/v1/linkedin-prospects/simulator/step', {}, { accessToken });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Simulate failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function advance(id: string, newStatus: Status) {
     if (!accessToken) return;
     setBusy(id);
@@ -127,6 +153,31 @@ export default function AdminProspectsPage() {
           ))}
         </section>
       )}
+
+      <section className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+        <span className="text-xs font-medium text-gray-600">Demo helpers:</span>
+        <button
+          type="button"
+          onClick={() => void seed()}
+          disabled={busy === 'seed'}
+          className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          <Wand2 className="h-3 w-3" />
+          {busy === 'seed' ? 'Seeding…' : 'Seed sample prospects'}
+        </button>
+        <button
+          type="button"
+          onClick={() => void simulate()}
+          disabled={busy === 'simulate'}
+          className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          <FastForward className="h-3 w-3" />
+          {busy === 'simulate' ? 'Stepping…' : 'Advance pipeline 1 step'}
+        </button>
+        <span className="text-[10px] text-gray-500">
+          Plug a real Dripify webhook into /api/v1/integrations/dripify when live.
+        </span>
+      </section>
 
       <section className="flex items-center gap-2">
         <span className="text-xs text-gray-500">Rank by:</span>

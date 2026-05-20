@@ -12,6 +12,7 @@ import {
   getPipelineSnapshot,
   ingestProspect,
 } from './linkedin-prospects.service.js';
+import { seedSampleProspects, simulateOutreachStep } from './linkedin-simulator.service.js';
 
 export const linkedinProspectsRouter: Router = Router();
 linkedinProspectsRouter.use(authenticate);
@@ -108,6 +109,28 @@ const advanceSchema = z.object({
   status: z.enum(PROSPECT_STATUSES),
   notes: z.string().max(1000).optional(),
 });
+// Demo helpers (admin only) — populate sample prospects and walk the
+// pipeline forward when no real Dripify feed is connected.
+linkedinProspectsRouter.post(
+  '/simulator/seed',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req.user!.role);
+    const result = await seedSampleProspects();
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+linkedinProspectsRouter.post(
+  '/simulator/step',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req.user!.role);
+    const result = await simulateOutreachStep();
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
 linkedinProspectsRouter.post(
   '/:id/advance',
   validate(advanceSchema),

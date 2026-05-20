@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { AlertTriangle, Calendar, LayoutDashboard, Linkedin, Mail, Shield, Sparkles, Store, Users, UsersRound, Video } from 'lucide-react';
+import { AlertTriangle, Calendar, Database, LayoutDashboard, Linkedin, Mail, Shield, Sparkles, Store, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/crm', label: 'Member CRM', icon: Database },
   { href: '/admin/listings', label: 'Listings', icon: Store },
   { href: '/admin/moderation', label: 'Moderation queue', icon: AlertTriangle },
   { href: '/admin/events', label: 'Zoom events', icon: Video },

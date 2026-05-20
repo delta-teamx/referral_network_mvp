@@ -130,6 +130,7 @@ model User {
   referralsReceived      ReferralTracking[]  @relation("ReferralsReceived")
   linkedInConverted      LinkedInProspect[]  @relation("LinkedInConverted")
   loginEvents            LoginEvent[]        @relation("LoginEventUser")
+  pushSubscriptions      PushSubscription[]  @relation("PushSubscriptionUser")
 
   @@index([email])
   @@index([role])
@@ -907,5 +908,25 @@ model LoginEvent {
   user User @relation("LoginEventUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt])
+}
+
+
+/// Web Push subscription endpoints. One row per (userId, endpoint) pair —
+/// users may have multiple subscriptions (phone + laptop). Senders dispatch
+/// in parallel; expired endpoints are pruned by the sender on first 410.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation("PushSubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
 }
 

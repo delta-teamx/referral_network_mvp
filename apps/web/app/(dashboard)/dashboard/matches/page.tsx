@@ -6,6 +6,7 @@ import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { clientConfig } from '../../../../lib/clientConfig';
 import { TierSection, type EnrichedTieredMatch, type TieredMatchBuckets } from '../../../../components/matches/TierSection';
+import { PushPrompt } from '../../../../components/matches/PushPrompt';
 
 const TIERS: { key: keyof TieredMatchBuckets; title: string; subtitle: string; band: string }[] = [
   { key: 'level1', title: 'High match', subtitle: 'Strong industry and service fit', band: '70–100%' },
@@ -86,6 +87,8 @@ export default function MatchesPage() {
           </p>
         </div>
       </div>
+
+      {accessToken && <PushPrompt accessToken={accessToken} />}
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
