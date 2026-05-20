@@ -13,6 +13,7 @@ import {
   ingestProspect,
 } from './linkedin-prospects.service.js';
 import { seedSampleProspects, simulateOutreachStep } from './linkedin-simulator.service.js';
+import { bulkSendInvites, processRsvp, sendMeetingInvite } from './linkedin-outreach.service.js';
 
 export const linkedinProspectsRouter: Router = Router();
 linkedinProspectsRouter.use(authenticate);
@@ -25,6 +26,7 @@ const prospectSchema = z.object({
   fullName: z.string().min(1).max(120),
   headline: z.string().max(280).nullable().optional(),
   linkedInUrl: z.string().url().max(512),
+  email: z.string().email().max(254).nullable().optional(),
   industry: z.string().max(120).nullable().optional(),
   jobRole: z.string().max(120).nullable().optional(),
   location: z.string().max(120).nullable().optional(),
@@ -126,6 +128,29 @@ linkedinProspectsRouter.post(
   asyncHandler(async (req, res) => {
     requireAdmin(req.user!.role);
     const result = await simulateOutreachStep();
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+// Send the meeting invite — email primary, Dripify DM fallback. Single prospect.
+linkedinProspectsRouter.post(
+  '/:id/invite',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req.user!.role);
+    const result = await sendMeetingInvite(req.params.id ?? '');
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+const bulkInviteSchema = z.object({ prospectIds: z.array(z.string().min(8)).min(1).max(50) });
+linkedinProspectsRouter.post(
+  '/invite/bulk',
+  validate(bulkInviteSchema),
+  asyncHandler(async (req, res) => {
+    requireAdmin(req.user!.role);
+    const result = await bulkSendInvites(req.body.prospectIds);
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),

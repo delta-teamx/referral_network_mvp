@@ -93,6 +93,14 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:admin@nrg-ai.com'),
 
+  // Dripify (Feature 3 LinkedIn outreach). API key + webhook secret are
+  // both optional. Outreach falls back to email-only when DRIPIFY_API_KEY
+  // is unset; the webhook receiver runs without DRIPIFY_WEBHOOK_SECRET in
+  // dev only.
+  DRIPIFY_API_KEY: z.string().optional(),
+  DRIPIFY_API_URL: z.string().url().default('https://api.dripify.io/v1'),
+  DRIPIFY_WEBHOOK_SECRET: z.string().optional(),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

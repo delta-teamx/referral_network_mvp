@@ -881,8 +881,13 @@ model LinkedInProspect {
 
   // Outreach metadata
   source          String   @default("manual")   // manual | dripify | csv_import
+  email           String?
   notes           String?
   lastTouchedAt   DateTime?
+  invitedAt       DateTime?
+  invitedChannel  String?   // email | dripify_dm | manual
+  rsvpToken       String?   @unique
+  rsvpedAt        DateTime?
   convertedUserId String?
 
   createdAt       DateTime @default(now())

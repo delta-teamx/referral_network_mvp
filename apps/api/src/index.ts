@@ -15,6 +15,7 @@ import { connectorRouter } from './domains/matching/connector/connector.routes.j
 import { leadsRouter } from './domains/matching/leads/leads.routes.js';
 import { funnelRouter } from './domains/marketing/funnel.routes.js';
 import { linkedinProspectsRouter } from './domains/marketing/linkedin-prospects.routes.js';
+import { rsvpRouter } from './domains/marketing/rsvp.routes.js';
 import { nrgOnlineRouter } from './domains/integrations/nrg-online.routes.js';
 import { dripifyRouter } from './domains/integrations/dripify.routes.js';
 import { registerLeadSubscribers } from './domains/matching/leads/leads.subscribers.js';
@@ -135,6 +136,7 @@ app.use('/api/v1/connect', connectorRouter);
 app.use('/api/v1/consumer-leads', leadsRouter);
 app.use('/api/v1/funnel', funnelRouter);
 app.use('/api/v1/linkedin-prospects', linkedinProspectsRouter);
+app.use('/api/v1/rsvp', rsvpRouter);
 app.use('/api/v1/integrations', nrgOnlineRouter);
 app.use('/api/v1/integrations', dripifyRouter);
 app.use('/api/v1/push', pushRouter);

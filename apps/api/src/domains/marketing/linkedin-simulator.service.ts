@@ -243,10 +243,20 @@ const SAMPLE_PROSPECTS = [
 export async function seedSampleProspects(): Promise<{ ingested: number }> {
   let ingested = 0;
   for (const p of SAMPLE_PROSPECTS) {
-    await ingestProspect({ ...p, source: 'simulator' });
+    await ingestProspect({ ...p, email: synthesizeEmail(p.fullName), source: 'simulator' });
     ingested++;
   }
   return { ingested };
+}
+
+function synthesizeEmail(fullName: string): string {
+  const slug = fullName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '');
+  return `${slug}@example-demo.test`;
 }
 
 const STATUS_PROGRESSION: Record<ProspectStatus, ProspectStatus | null> = {

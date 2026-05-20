@@ -25,7 +25,8 @@ export type EmailTemplate =
   | 'intro_requested_sender'
   | 'weekly_referral_digest'
   | 'welcome_packet'
-  | 'reengagement';
+  | 'reengagement'
+  | 'linkedin_meeting_invite';
 
 export interface EmailAttachment {
   filename: string;
@@ -168,6 +169,31 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p>We\u2019ll notify you the moment they respond \u2014 and if they accept, we\u2019ll auto-book a Zoom call at the earliest time you\u2019re both free.</p>`,
         ),
       };
+    case 'linkedin_meeting_invite': {
+      const groupName = String(d.groupName ?? appName);
+      const whenLabel = String(d.whenLabel ?? 'an upcoming meeting');
+      const rsvpUrl = String(d.rsvpUrl ?? '#');
+      const zoomUrl = String(d.zoomUrl ?? '');
+      return {
+        subject: `You're invited: ${groupName} (${whenLabel})`,
+        text: `Hi ${d.firstName ?? 'there'},
+
+You're invited to a ${appName} meeting hosted by ${groupName} on ${whenLabel}.
+
+Confirm you'll join: ${rsvpUrl}
+${zoomUrl ? `Zoom link (after RSVP): ${zoomUrl}` : ''}
+
+${appName} is a referral-first network. Members get curated intros, auto-booked Zoom calls, and a weekly digest of high-fit matches. Come to one meeting — no pitch, no commitment — see if it's a fit.`,
+        html: basicLayout(
+          `You're invited to ${escapeHtml(groupName)}`,
+          `<p>Hi ${escapeHtml(String(d.firstName ?? 'there'))},</p>
+           <p>You're invited to a ${escapeHtml(appName)} meeting hosted by <strong>${escapeHtml(groupName)}</strong>.</p>
+           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;"><strong>When:</strong> ${escapeHtml(whenLabel)}</p>
+           ${cta('RSVP — count me in', rsvpUrl)}
+           <p style="color:#666;font-size:13px;">${escapeHtml(appName)} is a referral-first network. Members get curated intros, auto-booked Zoom calls, and a weekly digest of high-fit matches. Come to one meeting — no pitch, no commitment — see if it's a fit.</p>`,
+        ),
+      };
+    }
     case 'reengagement': {
       const matchesUrl = String(d.matchesUrl ?? '#');
       const newMatches = Number(d.newMatches ?? 0);

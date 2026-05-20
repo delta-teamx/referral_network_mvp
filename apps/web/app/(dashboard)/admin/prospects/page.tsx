@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FastForward, Linkedin, Sparkles, TrendingUp, Wand2 } from 'lucide-react';
+import { FastForward, Linkedin, Mail, Sparkles, TrendingUp, Wand2 } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -28,12 +28,16 @@ interface Prospect {
   fullName: string;
   headline: string | null;
   linkedInUrl: string;
+  email: string | null;
   industry: string | null;
   jobRole: string | null;
   location: string | null;
   fitScore: number;
   leaderScore: number;
   status: Status;
+  invitedAt: string | null;
+  invitedChannel: string | null;
+  rsvpedAt: string | null;
   assignedGroup: { id: string; name: string; city: string; state: string } | null;
 }
 
@@ -95,6 +99,26 @@ export default function AdminProspectsPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Simulate failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function invite(id: string) {
+    if (!accessToken) return;
+    setBusy(`invite-${id}`);
+    try {
+      const result = await api.post<{ delivered: boolean; channel: string; reason?: string }>(
+        `/api/v1/linkedin-prospects/${id}/invite`,
+        {},
+        { accessToken },
+      );
+      if (!result.delivered) {
+        setError(`Invite not delivered: ${result.reason ?? 'no channel available'}`);
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Invite failed');
     } finally {
       setBusy(null);
     }
@@ -238,6 +262,10 @@ export default function AdminProspectsPage() {
                       {p.fullName}
                     </a>
                     {p.headline && <p className="text-xs text-gray-500">{p.headline}</p>}
+                    {p.email && <p className="text-[10px] text-gray-400">{p.email}</p>}
+                    {p.rsvpedAt && (
+                      <p className="text-[10px] font-medium text-green-700">RSVP&apos;d {new Date(p.rsvpedAt).toLocaleDateString()}</p>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-600">
                     {p.industry ?? '—'} · {p.jobRole ?? '—'}
@@ -258,18 +286,32 @@ export default function AdminProspectsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <select
-                      value={p.status}
-                      disabled={busy === p.id}
-                      onChange={(e) => void advance(p.id, e.target.value as Status)}
-                      className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s.replace('_', ' ')}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="inline-flex items-center gap-1">
+                      {p.status === 'connected' && (
+                        <button
+                          type="button"
+                          onClick={() => void invite(p.id)}
+                          disabled={busy === `invite-${p.id}`}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-white transition hover:bg-primary/90 disabled:opacity-50"
+                          title="Send meeting invite (email → Dripify DM fallback)"
+                        >
+                          <Mail className="h-3 w-3" />
+                          {busy === `invite-${p.id}` ? 'Sending…' : 'Invite'}
+                        </button>
+                      )}
+                      <select
+                        value={p.status}
+                        disabled={busy === p.id}
+                        onChange={(e) => void advance(p.id, e.target.value as Status)}
+                        className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700"
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s.replace('_', ' ')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </td>
                 </tr>
               ))}

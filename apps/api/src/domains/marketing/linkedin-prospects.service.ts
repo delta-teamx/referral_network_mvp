@@ -28,6 +28,7 @@ export interface ProspectInput {
   fullName: string;
   headline?: string | null;
   linkedInUrl: string;
+  email?: string | null;
   industry?: string | null;
   jobRole?: string | null;
   location?: string | null;
@@ -123,6 +124,7 @@ export async function ingestProspect(input: ProspectInput): Promise<{
       fullName: input.fullName,
       headline: input.headline ?? null,
       linkedInUrl: input.linkedInUrl,
+      email: input.email ?? null,
       industry: input.industry ?? null,
       jobRole: input.jobRole ?? null,
       location: input.location ?? null,
@@ -139,6 +141,7 @@ export async function ingestProspect(input: ProspectInput): Promise<{
     update: {
       fullName: input.fullName,
       headline: input.headline ?? null,
+      email: input.email ?? undefined,
       industry: input.industry ?? null,
       jobRole: input.jobRole ?? null,
       location: input.location ?? null,
