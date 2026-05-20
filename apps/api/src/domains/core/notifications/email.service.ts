@@ -23,7 +23,8 @@ export type EmailTemplate =
   | 'event_registered'
   | 'intro_requested_target'
   | 'intro_requested_sender'
-  | 'weekly_referral_digest';
+  | 'weekly_referral_digest'
+  | 'welcome_packet';
 
 export interface EmailAttachment {
   filename: string;
@@ -166,6 +167,36 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p>We\u2019ll notify you the moment they respond \u2014 and if they accept, we\u2019ll auto-book a Zoom call at the earliest time you\u2019re both free.</p>`,
         ),
       };
+    case 'welcome_packet': {
+      const matchesUrl = String(d.matchesUrl ?? '#');
+      const profileUrl = String(d.profileUrl ?? '#');
+      const availabilityUrl = String(d.availabilityUrl ?? '#');
+      return {
+        subject: `Your ${appName} welcome packet — let's get you connected`,
+        text: `Welcome to ${appName}, ${d.firstName ?? ''}!
+
+You're now part of a referral-first network. Here's what to do this week:
+
+1. Polish your profile so other members know how to refer you: ${profileUrl}
+2. Set your availability windows so the auto-Zoom booking can do its job: ${availabilityUrl}
+3. Review your first 10 curated matches — they're already waiting: ${matchesUrl}
+
+We'll send you a fresh batch each month for the first 3 months, plus a weekly digest of new high-fit matches. Hit Request Intro on anyone who looks interesting and we'll handle the SMS + email coordination.
+
+Questions? Just reply to this email.`,
+        html: basicLayout(
+          `Welcome to ${appName}, ${escapeHtml(String(d.firstName ?? ''))}`,
+          `<p>You're now part of a referral-first network. Here's what to do this week to get the most out of your first month:</p>
+           <ol style="padding-left:20px;line-height:1.7;">
+             <li><strong>Polish your profile</strong> so other members know how to refer you. <a href="${escapeAttr(profileUrl)}">Edit profile →</a></li>
+             <li><strong>Set your availability</strong> windows so we can auto-book Zoom calls when intros accept. <a href="${escapeAttr(availabilityUrl)}">Set availability →</a></li>
+             <li><strong>Review your first 10 curated matches</strong> — they're already waiting. <a href="${escapeAttr(matchesUrl)}">View matches →</a></li>
+           </ol>
+           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;">We'll send you a fresh batch of 10 matches each month for the first 3 months, plus a weekly digest of new high-fit matches. Hit <em>Request intro</em> on anyone who looks interesting and we'll handle the SMS + email coordination.</p>
+           ${cta('Open my dashboard', matchesUrl)}`,
+        ),
+      };
+    }
     case 'weekly_referral_digest': {
       const items = Array.isArray(d.items) ? (d.items as Array<Record<string, unknown>>) : [];
       const count = items.length;

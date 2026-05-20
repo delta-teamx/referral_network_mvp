@@ -29,15 +29,30 @@ export function registerOnboardingSubscribers(bus: EventBus): void {
     }
   });
 
-  // Once onboarding completes, optional audit log.
+  // Once onboarding completes, persist completedAt and send the welcome
+  // packet — a richer onboarding email with the concrete first-week actions
+  // (profile polish, availability, matches). Also available at /dashboard/welcome
+  // for members who want to revisit it.
   bus.subscribe('onboarding.completed', async ({ userId }) => {
     // eslint-disable-next-line no-console
     console.log(`[onboarding] user ${userId} completed onboarding`);
-    // Ensure the completedAt timestamp is persisted even if the service
-    // call that triggered this event skipped it for some reason.
     await prisma.onboardingProgress.updateMany({
       where: { userId, completedAt: null },
       data: { completedAt: new Date() },
+    });
+
+    const user = await findUserById(userId);
+    if (!user) return;
+    const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
+    await sendEmail({
+      to: user.email,
+      template: 'welcome_packet',
+      data: {
+        firstName: user.firstName,
+        matchesUrl: `${origin.replace(/\/$/, '')}/dashboard/matches`,
+        profileUrl: `${origin.replace(/\/$/, '')}/dashboard/settings`,
+        availabilityUrl: `${origin.replace(/\/$/, '')}/dashboard/availability`,
+      },
     });
   });
 }
