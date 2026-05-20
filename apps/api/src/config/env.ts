@@ -82,6 +82,11 @@ const envSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
 
+  // NRG.online membership form webhook (Feature 4). When set, the
+  // /api/v1/integrations/nrg-online webhook verifies the X-Signature
+  // header against this HMAC secret before creating the user.
+  NRG_ONLINE_WEBHOOK_SECRET: z.string().optional(),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

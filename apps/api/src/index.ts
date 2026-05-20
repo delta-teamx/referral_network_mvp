@@ -15,6 +15,7 @@ import { connectorRouter } from './domains/matching/connector/connector.routes.j
 import { leadsRouter } from './domains/matching/leads/leads.routes.js';
 import { funnelRouter } from './domains/marketing/funnel.routes.js';
 import { linkedinProspectsRouter } from './domains/marketing/linkedin-prospects.routes.js';
+import { nrgOnlineRouter } from './domains/integrations/nrg-online.routes.js';
 import { registerLeadSubscribers } from './domains/matching/leads/leads.subscribers.js';
 import { dashboardRouter } from './domains/core/dashboard/dashboard.routes.js';
 import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
@@ -128,6 +129,7 @@ app.use('/api/v1/connect', connectorRouter);
 app.use('/api/v1/consumer-leads', leadsRouter);
 app.use('/api/v1/funnel', funnelRouter);
 app.use('/api/v1/linkedin-prospects', linkedinProspectsRouter);
+app.use('/api/v1/integrations', nrgOnlineRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/reviews', verifiedWriteGate, reviewsRouter);
 app.use('/api/v1/referrals', verifiedWriteGate, referralsRouter);
