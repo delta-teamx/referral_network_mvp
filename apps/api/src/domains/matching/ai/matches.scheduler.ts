@@ -4,6 +4,7 @@ import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
 import { topUpOnboardingReferralsForAllMembers } from './onboarding-referrals.service.js';
 import { sendWeeklyReferralDigestForAllMembers } from './referral-digest.service.js';
+import { retrainFromOutcomes } from './ai-learning.service.js';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let lastRunUtcDate: string | null = null;
@@ -35,6 +36,7 @@ export interface DailyMatchesRun {
   onboardingMembersTouched: number;
   onboardingReferralsAssigned: number;
   digestsSent: number;
+  learningIntrosProcessed: number;
   errors: number;
 }
 
@@ -53,6 +55,7 @@ export async function runDailyMatchesRefresh(
     onboardingMembersTouched: 0,
     onboardingReferralsAssigned: 0,
     digestsSent: 0,
+    learningIntrosProcessed: 0,
     errors: 0,
   };
 
@@ -112,6 +115,15 @@ export async function runDailyMatchesRefresh(
       // eslint-disable-next-line no-console
       console.error('[matches-scheduler] weekly digest failed:', err);
     }
+  }
+
+  try {
+    const retrain = await retrainFromOutcomes();
+    stats.learningIntrosProcessed = retrain.introsProcessed;
+  } catch (err) {
+    stats.errors++;
+    // eslint-disable-next-line no-console
+    console.error('[matches-scheduler] retrain failed:', err);
   }
 
   // eslint-disable-next-line no-console

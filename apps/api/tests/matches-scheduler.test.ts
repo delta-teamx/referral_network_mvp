@@ -25,6 +25,20 @@ vi.mock('../src/domains/matching/ai/referral-digest.service.js', () => ({
   })),
 }));
 
+vi.mock('../src/domains/matching/ai/ai-learning.service.js', () => ({
+  retrainFromOutcomes: vi.fn(async () => ({
+    introsProcessed: 0,
+    newWeights: {
+      industryAlignment: 1,
+      reverseAlignment: 1,
+      referralToMe: 1,
+      referralFromMe: 1,
+      keywordOverlap: 1,
+      location: 1,
+    },
+  })),
+}));
+
 vi.mock('../src/config/prisma.js', () => ({
   prisma: {
     memberProfile: {
