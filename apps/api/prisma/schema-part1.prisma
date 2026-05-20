@@ -1,0 +1,71 @@
+// VirtualProsNetwork — Prisma schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_DATABASE_URL")
+  extensions = [postgis, pg_trgm]
+}
+
+enum UserRole {
+  CONSUMER
+  BUSINESS_OWNER
+  GROUP_LEADER
+  CITY_CAPTAIN
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum ListingStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+  PENDING_REVIEW
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  EXPIRED
+}
+
+enum ReferralStatus {
+  SENT
+  ACCEPTED
+  CONVERTED
+  DECLINED
+}
+
+enum EventType {
+  BUYING_HOUSE
+  SELLING_HOUSE
+  GETTING_MARRIED
+  STARTING_BUSINESS
+  HAVING_BABY
+  PLANNING_FUNERAL
+  HOME_RENOVATION
+  PLANNING_RETIREMENT
+  MOVING_TO_NEW_CITY
+  HOSTING_EVENT
+  GOING_TO_COLLEGE
+  GETTING_DIVORCED
+  OPENING_RESTAURANT
+  CULTURAL_CELEBRATION
+}
+
+enum GroupMemberRole {
+  MEMBER
+  LEADER
+  CO_LEADER
+}
