@@ -146,9 +146,10 @@ model MemberProfile {
   // Business identity
   businessName    String
   industry        String
-  headline        String? // "Residential roofer serving St. Louis metro"
-  bio             String? // Longer free-text about their business
-  keywords        String[] // Indexed for matching: ["roofing", "residential", "insurance claims"]
+  headline        String?
+  bio             String?
+  photoUrl        String?
+  keywords        String[]
   servicesOffered String[] // ["roof repair", "new construction", "inspections"]
   yearsInBusiness Int?
 
