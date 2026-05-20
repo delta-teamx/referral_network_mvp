@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { branding } from '@refnet/shared';
 import { NRGLogoWhite } from '../ui/NRGLogo';
 import { BrandLogoWhite } from '../ui/BrandLogo';
 
@@ -59,7 +60,7 @@ export function Footer() {
               The AI-powered referral networking platform. Build real relationships, get warm introductions, close more deals.
             </p>
             <p className="mt-2 text-xs text-gray-500">
-              Powering <span className="font-semibold text-gray-400">NRG</span> and other referral communities.
+              Powering <span className="font-semibold text-gray-400">{branding.fullName}</span> and other referral communities.
             </p>
           </div>
 
@@ -88,8 +89,8 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <div>
-              <p>&copy; {new Date().getFullYear()} {isVpn ? 'NRG' : 'NRG'}. All rights reserved.</p>
-              {!isVpn && <p className="mt-1 text-gray-600">Powering <span className="font-semibold text-gray-400">NRG</span></p>}
+              <p>&copy; {new Date().getFullYear()} {branding.legal.companyName}. All rights reserved.</p>
+              {!isVpn && <p className="mt-1 text-gray-600">Powering <span className="font-semibold text-gray-400">{branding.fullName}</span></p>}
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">

@@ -19,6 +19,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
+import { branding } from '@refnet/shared';
 import { useAuthStore } from '../../../stores/auth';
 import { MobileNav } from '../../../components/layout/MobileNav';
 import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
@@ -114,7 +115,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             Log out
           </button>
           <div className="px-3 text-[10px] text-gray-400">
-            Powered by <span className="font-semibold text-gray-500">NRG</span>
+            Powered by <span className="font-semibold text-gray-500">{branding.fullName}</span>
           </div>
         </div>
       </aside>

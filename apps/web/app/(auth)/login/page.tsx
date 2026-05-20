@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { branding } from '@refnet/shared';
 import type { FormEvent } from 'react';
 import { loginSchema } from '@refnet/shared';
 import { AuthShell } from '../../../components/auth/AuthShell';
@@ -56,7 +57,7 @@ function LoginInner() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your NRG account"
+      subtitle={`Sign in to your ${branding.name} account`}
       footer={
         <>
           Need an account?{' '}

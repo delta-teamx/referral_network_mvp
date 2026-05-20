@@ -1,3 +1,4 @@
+import { branding } from '@refnet/shared';
 import { env } from '../../../config/env.js';
 
 /**
@@ -53,7 +54,7 @@ interface RenderedEmail {
 
 function renderTemplate(req: EmailRequest): RenderedEmail {
   const d = req.data;
-  const appName = 'NRG';
+  const appName = branding.name;
   switch (req.template) {
     case 'verify_email':
       return {
@@ -102,7 +103,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         text: `${d.senderName ?? 'A peer'} wants to connect on ${appName}: ${d.inviteUrl}`,
         html: basicLayout(
           `You\u2019ve been invited to ${appName}`,
-          `<p><strong>${d.senderName ?? 'A peer'}</strong> invited you to join their referral network.</p>${d.message ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.message))}</blockquote>` : ''}${cta('Accept invitation', String(d.inviteUrl))}`,
+          `<p><strong>${d.senderName ?? 'A peer'}</strong> invited you to join their referral network.</p>${d.message ? `<blockquote style="border-left:3px solid ${branding.colors.primary};padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.message))}</blockquote>` : ''}${cta('Accept invitation', String(d.inviteUrl))}`,
         ),
       };
     case 'lead_received':
@@ -132,7 +133,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
           `<p>Your call with <strong>${d.withName ?? ''}</strong> is confirmed.</p>
            <p><strong>When:</strong> ${d.whenLabel ?? ''}<br>
            <strong>Reason:</strong> ${d.reason ?? ''}</p>
-           ${d.notes ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.notes))}</blockquote>` : ''}
+           ${d.notes ? `<blockquote style="border-left:3px solid ${branding.colors.primary};padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.notes))}</blockquote>` : ''}
            ${cta('Join Zoom meeting', String(d.zoomUrl ?? '#'))}
            <p style="color:#888;font-size:12px">A calendar invite is attached — open it to add this to your calendar.</p>`,
         ),
@@ -155,7 +156,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: basicLayout(
           `Intro request from ${escapeHtml(String(d.senderName ?? 'a member'))}`,
           `<p><strong>${escapeHtml(String(d.senderName ?? 'A member'))}</strong>${d.senderBusiness ? ` of ${escapeHtml(String(d.senderBusiness))}` : ''} would like to connect with you.</p>
-           ${d.reason ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2563eb;background:#f9fafb;color:#374151;">${escapeHtml(String(d.reason))}</blockquote>` : ''}
+           ${d.reason ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid ${branding.colors.primary};background:#f9fafb;color:#374151;">${escapeHtml(String(d.reason))}</blockquote>` : ''}
            ${cta('Accept or decline', String(d.respondUrl ?? '#'))}`,
         ),
       };
@@ -188,7 +189,7 @@ ${appName} is a referral-first network. Members get curated intros, auto-booked 
           `You're invited to ${escapeHtml(groupName)}`,
           `<p>Hi ${escapeHtml(String(d.firstName ?? 'there'))},</p>
            <p>You're invited to a ${escapeHtml(appName)} meeting hosted by <strong>${escapeHtml(groupName)}</strong>.</p>
-           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;"><strong>When:</strong> ${escapeHtml(whenLabel)}</p>
+           <p style="background:#f9fafb;border-left:3px solid ${branding.colors.primary};padding:12px 16px;color:#374151;font-size:14px;"><strong>When:</strong> ${escapeHtml(whenLabel)}</p>
            ${cta('RSVP — count me in', rsvpUrl)}
            <p style="color:#666;font-size:13px;">${escapeHtml(appName)} is a referral-first network. Members get curated intros, auto-booked Zoom calls, and a weekly digest of high-fit matches. Come to one meeting — no pitch, no commitment — see if it's a fit.</p>`,
         ),
@@ -209,7 +210,7 @@ We've also upgraded our matching with AI-derived scoring and auto-booked Zoom ca
         html: basicLayout(
           `We've missed you, ${escapeHtml(String(d.firstName ?? ''))}`,
           `<p>While you were away, our matching engine found <strong>${newMatches}</strong> new connection${newMatches === 1 ? '' : 's'} we think you should know about.</p>
-           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;">We've also upgraded matching with AI-derived scoring and auto-booked Zoom calls — when you find someone interesting, one click and we handle the SMS, email, and calendar invite.</p>
+           <p style="background:#f9fafb;border-left:3px solid ${branding.colors.primary};padding:12px 16px;color:#374151;font-size:14px;">We've also upgraded matching with AI-derived scoring and auto-booked Zoom calls — when you find someone interesting, one click and we handle the SMS, email, and calendar invite.</p>
            ${cta(`See my ${newMatches} new matches`, matchesUrl)}`,
         ),
       };
@@ -239,7 +240,7 @@ Questions? Just reply to this email.`,
              <li><strong>Set your availability</strong> windows so we can auto-book Zoom calls when intros accept. <a href="${escapeAttr(availabilityUrl)}">Set availability →</a></li>
              <li><strong>Review your first 10 curated matches</strong> — they're already waiting. <a href="${escapeAttr(matchesUrl)}">View matches →</a></li>
            </ol>
-           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;">We'll send you a fresh batch of 10 matches each month for the first 3 months, plus a weekly digest of new high-fit matches. Hit <em>Request intro</em> on anyone who looks interesting and we'll handle the SMS + email coordination.</p>
+           <p style="background:#f9fafb;border-left:3px solid ${branding.colors.primary};padding:12px 16px;color:#374151;font-size:14px;">We'll send you a fresh batch of 10 matches each month for the first 3 months, plus a weekly digest of new high-fit matches. Hit <em>Request intro</em> on anyone who looks interesting and we'll handle the SMS + email coordination.</p>
            ${cta('Open my dashboard', matchesUrl)}`,
         ),
       };
@@ -281,12 +282,12 @@ function basicLayout(heading: string, bodyHtml: string): string {
     <h1 style="font-size:20px;margin:0 0 16px;">${heading}</h1>
     ${bodyHtml}
     <hr style="border:0;border-top:1px solid #eee;margin:32px 0 16px;">
-    <p style="color:#888;font-size:12px;margin:0;">NRG · Trusted local pros, matched to life\u2019s moments</p>
+    <p style="color:#888;font-size:12px;margin:0;">${branding.fullName} · ${branding.shortPitch}</p>
   </body></html>`;
 }
 
 function cta(label: string, url: string): string {
-  return `<p style="margin:24px 0"><a href="${escapeAttr(url)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">${label}</a></p>`;
+  return `<p style="margin:24px 0"><a href="${escapeAttr(url)}" style="display:inline-block;background:${branding.colors.primary};color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">${label}</a></p>`;
 }
 
 function escapeHtml(s: string): string {

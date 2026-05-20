@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { branding } from '@refnet/shared';
 import { prisma } from '../../config/prisma.js';
 import { env } from '../../config/env.js';
 import { sendEmail } from '../core/notifications/email.service.js';
@@ -167,7 +168,7 @@ export async function sendMeetingInvite(prospectId: string): Promise<SendInviteR
 }
 
 function buildDmBody(args: { firstName: string; groupName: string; whenLabel: string; rsvpUrl: string }): string {
-  return `Hi ${args.firstName} — wanted to extend a quick invite to a ${args.groupName} meeting on ${args.whenLabel}. No pitch, no commitment — just a chance to see how NRG members refer business to each other. RSVP if you're in: ${args.rsvpUrl}`;
+  return `Hi ${args.firstName} — wanted to extend a quick invite to a ${args.groupName} meeting on ${args.whenLabel}. No pitch, no commitment — just a chance to see how ${branding.name} members refer business to each other. RSVP if you're in: ${args.rsvpUrl}`;
 }
 
 export async function processRsvp(token: string): Promise<{ ok: boolean; groupName?: string; whenLabel?: string }> {

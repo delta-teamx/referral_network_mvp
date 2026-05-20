@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Montserrat } from "next/font/google";
+import { branding } from "@refnet/shared";
 import { DomainHead } from "../components/layout/DomainHead";
 import { LayoutShell } from "../components/layout/LayoutShell";
 import "./globals.css";
@@ -14,11 +15,17 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: {
-    default: "NRG - AI-Powered Referral Networking Platform",
-    template: "%s | NRG",
+    default: `${branding.fullName} — ${branding.tagline}`,
+    template: `%s | ${branding.name}`,
   },
-  description:
-    "NRG is the AI-powered referral networking platform.",
+  description: branding.description,
+  openGraph: {
+    title: `${branding.fullName} — ${branding.tagline}`,
+    description: branding.description,
+    siteName: branding.fullName,
+    url: branding.url,
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowRight, CheckCircle, XCircle } from 'lucide-react';
+import { branding } from '@refnet/shared';
 import { api, ApiError } from '../../../lib/api';
 
 interface RsvpResponse {
@@ -76,7 +77,7 @@ export default function RsvpClient() {
       )}
       <p className="mt-4 text-sm text-gray-600">
         We&apos;ll send you the Zoom link the day before the meeting. No pitch, no commitment — just come and
-        see how NRG works.
+        see how {branding.name} works.
       </p>
       <a
         href="/preview"

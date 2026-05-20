@@ -1,10 +1,22 @@
+import { branding } from '@refnet/shared';
+
+/**
+ * Web client config. Branding is sourced from packages/shared so it's
+ * a single source of truth across web + API. Feature flags stay here
+ * since they're web-specific (gate UI surfaces, not data).
+ */
 export const clientConfig = {
   brand: {
-    name: 'NRG',
-    tagline: 'AI-Powered Referral Networking Platform',
-    description: 'NRG is the AI-powered referral networking platform.',
-    url: 'https://nrg-ai.com',
-    supportEmail: 'support@nrg-ai.com',
+    name: branding.name,
+    fullName: branding.fullName,
+    tagline: branding.tagline,
+    description: branding.description,
+    shortPitch: branding.shortPitch,
+    url: branding.url,
+    supportEmail: branding.supportEmail,
+    logo: branding.logo,
+    valueProps: branding.valueProps,
+    social: branding.social,
   },
   features: {
     payments: true,
@@ -13,11 +25,7 @@ export const clientConfig = {
     referrals: true,
     adminPanel: true,
   },
-  legal: {
-    companyName: 'NRG, Inc.',
-    privacyUrl: '/privacy',
-    termsUrl: '/terms',
-  },
+  legal: branding.legal,
 } as const;
 
 export type ClientConfig = typeof clientConfig;

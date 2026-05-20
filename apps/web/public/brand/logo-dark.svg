@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 36" role="img" aria-label="NRG Online">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EA9D6"/>
+      <stop offset="100%" stop-color="#F2B473"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(2 2)">
+    <rect width="32" height="32" rx="8" fill="url(#g2)"/>
+    <path d="M9 23 L9 9 L13 9 L19 18 L19 9 L23 9 L23 23 L19 23 L13 14 L13 23 Z" fill="#0F1B2D"/>
+  </g>
+  <text x="42" y="24" font-family="Montserrat, Inter, system-ui, sans-serif" font-weight="800" font-size="18" fill="#F7F9FC" letter-spacing="0.5">
+    NRG <tspan font-weight="500" fill="#5EA9D6">Online</tspan>
+  </text>
+</svg>

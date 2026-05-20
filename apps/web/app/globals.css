@@ -3,12 +3,18 @@
 @tailwind utilities;
 
 :root {
-  /* Single primary palette — blue with tints. No random accent colors. */
-  --color-primary: #2563eb;
-  --color-primary-light: #eff6ff;
-  --color-primary-dark: #1d4ed8;
-  --color-success: #16a34a;
-  --color-danger: #dc2626;
+  /* Brand palette. Sourced from packages/shared/src/branding.ts at build
+     time via tailwind.config.ts; mirrored here so non-Tailwind styles +
+     downstream tenants can override at runtime by setting these vars. */
+  --color-primary: #1B5E8C;
+  --color-primary-light: #E8F2FA;
+  --color-primary-dark: #134669;
+  --color-secondary: #E8913A;
+  --color-success: #2E7D32;
+  --color-danger: #D32F2F;
+  --color-warning: #ED6C02;
+  --color-surface: #F7F9FC;
+  --color-text: #0F1B2D;
 }
 
 @layer base {
