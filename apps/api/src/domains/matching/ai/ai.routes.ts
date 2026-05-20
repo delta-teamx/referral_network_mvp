@@ -17,6 +17,7 @@ import {
   ONBOARDING_TARGET_PER_MONTH,
   assignOnboardingReferrals,
 } from './onboarding-referrals.service.js';
+import { listOnboardingMembers } from './onboarding-admin.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -177,6 +178,18 @@ aiRouter.post(
     if (!req.user) throw AppError.unauthorized();
     const intro = await completeIntro(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof intro> = { success: true, data: intro };
+    res.json(body);
+  }),
+);
+
+// Admin: list members currently in their first 3 months with their
+// per-month onboarding-referral counts. Drives the override panel.
+aiRouter.get(
+  '/admin/onboarding-members',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const rows = await listOnboardingMembers();
+    const body: ApiResponse<typeof rows> = { success: true, data: rows };
     res.json(body);
   }),
 );
