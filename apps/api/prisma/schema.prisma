@@ -129,6 +129,7 @@ model User {
   referralsMade          ReferralTracking[]  @relation("ReferralsMade")
   referralsReceived      ReferralTracking[]  @relation("ReferralsReceived")
   linkedInConverted      LinkedInProspect[]  @relation("LinkedInConverted")
+  loginEvents            LoginEvent[]        @relation("LoginEventUser")
 
   @@index([email])
   @@index([role])
@@ -892,5 +893,19 @@ model LinkedInProspect {
   @@index([status])
   @@index([fitScore])
   @@index([assignedGroupId])
+}
+
+
+/// One row per login. Powers the F6 streak counter and the engagement
+/// "recent login" signal. Capped retention is handled by a daily prune
+/// elsewhere; we only ever query the last ~60 days.
+model LoginEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  occurredAt DateTime @default(now())
+
+  user User @relation("LoginEventUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
 }
 

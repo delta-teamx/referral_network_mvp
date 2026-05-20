@@ -142,7 +142,7 @@ export default function PreviewPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-gray-600 sm:text-lg">
             A referral-first network with an AI matching engine. Every member gets curated intros, auto-booked
-            Zoom calls, and a weekly digest. Here's a glimpse of what your dashboard would look like.
+            Zoom calls, and a weekly digest. Here&apos;s a glimpse of what your dashboard would look like.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a

@@ -16,6 +16,7 @@ import { leadsRouter } from './domains/matching/leads/leads.routes.js';
 import { funnelRouter } from './domains/marketing/funnel.routes.js';
 import { linkedinProspectsRouter } from './domains/marketing/linkedin-prospects.routes.js';
 import { nrgOnlineRouter } from './domains/integrations/nrg-online.routes.js';
+import { dripifyRouter } from './domains/integrations/dripify.routes.js';
 import { registerLeadSubscribers } from './domains/matching/leads/leads.subscribers.js';
 import { dashboardRouter } from './domains/core/dashboard/dashboard.routes.js';
 import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
@@ -45,6 +46,7 @@ import { referralTrackingRouter } from './domains/network/referral-tracking/refe
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
 import { registerIntroSubscribers } from './domains/matching/ai/intro.subscribers.js';
 import { registerOnboardingReferralSubscribers } from './domains/matching/ai/onboarding-referrals.subscribers.js';
+import { registerLoginTrackingSubscribers } from './domains/matching/ai/login-tracking.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -107,6 +109,7 @@ registerTrustSubscribers(eventBus);
 registerReferralTrackingSubscribers(eventBus);
 registerIntroSubscribers(eventBus);
 registerOnboardingReferralSubscribers(eventBus);
+registerLoginTrackingSubscribers(eventBus);
 
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.
@@ -130,6 +133,7 @@ app.use('/api/v1/consumer-leads', leadsRouter);
 app.use('/api/v1/funnel', funnelRouter);
 app.use('/api/v1/linkedin-prospects', linkedinProspectsRouter);
 app.use('/api/v1/integrations', nrgOnlineRouter);
+app.use('/api/v1/integrations', dripifyRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/reviews', verifiedWriteGate, reviewsRouter);
 app.use('/api/v1/referrals', verifiedWriteGate, referralsRouter);

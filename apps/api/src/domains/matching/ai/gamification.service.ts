@@ -116,25 +116,48 @@ export async function getMemberBadges(userId: string): Promise<MemberBadgeReport
 }
 
 /**
- * Login streak: consecutive weeks the member has logged in at least once.
- * Computed from User.lastLoginAt — a simple "have they been here this week"
- * binary, extended back by checking previous-week login records. With the
- * current schema (no login_event table) we cap at "this week + last week"
- * which is enough for the surface UI. A real streak counter belongs to a
- * future LoginEvent table.
+ * Login streak: consecutive ISO weeks the member has logged in at least
+ * once. Backed by LoginEvent rows. Walks the last 90 days of events,
+ * bucketed into week-of-year, and counts consecutive weeks ending in the
+ * current week. Returns 0 if the current week has no login (a missed
+ * week resets the streak — the brief calls these "activity streaks").
  */
-export async function getMemberStreak(userId: string, now: Date = new Date()): Promise<{ weeks: number; activeThisWeek: boolean }> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { lastLoginAt: true } });
-  if (!user?.lastLoginAt) return { weeks: 0, activeThisWeek: false };
+export async function getMemberStreak(
+  userId: string,
+  now: Date = new Date(),
+): Promise<{ weeks: number; activeThisWeek: boolean }> {
+  const since = new Date(now.getTime() - 90 * 86400_000);
+  const events = await prisma.loginEvent.findMany({
+    where: { userId, occurredAt: { gte: since } },
+    select: { occurredAt: true },
+    orderBy: { occurredAt: 'desc' },
+  });
+  if (events.length === 0) return { weeks: 0, activeThisWeek: false };
 
-  const oneWeekMs = 7 * 86400_000;
-  const lastLogin = user.lastLoginAt.getTime();
-  const nowMs = now.getTime();
-  const daysSinceLastLogin = (nowMs - lastLogin) / 86400_000;
+  const currentWeekKey = isoWeekKey(now);
+  const weekKeys = new Set(events.map((e) => isoWeekKey(e.occurredAt)));
 
-  if (daysSinceLastLogin > 7) return { weeks: 0, activeThisWeek: false };
-  if (daysSinceLastLogin <= 1) return { weeks: 2, activeThisWeek: true };
-  return { weeks: 1, activeThisWeek: true };
-  // True streak counting requires a per-week login table — left for follow-up.
-  void oneWeekMs;
+  const activeThisWeek = weekKeys.has(currentWeekKey);
+  if (!activeThisWeek) return { weeks: 0, activeThisWeek: false };
+
+  let weeks = 0;
+  let cursor = startOfIsoWeek(now);
+  while (weekKeys.has(isoWeekKey(cursor))) {
+    weeks++;
+    cursor = new Date(cursor.getTime() - 7 * 86400_000);
+  }
+  return { weeks, activeThisWeek };
+}
+
+function startOfIsoWeek(d: Date): Date {
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dow = date.getUTCDay();
+  const diff = (dow + 6) % 7; // Monday-start
+  date.setUTCDate(date.getUTCDate() - diff);
+  return date;
+}
+
+function isoWeekKey(d: Date): string {
+  const start = startOfIsoWeek(d);
+  return `${start.getUTCFullYear()}-${start.getUTCMonth() + 1}-${start.getUTCDate()}`;
 }
