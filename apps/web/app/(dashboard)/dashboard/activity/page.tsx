@@ -1,9 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Calendar, Sparkles, UserPlus, Users } from 'lucide-react';
+import { Activity, Calendar, DollarSign, Flame, Handshake, Sparkles, TrendingUp, UserPlus, Users } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+
+interface MemberRoi {
+  introsReceived: number;
+  meetingsBooked: number;
+  dealsClosed: number;
+  estimatedValue: number;
+}
+
+interface Engagement {
+  userId: string;
+  score: number;
+  signals: {
+    recentLogin: boolean;
+    introsRequested: number;
+    introsAccepted: number;
+    meetingsAttended: number;
+  };
+}
 
 interface MonthBucket {
   monthStart: string;
@@ -36,6 +54,8 @@ const SERIES: { key: SeriesKey; label: string; color: string; icon: React.ReactN
 export default function ActivityPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [data, setData] = useState<MemberAnalytics | null>(null);
+  const [roi, setRoi] = useState<MemberRoi | null>(null);
+  const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,10 +64,21 @@ export default function ActivityPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get<MemberAnalytics>('/api/v1/ai/analytics/me?months=6', {
-          accessToken: accessToken ?? undefined,
-        });
-        if (!cancelled) setData(res);
+        const [analyticsRes, roiRes, engagementRes] = await Promise.all([
+          api.get<MemberAnalytics>('/api/v1/ai/analytics/me?months=6', {
+            accessToken: accessToken ?? undefined,
+          }),
+          api.get<MemberRoi>('/api/v1/ai/roi/me', {
+            accessToken: accessToken ?? undefined,
+          }),
+          api.get<Engagement>('/api/v1/ai/engagement/me', {
+            accessToken: accessToken ?? undefined,
+          }),
+        ]);
+        if (cancelled) return;
+        setData(analyticsRes);
+        setRoi(roiRes);
+        setEngagement(engagementRes);
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Load failed');
       } finally {
@@ -125,6 +156,50 @@ export default function ActivityPage() {
         </div>
       </section>
 
+      {roi && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-600">
+            <TrendingUp className="h-4 w-4" />
+            ROI (lifetime)
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <RoiStat label="Intros received" value={roi.introsReceived} icon={<UserPlus className="h-4 w-4" />} />
+            <RoiStat label="Meetings booked" value={roi.meetingsBooked} icon={<Calendar className="h-4 w-4" />} />
+            <RoiStat label="Deals closed" value={roi.dealsClosed} icon={<Handshake className="h-4 w-4" />} />
+            <RoiStat
+              label="Estimated value"
+              value={`$${roi.estimatedValue.toLocaleString()}`}
+              icon={<DollarSign className="h-4 w-4" />}
+            />
+          </div>
+        </section>
+      )}
+
+      {engagement && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-600">
+            <Flame className="h-4 w-4" />
+            Engagement score
+          </h2>
+          <div className="flex items-center gap-4">
+            <div className="text-4xl font-bold text-gray-900">{engagement.score}</div>
+            <div className="flex-1">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className={`h-full ${engagement.score >= 60 ? 'bg-green-500' : engagement.score >= 20 ? 'bg-amber-500' : 'bg-red-500'}`}
+                  style={{ width: `${engagement.score}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-gray-600">
+                Based on the last 30 days: {engagement.signals.introsRequested} intros sent ·{' '}
+                {engagement.signals.introsAccepted} accepted · {engagement.signals.meetingsAttended} meetings
+                {engagement.signals.recentLogin ? ' · recent login ✓' : ''}.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-lg border border-gray-200 bg-white p-5">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-600">
           Cumulative (last 6 months)
@@ -138,6 +213,18 @@ export default function ActivityPage() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function RoiStat({ label, value, icon }: { label: string; value: number | string; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-md bg-gray-50 p-4">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+        {icon}
+        {label}
+      </div>
+      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

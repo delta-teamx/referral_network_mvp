@@ -30,6 +30,13 @@ export interface MemberAnalytics {
   };
 }
 
+export interface MemberRoi {
+  introsReceived: number;
+  meetingsBooked: number;
+  dealsClosed: number;
+  estimatedValue: number;
+}
+
 const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   year: 'numeric',
@@ -130,6 +137,38 @@ export async function getMemberAnalytics(
   );
 
   return { months: buckets, totals };
+}
+
+/**
+ * Lifetime ROI for the member-facing ROI dashboard. Returns the brief's
+ * four metrics: total intros received as the target, meetings booked
+ * (host or guest, confirmed), deals closed (intros marked outcome
+ * "deal_closed"), and the summed dealValue.
+ */
+export async function getMemberRoi(userId: string): Promise<MemberRoi> {
+  const [introsReceived, meetingsBooked, closedAgg] = await Promise.all([
+    prisma.introduction.count({
+      where: { targetId: userId, status: { in: ['requested', 'accepted', 'completed'] } },
+    }),
+    prisma.bookingCall.count({
+      where: { OR: [{ hostId: userId }, { guestId: userId }], status: 'confirmed' },
+    }),
+    prisma.introduction.aggregate({
+      where: {
+        OR: [{ senderId: userId }, { targetId: userId }],
+        outcome: 'deal_closed',
+      },
+      _count: { _all: true },
+      _sum: { dealValue: true },
+    }),
+  ]);
+
+  return {
+    introsReceived,
+    meetingsBooked,
+    dealsClosed: closedAgg._count._all,
+    estimatedValue: Number(closedAgg._sum.dealValue ?? 0),
+  };
 }
 
 function startOfMonth(d: Date): Date {

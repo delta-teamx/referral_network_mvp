@@ -11,7 +11,7 @@ import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
 import { runDailyMatchesRefresh } from './matches.scheduler.js';
 import { getMemberProfileForViewing } from './profile.service.js';
-import { getMemberAnalytics } from './analytics.service.js';
+import { getMemberAnalytics, getMemberRoi } from './analytics.service.js';
 import {
   ONBOARDING_MONTH_COUNT,
   ONBOARDING_TARGET_PER_MONTH,
@@ -41,6 +41,18 @@ aiRouter.get(
     const groupId = typeof req.query.groupId === 'string' ? req.query.groupId : undefined;
     const matches = await generateMatchesForUser(req.user.id, { groupId, limit: 10 });
     const body: ApiResponse<typeof matches> = { success: true, data: matches };
+    res.json(body);
+  }),
+);
+
+// Per-member ROI (Feature 6 dashboard): lifetime intros received, meetings,
+// deals closed, estimated value.
+aiRouter.get(
+  '/roi/me',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getMemberRoi(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );
