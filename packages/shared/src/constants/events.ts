@@ -110,6 +110,11 @@ export interface DomainEventMap {
   // Referral tracking
   'referral_tracking.signup': { referrerUserId: string; inviteeUserId: string };
   'referral_tracking.reward_granted': { referrerUserId: string; inviteeUserId: string; tier: string; rewardMonths: number };
+
+  // Lead-gen funnel (Feature 5)
+  'funnel.viewed': { sessionId: string; referrer: string | null; campaign: string | null };
+  'funnel.cta_clicked': { sessionId: string; cta: string };
+  'funnel.signup_attributed': { sessionId: string; userId: string };
 }
 
 export type DomainEventType = keyof DomainEventMap;
