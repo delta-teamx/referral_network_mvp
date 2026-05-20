@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
+import { geocodeZip } from '../../search/geocoding.service.js';
 
 /**
  * Listings service — directory read/write.
@@ -201,15 +202,23 @@ export async function createListing(userId: string, input: CreateListingInput) {
       phone: input.phone ?? null,
       email: input.email ?? null,
       website: input.website ?? null,
-      // Approximate coordinates — listings don't yet prompt for geocoding; a
-      // Branch 5 job backfills lat/lng via Google Maps geocoding.
-      latitude: 38.627,
-      longitude: -90.1994,
+      latitude: 0,
+      longitude: 0,
     },
     select: listingCardSelect,
   });
 
   await eventBus.publish('listing.created', { listingId: listing.id, userId });
+
+  // Geocode ZIP in background — updates lat/lng after creation
+  void geocodeZip(input.zipCode).then(async (coords) => {
+    if (coords) {
+      await prisma.listing.update({
+        where: { id: listing.id },
+        data: { latitude: coords.lat, longitude: coords.lng },
+      });
+    }
+  }).catch(() => {});
 
   return listing;
 }
