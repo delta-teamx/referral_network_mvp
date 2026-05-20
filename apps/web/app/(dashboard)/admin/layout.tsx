@@ -15,6 +15,7 @@ const NAV = [
   { href: '/admin/events', label: 'Zoom events', icon: Video },
   { href: '/admin/pods', label: 'AI Pods', icon: Sparkles },
   { href: '/admin/referrals', label: 'Onboarding referrals', icon: Mail },
+  { href: '/admin/reengagement', label: 'Re-engagement', icon: AlertTriangle },
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
 ];

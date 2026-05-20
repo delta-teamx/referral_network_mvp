@@ -24,7 +24,8 @@ export type EmailTemplate =
   | 'intro_requested_target'
   | 'intro_requested_sender'
   | 'weekly_referral_digest'
-  | 'welcome_packet';
+  | 'welcome_packet'
+  | 'reengagement';
 
 export interface EmailAttachment {
   filename: string;
@@ -167,6 +168,26 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p>We\u2019ll notify you the moment they respond \u2014 and if they accept, we\u2019ll auto-book a Zoom call at the earliest time you\u2019re both free.</p>`,
         ),
       };
+    case 'reengagement': {
+      const matchesUrl = String(d.matchesUrl ?? '#');
+      const newMatches = Number(d.newMatches ?? 0);
+      return {
+        subject: `${appName}: ${newMatches} new ${newMatches === 1 ? 'match is' : 'matches are'} waiting for you`,
+        text: `Hi ${d.firstName ?? ''},
+
+We've missed you on ${appName}. While you were away, our matching engine found ${newMatches} new connection${newMatches === 1 ? '' : 's'} we think you should know about.
+
+Take a look: ${matchesUrl}
+
+We've also upgraded our matching with AI-derived scoring and auto-booked Zoom calls — when you find someone interesting, one click and we handle the SMS, email, and calendar invite.`,
+        html: basicLayout(
+          `We've missed you, ${escapeHtml(String(d.firstName ?? ''))}`,
+          `<p>While you were away, our matching engine found <strong>${newMatches}</strong> new connection${newMatches === 1 ? '' : 's'} we think you should know about.</p>
+           <p style="background:#f9fafb;border-left:3px solid #2563eb;padding:12px 16px;color:#374151;font-size:14px;">We've also upgraded matching with AI-derived scoring and auto-booked Zoom calls — when you find someone interesting, one click and we handle the SMS, email, and calendar invite.</p>
+           ${cta(`See my ${newMatches} new matches`, matchesUrl)}`,
+        ),
+      };
+    }
     case 'welcome_packet': {
       const matchesUrl = String(d.matchesUrl ?? '#');
       const profileUrl = String(d.profileUrl ?? '#');

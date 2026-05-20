@@ -18,6 +18,8 @@ import {
   assignOnboardingReferrals,
 } from './onboarding-referrals.service.js';
 import { listOnboardingMembers } from './onboarding-admin.service.js';
+import { computeEngagement, listEngagementForAllMembers } from './engagement.service.js';
+import { runReengagementCampaign } from './reengagement.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -225,6 +227,42 @@ aiRouter.post(
     if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
     const stats = await runDailyMatchesRefresh();
     const body: ApiResponse<typeof stats> = { success: true, data: stats };
+    res.json(body);
+  }),
+);
+
+// Member's own engagement score (Feature 6: ROI dashboard input).
+aiRouter.get(
+  '/engagement/me',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await computeEngagement(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Admin: list every member's engagement score. Feeds the re-engagement
+// preview panel.
+aiRouter.get(
+  '/admin/engagement',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const rows = await listEngagementForAllMembers();
+    const body: ApiResponse<typeof rows> = { success: true, data: rows };
+    res.json(body);
+  }),
+);
+
+// Admin: run the bulk re-engagement campaign. ?dryRun=1 returns the
+// would-be recipients without sending.
+aiRouter.post(
+  '/admin/reengagement',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
+    const result = await runReengagementCampaign({ dryRun });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );
