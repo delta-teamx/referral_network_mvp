@@ -22,7 +22,8 @@ export type EmailTemplate =
   | 'booking_confirmed'
   | 'event_registered'
   | 'intro_requested_target'
-  | 'intro_requested_sender';
+  | 'intro_requested_sender'
+  | 'weekly_referral_digest';
 
 export interface EmailAttachment {
   filename: string;
@@ -165,6 +166,35 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p>We\u2019ll notify you the moment they respond \u2014 and if they accept, we\u2019ll auto-book a Zoom call at the earliest time you\u2019re both free.</p>`,
         ),
       };
+    case 'weekly_referral_digest': {
+      const items = Array.isArray(d.items) ? (d.items as Array<Record<string, unknown>>) : [];
+      const count = items.length;
+      return {
+        subject: `${count} ${count === 1 ? 'match' : 'matches'} waiting for you on ${appName}`,
+        text: `Hi ${d.firstName ?? ''}, you have ${count} curated ${count === 1 ? 'match' : 'matches'} this week.\n\n${items
+          .map((it) => `- ${it.name} (${it.business}) \u2014 ${it.score}% match. ${it.reason}`)
+          .join('\n')}\n\nView all: ${d.dashboardUrl}`,
+        html: basicLayout(
+          `Your ${count} curated ${count === 1 ? 'match' : 'matches'} this week`,
+          `<p>Hi ${escapeHtml(String(d.firstName ?? ''))},</p>
+           <p>Here are the connections we think are worth your time this week. Each one comes with a score and a short reason.</p>
+           ${items
+             .map(
+               (it) => `
+             <div style="border:1px solid #eee;border-radius:8px;padding:14px 16px;margin:12px 0;">
+               <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
+                 <strong style="font-size:15px;">${escapeHtml(String(it.name ?? ''))}</strong>
+                 <span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;">${escapeHtml(String(it.score ?? ''))}%</span>
+               </div>
+               <p style="margin:4px 0 6px;color:#555;font-size:13px;">${escapeHtml(String(it.business ?? ''))} \u00b7 ${escapeHtml(String(it.industry ?? ''))}${it.location ? ` \u00b7 ${escapeHtml(String(it.location))}` : ''}</p>
+               <p style="margin:6px 0;color:#374151;font-size:13px;">${escapeHtml(String(it.reason ?? ''))}</p>
+             </div>`,
+             )
+             .join('')}
+           ${cta('See all matches', String(d.dashboardUrl ?? '#'))}`,
+        ),
+      };
+    }
   }
 }
 

@@ -16,6 +16,15 @@ vi.mock('../src/domains/matching/ai/onboarding-referrals.service.js', () => ({
   topUpOnboardingReferralsForAllMembers: vi.fn(async () => ({ membersTouched: 0, assigned: 0 })),
 }));
 
+vi.mock('../src/domains/matching/ai/referral-digest.service.js', () => ({
+  sendWeeklyReferralDigestForAllMembers: vi.fn(async () => ({
+    membersConsidered: 0,
+    emailsSent: 0,
+    skippedEmpty: 0,
+    errors: 0,
+  })),
+}));
+
 vi.mock('../src/config/prisma.js', () => ({
   prisma: {
     memberProfile: {
@@ -28,6 +37,7 @@ import { runDailyMatchesRefresh } from '../src/domains/matching/ai/matches.sched
 import { refreshSuggestionsForUser } from '../src/domains/matching/ai/ai-matching.service.js';
 import { refineSuggestionsForUser } from '../src/domains/matching/ai/llm-refinement.service.js';
 import { isLlmEnabled } from '../src/domains/matching/ai/llm-scorer.service.js';
+import { sendWeeklyReferralDigestForAllMembers } from '../src/domains/matching/ai/referral-digest.service.js';
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -59,5 +69,21 @@ describe('runDailyMatchesRefresh', () => {
     const stats = await runDailyMatchesRefresh();
     expect(stats.rulesRefreshed).toBe(2);
     expect(stats.errors).toBe(1);
+  });
+
+  it('skips the weekly digest on non-Monday runs', async () => {
+    // Tuesday 2026-05-19
+    await runDailyMatchesRefresh({ now: new Date('2026-05-19T09:00:00Z'), perUserDelayMs: 0 });
+    expect(sendWeeklyReferralDigestForAllMembers).not.toHaveBeenCalled();
+  });
+
+  it('fires the weekly digest on Monday runs', async () => {
+    // Monday 2026-05-18
+    const stats = await runDailyMatchesRefresh({
+      now: new Date('2026-05-18T09:00:00Z'),
+      perUserDelayMs: 0,
+    });
+    expect(sendWeeklyReferralDigestForAllMembers).toHaveBeenCalledTimes(1);
+    expect(stats.digestsSent).toBe(0); // mocked to return emailsSent:0
   });
 });

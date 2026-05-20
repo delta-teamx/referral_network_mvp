@@ -3,6 +3,7 @@ import { refreshSuggestionsForUser } from './ai-matching.service.js';
 import { refineSuggestionsForUser } from './llm-refinement.service.js';
 import { isLlmEnabled } from './llm-scorer.service.js';
 import { topUpOnboardingReferralsForAllMembers } from './onboarding-referrals.service.js';
+import { sendWeeklyReferralDigestForAllMembers } from './referral-digest.service.js';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let lastRunUtcDate: string | null = null;
@@ -33,19 +34,25 @@ export interface DailyMatchesRun {
   llmRefined: number;
   onboardingMembersTouched: number;
   onboardingReferralsAssigned: number;
+  digestsSent: number;
   errors: number;
 }
 
+const WEEKLY_DIGEST_DOW = 1; // Monday (0 = Sunday)
+
 export async function runDailyMatchesRefresh(
-  opts: { perUserDelayMs?: number } = {},
+  opts: { perUserDelayMs?: number; now?: Date; sendDigest?: boolean } = {},
 ): Promise<DailyMatchesRun> {
   const perUserDelayMs = opts.perUserDelayMs ?? PER_USER_DELAY_MS;
+  const now = opts.now ?? new Date();
+  const sendDigest = opts.sendDigest ?? now.getUTCDay() === WEEKLY_DIGEST_DOW;
   const stats: DailyMatchesRun = {
     usersScanned: 0,
     rulesRefreshed: 0,
     llmRefined: 0,
     onboardingMembersTouched: 0,
     onboardingReferralsAssigned: 0,
+    digestsSent: 0,
     errors: 0,
   };
 
@@ -93,6 +100,18 @@ export async function runDailyMatchesRefresh(
     stats.errors++;
     // eslint-disable-next-line no-console
     console.error('[matches-scheduler] onboarding top-up failed:', err);
+  }
+
+  if (sendDigest) {
+    try {
+      const digest = await sendWeeklyReferralDigestForAllMembers();
+      stats.digestsSent = digest.emailsSent;
+      stats.errors += digest.errors;
+    } catch (err) {
+      stats.errors++;
+      // eslint-disable-next-line no-console
+      console.error('[matches-scheduler] weekly digest failed:', err);
+    }
   }
 
   // eslint-disable-next-line no-console
