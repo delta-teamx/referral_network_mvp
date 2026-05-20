@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Calendar, DollarSign, Flame, Handshake, Sparkles, TrendingUp, UserPlus, Users } from 'lucide-react';
+import { Activity, Award, Calendar, DollarSign, Flame, Handshake, Sparkles, TrendingUp, UserPlus, Users } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -21,6 +21,20 @@ interface Engagement {
     introsAccepted: number;
     meetingsAttended: number;
   };
+}
+
+interface Badge {
+  id: string;
+  label: string;
+  description: string;
+  earned: boolean;
+  progress: number;
+  target: number;
+}
+
+interface BadgeReport {
+  badges: Badge[];
+  earnedCount: number;
 }
 
 interface MonthBucket {
@@ -56,6 +70,7 @@ export default function ActivityPage() {
   const [data, setData] = useState<MemberAnalytics | null>(null);
   const [roi, setRoi] = useState<MemberRoi | null>(null);
   const [engagement, setEngagement] = useState<Engagement | null>(null);
+  const [badges, setBadges] = useState<BadgeReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +79,7 @@ export default function ActivityPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [analyticsRes, roiRes, engagementRes] = await Promise.all([
+        const [analyticsRes, roiRes, engagementRes, badgesRes] = await Promise.all([
           api.get<MemberAnalytics>('/api/v1/ai/analytics/me?months=6', {
             accessToken: accessToken ?? undefined,
           }),
@@ -74,11 +89,15 @@ export default function ActivityPage() {
           api.get<Engagement>('/api/v1/ai/engagement/me', {
             accessToken: accessToken ?? undefined,
           }),
+          api.get<BadgeReport>('/api/v1/ai/me/badges', {
+            accessToken: accessToken ?? undefined,
+          }),
         ]);
         if (cancelled) return;
         setData(analyticsRes);
         setRoi(roiRes);
         setEngagement(engagementRes);
+        setBadges(badgesRes);
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Load failed');
       } finally {
@@ -196,6 +215,43 @@ export default function ActivityPage() {
                 {engagement.signals.recentLogin ? ' · recent login ✓' : ''}.
               </p>
             </div>
+          </div>
+        </section>
+      )}
+
+      {badges && (
+        <section className="rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-600">
+            <Award className="h-4 w-4" />
+            Badges ({badges.earnedCount} of {badges.badges.length} earned)
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {badges.badges.map((b) => {
+              const pct = Math.min(100, Math.round((b.progress / b.target) * 100));
+              return (
+                <div
+                  key={b.id}
+                  className={`rounded-md border p-3 ${b.earned ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className={`text-sm font-semibold ${b.earned ? 'text-amber-900' : 'text-gray-700'}`}>
+                      {b.label}
+                    </p>
+                    {b.earned && <Award className="h-4 w-4 text-amber-500" />}
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-600">{b.description}</p>
+                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white">
+                    <div
+                      className={`h-full ${b.earned ? 'bg-amber-500' : 'bg-primary'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    {b.progress} / {b.target}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

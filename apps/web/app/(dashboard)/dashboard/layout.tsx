@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Store,
+  Trophy,
   Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
@@ -26,6 +27,7 @@ const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/matches', label: 'Matches', icon: Sparkles },
   { href: '/dashboard/activity', label: 'Activity', icon: Activity },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },

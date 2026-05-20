@@ -20,6 +20,11 @@ import {
 import { listOnboardingMembers } from './onboarding-admin.service.js';
 import { computeEngagement, listEngagementForAllMembers } from './engagement.service.js';
 import { runReengagementCampaign } from './reengagement.service.js';
+import {
+  getMemberBadges,
+  getMemberStreak,
+  getMonthlyLeaderboard,
+} from './gamification.service.js';
 import { getMatchingStats, getWeights } from './ai-learning.service.js';
 import {
   completeIntro,
@@ -275,6 +280,40 @@ aiRouter.post(
     const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
     const result = await runReengagementCampaign({ dryRun });
     const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+// Monthly leaderboard (top networkers by engagement score).
+aiRouter.get(
+  '/leaderboard',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const limit = typeof req.query.limit === 'string' ? Math.max(3, Math.min(50, Number(req.query.limit))) : 10;
+    const rows = await getMonthlyLeaderboard(limit);
+    const body: ApiResponse<typeof rows> = { success: true, data: rows };
+    res.json(body);
+  }),
+);
+
+// Member's earned + in-progress badges.
+aiRouter.get(
+  '/me/badges',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getMemberBadges(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Member's current login streak.
+aiRouter.get(
+  '/me/streak',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getMemberStreak(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );
