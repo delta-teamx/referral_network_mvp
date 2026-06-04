@@ -1,7 +1,7 @@
 import { env } from '../../config/env.js';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:8000';
-const AI_SERVICE_SECRET = process.env.AI_SERVICE_SECRET ?? '';
+const AI_SERVICE_URL = env.AI_SERVICE_URL ?? 'http://localhost:8000';
+const AI_SERVICE_SECRET = env.AI_SERVICE_SECRET ?? '';
 
 async function callAI<T>(path: string, body?: unknown): Promise<T | null> {
   try {

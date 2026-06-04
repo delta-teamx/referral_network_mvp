@@ -71,6 +71,10 @@ const envSchema = z.object({
   // Observability
   SENTRY_DSN: z.string().optional(),
 
+  // Python AI microservice
+  AI_SERVICE_URL: z.string().url().optional(),
+  AI_SERVICE_SECRET: z.string().optional(),
+
   // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

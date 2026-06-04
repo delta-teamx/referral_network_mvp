@@ -60,3 +60,7 @@ services:
         value: redis://localhost:6379
       - key: ELASTICSEARCH_URL
         value: http://localhost:9200
+      - key: AI_SERVICE_URL
+        sync: false
+      - key: AI_SERVICE_SECRET
+        sync: false
