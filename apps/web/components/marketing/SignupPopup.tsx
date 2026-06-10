@@ -13,11 +13,10 @@ export function SignupPopup() {
 
   useEffect(() => {
     if (user || dismissed) return;
-    if (status === 'loading' || status === 'idle') return;
 
-    // Only show on referralnova.com, not on VPN (auth/dashboard pages)
+    // Only show on referralnova.com public pages
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
-    if (host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com') return;
+    if (host === 'virtualprosnetwork.com' || host === 'www.virtualprosnetwork.com' || host === 'localhost') return;
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     if (path.startsWith('/login') || path.startsWith('/signup') || path.startsWith('/verify') || path.startsWith('/onboarding') || path.startsWith('/dashboard') || path.startsWith('/admin')) return;
 
@@ -29,7 +28,7 @@ export function SignupPopup() {
 
     const timer = setTimeout(() => setVisible(true), 5000);
     return () => clearTimeout(timer);
-  }, [user, dismissed, status]);
+  }, [user, dismissed]);
 
   function dismiss() {
     setVisible(false);
