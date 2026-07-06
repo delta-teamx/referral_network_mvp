@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { env } from '../../config/env.js';
 
 /**
@@ -49,10 +50,21 @@ export async function createZoomMeeting(
   params: ZoomMeetingParams,
 ): Promise<ZoomMeetingResult> {
   if (!isZoomConfigured()) {
-    const meetingId = `demo-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    // No Zoom credentials configured — fall back to a Jitsi Meet room.
+    // Unlike a fabricated zoom.us/j/<random> link (which 404s), a Jitsi room
+    // is created implicitly by its URL, so the generated link is a REAL,
+    // joinable video call with no API keys required. Room names are made
+    // unguessable by embedding a random token.
+    const token = crypto.randomBytes(9).toString('hex');
+    const slug = params.topic
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40);
+    const room = `VPN-${slug || 'call'}-${token}`;
     return {
-      meetingId,
-      joinUrl: `https://zoom.us/j/${meetingId.replace(/\D/g, '') || '1234567890'}?pwd=demo`,
+      meetingId: room,
+      joinUrl: `https://meet.jit.si/${room}`,
       demo: true,
     };
   }

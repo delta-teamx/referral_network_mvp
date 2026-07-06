@@ -17,7 +17,6 @@ import {
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
-import { UpgradeGate } from '../../../components/billing/UpgradeGate';
 
 interface IntroSuggestion {
   id: string;
@@ -50,16 +49,69 @@ export function AiFeed() {
   const user = useAuthStore((s) => s.user);
   const [suggestions, setSuggestions] = useState<IntroSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [profileReady, setProfileReady] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+
+  // A profile is "ready to match" once it has an industry and at least one
+  // side of the two-sided intent (who they want to meet OR who they refer).
+  function isProfileComplete(p: {
+    industry?: string | null;
+    icpIndustries?: string[] | null;
+    canReferIndustries?: string[] | null;
+  } | null): boolean {
+    if (!p) return false;
+    const hasIntent =
+      (p.icpIndustries?.length ?? 0) > 0 || (p.canReferIndustries?.length ?? 0) > 0;
+    return Boolean(p.industry) && hasIntent;
+  }
 
   async function load() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
+      let data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
         accessToken: accessToken ?? undefined,
       });
+
+      // The feed reads persisted Introduction rows. A brand-new (or newly
+      // completed) profile has none yet, so ask the engine to generate them
+      // on demand, then re-read — instead of showing an empty feed forever.
+      if (data.length === 0) {
+        let complete = true;
+        try {
+          const me = await api.get<{
+            industry?: string;
+            icpIndustries?: string[];
+            canReferIndustries?: string[];
+          }>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
+          complete = isProfileComplete(me);
+          setProfileReady(complete);
+        } catch {
+          // No profile yet (or unreadable) — treat as incomplete so the user
+          // is pointed at onboarding rather than an empty "all set" screen.
+          complete = false;
+          setProfileReady(false);
+        }
+
+        if (complete) {
+          setScanning(true);
+          try {
+            await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
+            data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
+              accessToken: accessToken ?? undefined,
+            });
+          } catch {
+            // Refresh is best-effort; fall through with whatever we have.
+          } finally {
+            setScanning(false);
+          }
+        }
+      } else {
+        setProfileReady(true);
+      }
+
       setSuggestions(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Load failed');
@@ -104,7 +156,6 @@ export function AiFeed() {
   }
 
   return (
-    <UpgradeGate feature="AI-Powered Introductions" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -141,8 +192,13 @@ export function AiFeed() {
         </p>
       )}
 
-      {loading ? (
+      {loading || scanning ? (
         <div className="space-y-4">
+          {scanning && (
+            <p className="mb-2 flex items-center gap-2 text-sm text-primary">
+              <Sparkles size={14} className="animate-pulse" /> Scanning the network for your best matches…
+            </p>
+          )}
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" />
           ))}
@@ -155,18 +211,46 @@ export function AiFeed() {
           className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center"
         >
           <Sparkles size={32} className="mx-auto mb-3 text-primary" />
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">No suggestions yet</h3>
-          <p className="mb-4 text-sm text-gray-600">
-            {user
-              ? 'Complete your profile so the AI can find your best matches.'
-              : 'Log in and set up your profile to get started.'}
-          </p>
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Complete profile →
-          </Link>
+          {!user ? (
+            <>
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Log in to see your matches</h3>
+              <p className="mb-4 text-sm text-gray-600">
+                Log in and set up your profile to get started.
+              </p>
+              <Link href="/login" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
+                Log in →
+              </Link>
+            </>
+          ) : profileReady === false ? (
+            <>
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Finish setting up your profile</h3>
+              <p className="mb-4 text-sm text-gray-600">
+                Add your industry and tell us who you want to meet — that&rsquo;s what the AI uses to find your matches.
+              </p>
+              <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
+                Complete profile →
+              </Link>
+            </>
+          ) : (
+            <>
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Your profile is all set 🎉</h3>
+              <p className="mb-4 text-sm text-gray-600">
+                We&rsquo;re scanning the network for your best connections. New matches appear here
+                as more members join — check back soon, or invite people you already refer.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => void load()}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary"
+                >
+                  <Sparkles size={14} /> Refresh matches
+                </button>
+                <Link href="/dashboard/network/invite" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
+                  Invite my network →
+                </Link>
+              </div>
+            </>
+          )}
         </motion.div>
       ) : (
         <motion.ul
@@ -282,6 +366,5 @@ export function AiFeed() {
         </motion.ul>
       )}
     </div>
-    </UpgradeGate>
   );
 }

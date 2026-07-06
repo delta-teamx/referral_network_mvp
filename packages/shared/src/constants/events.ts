@@ -84,6 +84,7 @@ export interface DomainEventMap {
   'admin.listing_featured': { adminId: string; listingId: string; featured: boolean };
   'admin.group_archived': { adminId: string; groupId: string };
   'admin.user_impersonated': { adminId: string; targetUserId: string };
+  'admin.event_participants_invited': { eventId: string; userCount: number };
 
   // Matchmaking pods
   'matchmaking.pod_created': { podId: string; memberCount: number; scheduledAt: string };

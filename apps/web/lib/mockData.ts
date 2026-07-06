@@ -459,7 +459,7 @@ export const MOCK_EVENTS = [
       'Weekly 60-minute Zoom for pros to swap warm leads. Bring one referral-ready client you want to find a match for.',
     startsAt: new Date(Date.now() + 2 * 86400_000).toISOString(),
     durationMin: 60,
-    zoomUrl: 'https://zoom.us/j/1234567890?pwd=demo',
+    zoomUrl: 'https://meet.jit.si/VPN-tuesday-morning-referrals-a1b2c3',
     maxAttendees: 50,
     status: 'scheduled',
     isRecurring: true,
@@ -473,7 +473,7 @@ export const MOCK_EVENTS = [
       '3 top-earning members share exactly how they convert intros into closed deals. Live Q&A at the end.',
     startsAt: new Date(Date.now() + 9 * 86400_000).toISOString(),
     durationMin: 75,
-    zoomUrl: 'https://zoom.us/j/1234567891?pwd=demo',
+    zoomUrl: 'https://meet.jit.si/VPN-closing-referral-loops-d4e5f6',
     maxAttendees: 100,
     status: 'scheduled',
     isRecurring: false,
@@ -486,7 +486,7 @@ export const MOCK_EVENTS = [
     description: 'Planners, photographers, caterers, florists — monthly virtual coffee.',
     startsAt: new Date(Date.now() + 14 * 86400_000).toISOString(),
     durationMin: 45,
-    zoomUrl: 'https://zoom.us/j/1234567892?pwd=demo',
+    zoomUrl: 'https://meet.jit.si/VPN-stl-wedding-vendors-7a8b9c',
     maxAttendees: 30,
     status: 'scheduled',
     isRecurring: true,
@@ -503,7 +503,7 @@ export const MOCK_BOOKINGS = [
     startsAt: new Date(Date.now() + 2 * 86400_000 + 10 * 3600_000).toISOString(),
     endsAt: new Date(Date.now() + 2 * 86400_000 + 10.5 * 3600_000).toISOString(),
     status: 'confirmed',
-    zoomUrl: 'https://zoom.us/j/9876543210?pwd=demo',
+    zoomUrl: 'https://meet.jit.si/VPN-referral-call-9f8e7d',
     zoomMeetingId: '9876543210',
     createdAt: isoDaysAgo(1),
     host: {
@@ -778,6 +778,8 @@ export function getMockResponse(method: string, path: string): unknown {
         industry: 'Consulting',
         headline: 'AI-powered referral network demo',
         bio: null,
+        photoUrl: null,
+        serviceArea: 'local',
         keywords: ['consulting', 'networking'],
         servicesOffered: ['Business consulting'],
         yearsInBusiness: null,
@@ -1069,11 +1071,35 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url === '/api/v1/billing/checkout') {
       return { url: '/billing/success?tier=PRO&demo=1', demo: true };
     }
-    if (url === '/api/v1/photos/presign') {
+    if (url === '/api/v1/photos/presign' || url === '/api/v1/profiles/photo/presign') {
       return {
         uploadUrl: 'demo://skip-upload',
-        publicUrl: `https://picsum.photos/seed/${Date.now()}/1200/800`,
+        publicUrl: `https://picsum.photos/seed/${Date.now()}/600/600`,
         key: 'demo',
+        demo: true,
+      };
+    }
+    if (url === '/api/v1/profiles/video/presign') {
+      return {
+        uploadUrl: 'demo://skip-upload',
+        publicUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        key: 'demo',
+        demo: true,
+      };
+    }
+    if (url === '/api/v1/profiles/video/confirm' || url === '/api/v1/profiles/photo/confirm') {
+      return { ok: true, transcribed: true, demo: true };
+    }
+    if (url === '/api/v1/ai/refresh') {
+      return { created: MOCK_AI_SUGGESTIONS.length };
+    }
+    if (url === '/api/v1/bookings') {
+      const room = `VPN-referral-call-${Date.now().toString(36)}`;
+      return {
+        id: `bk-${Date.now()}`,
+        status: 'confirmed',
+        zoomUrl: `https://meet.jit.si/${room}`,
+        zoomMeetingId: room,
         demo: true,
       };
     }

@@ -1,13 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Sparkles, Users, Video } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Globe2,
+  Handshake,
+  MapPin,
+  Search,
+  Sparkles,
+  Users,
+  Video,
+} from 'lucide-react';
 import { fadeInUp } from '../../../lib/animations';
 import { Button } from '../../../components/ui/Button';
 import { FormField } from '../../../components/ui/FormField';
+import { ProfileMedia } from '../../../components/onboarding/ProfileMedia';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
 
@@ -20,8 +30,22 @@ const INDUSTRIES = [
   'Landscaping', 'Auto Services', 'Consulting', 'Other',
 ];
 
-type Step = 'business' | 'icp' | 'referrals' | 'video' | 'done';
-const STEPS: Step[] = ['business', 'icp', 'referrals', 'video', 'done'];
+const SERVICE_AREAS = [
+  { value: 'local', label: 'Local only', hint: 'I serve my city / metro', icon: MapPin },
+  { value: 'remote', label: 'Remote (US)', hint: 'I work with clients anywhere in the US', icon: Globe2 },
+  { value: 'international', label: 'International', hint: 'I work with clients worldwide', icon: Globe2 },
+] as const;
+
+type Step = 'business' | 'icp' | 'referrals' | 'media' | 'done';
+const STEPS: { key: Step; label: string }[] = [
+  { key: 'business', label: 'Your business' },
+  { key: 'icp', label: 'Who you want to meet' },
+  { key: 'referrals', label: 'Who you refer' },
+  { key: 'media', label: 'Photo & video' },
+  { key: 'done', label: 'Done' },
+];
+
+const RequiredMark = () => <span className="text-danger"> *</span>;
 
 export function IgorIntake() {
   const router = useRouter();
@@ -45,6 +69,7 @@ export function IgorIntake() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [zipCode, setZipCode] = useState('');
+  const [serviceArea, setServiceArea] = useState<'local' | 'remote' | 'international'>('local');
 
   const [icpIndustries, setIcpIndustries] = useState<string[]>([]);
   const [icpRoles, setIcpRoles] = useState('');
@@ -53,6 +78,10 @@ export function IgorIntake() {
 
   const [canReferIndustries, setCanReferIndustries] = useState<string[]>([]);
   const [canReferTypes, setCanReferTypes] = useState('');
+  const [openToBarter, setOpenToBarter] = useState(false);
+
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'idle') void hydrate();
@@ -77,19 +106,21 @@ export function IgorIntake() {
           keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
           servicesOffered: services.split(',').map((s) => s.trim()).filter(Boolean),
           yearsInBusiness: years ? Number(years) : undefined,
+          serviceArea,
           icpIndustries,
           icpRoles: icpRoles.split(',').map((r) => r.trim()).filter(Boolean),
           icpProblems: icpProblems.split('\n').map((p) => p.trim()).filter(Boolean),
           icpDealSize: icpDealSize || undefined,
           canReferIndustries,
           canReferTypes: canReferTypes.split('\n').map((t) => t.trim()).filter(Boolean),
+          openToBarter,
           city: city || undefined,
           state: state || undefined,
           zipCode: zipCode || undefined,
         },
         { accessToken: accessToken ?? undefined },
       );
-      setStep('video');
+      setStep('media');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Save failed');
     } finally {
@@ -97,38 +128,56 @@ export function IgorIntake() {
     }
   }
 
+  async function finish() {
+    // Kick the matching engine so the dashboard has suggestions ready.
+    if (accessToken) {
+      try {
+        await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
+      } catch {
+        // best-effort — the feed also self-refreshes when empty.
+      }
+    }
+    router.push('/dashboard');
+  }
+
   function next() {
-    const idx = STEPS.indexOf(step);
     if (step === 'referrals') {
       void saveProfile();
       return;
     }
-    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]!);
+    const idx = STEPS.findIndex((s) => s.key === step);
+    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]!.key);
   }
 
   function prev() {
-    const idx = STEPS.indexOf(step);
-    if (idx > 0) setStep(STEPS[idx - 1]!);
+    const idx = STEPS.findIndex((s) => s.key === step);
+    if (idx > 0) setStep(STEPS[idx - 1]!.key);
   }
 
   if (!user) return null;
 
-  const stepNum = STEPS.indexOf(step);
-  const progress = Math.round(((stepNum + 1) / STEPS.length) * 100);
+  const stepNum = STEPS.findIndex((s) => s.key === step);
+  const totalSteps = STEPS.length - 1; // exclude the "done" screen from the count
+  const progress = Math.round((Math.min(stepNum + 1, totalSteps) / totalSteps) * 100);
+  const currentLabel = STEPS[stepNum]?.label ?? '';
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary-light via-white to-amber-50 px-6 py-12">
       <div className="mx-auto max-w-2xl">
         {/* Progress */}
-        <div className="mb-8">
-          <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
-            <span>Step {stepNum + 1} of {STEPS.length}</span>
-            <span>{progress}%</span>
+        {step !== 'done' && (
+          <div className="mb-8">
+            <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
+              <span>
+                Step {stepNum + 1} of {totalSteps} — {currentLabel}
+              </span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
+        )}
 
         {error && (
           <p className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
@@ -142,103 +191,209 @@ export function IgorIntake() {
             title="Tell us about your business"
             subtitle="This helps the AI understand what you do and match you with the right people."
           >
-            <FormField label="Business name" name="businessName" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-900">Industry</label>
-              <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" required>
+            <FormField
+              label="Business name"
+              name="businessName"
+              required
+              placeholder="Johnson Realty Group"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+            />
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-900">
+                Industry
+                <RequiredMark />
+              </label>
+              <select
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                required
+              >
                 <option value="">Select your industry…</option>
-                {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                {INDUSTRIES.map((i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
               </select>
             </div>
-            <FormField label="Headline" name="headline" hint="One sentence: what you do + where" value={headline} onChange={(e) => setHeadline(e.target.value)} />
-            <div>
+            <FormField
+              label="Headline"
+              name="headline"
+              placeholder="5th-generation realtor serving the St. Louis metro"
+              hint="One sentence: what you do + where"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+            />
+            <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-gray-900">About your business</label>
-              <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="What makes you different? What types of clients do you serve?" />
+              <textarea
+                rows={4}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="What makes you different? What types of clients do you serve?"
+              />
             </div>
-            <FormField label="Services offered" name="services" hint="Comma-separated" value={services} onChange={(e) => setServices(e.target.value)} />
-            <FormField label="Keywords for matching" name="keywords" hint="Comma-separated: roofing, residential, insurance claims" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+            <FormField
+              label="Services offered"
+              name="services"
+              placeholder="AI Chatbots, Facebook Ads, CRM Setup"
+              hint="Separate with commas."
+              value={services}
+              onChange={(e) => setServices(e.target.value)}
+            />
+            <FormField
+              label="Keywords for matching"
+              name="keywords"
+              placeholder="chatbot, lead generation, automation, AI"
+              hint="Separate keywords with commas. These help customers and partners find you."
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+            />
+
+            {/* Service area cards */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-900">Service area</label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {SERVICE_AREAS.map((sa) => {
+                  const Icon = sa.icon;
+                  const active = serviceArea === sa.value;
+                  return (
+                    <button
+                      key={sa.value}
+                      type="button"
+                      onClick={() => setServiceArea(sa.value)}
+                      className={`rounded-xl border p-3 text-left transition ${
+                        active
+                          ? 'border-primary bg-primary-light ring-1 ring-primary'
+                          : 'border-gray-200 bg-white hover:border-primary'
+                      }`}
+                    >
+                      <Icon size={18} className={active ? 'text-primary' : 'text-gray-400'} />
+                      <p className="mt-1 text-sm font-semibold text-gray-900">{sa.label}</p>
+                      <p className="text-xs text-gray-500">{sa.hint}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
-              <FormField label="City" name="city" value={city} onChange={(e) => setCity(e.target.value)} />
-              <FormField label="State" name="state" maxLength={2} value={state} onChange={(e) => setState(e.target.value)} />
-              <FormField label="ZIP" name="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
+              <FormField label="City" name="city" placeholder="Albany" value={city} onChange={(e) => setCity(e.target.value)} />
+              <FormField label="State" name="state" placeholder="NY" maxLength={2} value={state} onChange={(e) => setState(e.target.value.toUpperCase())} />
+              <FormField label="ZIP" name="zipCode" placeholder="12207" value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
             </div>
-            <FormField label="Years in business" name="years" type="number" value={years} onChange={(e) => setYears(e.target.value)} />
+            <FormField
+              label="Years of experience"
+              name="years"
+              type="number"
+              placeholder="e.g. 12"
+              value={years}
+              onChange={(e) => setYears(e.target.value)}
+            />
           </StepCard>
         )}
 
         {step === 'icp' && (
           <StepCard
             icon={<Users size={20} />}
-            title="Who do you WANT to meet?"
-            subtitle="The AI will scan the network and suggest introductions to people matching this profile."
+            title="Who do you want to meet?"
+            subtitle="We use this to scan the network and suggest introductions to people who match — so every connection is worth your time."
           >
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-900">Industries you want to connect with</label>
-              <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <button
-                    key={ind}
-                    type="button"
-                    onClick={() => setIcpIndustries((prev) => prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind])}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${icpIndustries.includes(ind) ? 'bg-primary text-white' : 'border border-gray-200 bg-white text-gray-700 hover:border-primary'}`}
-                  >
-                    {icpIndustries.includes(ind) && <Check size={10} className="mr-1 inline" />}
-                    {ind}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <FormField label="Roles you want to meet" name="icpRoles" hint="Comma-separated: agents, brokers, adjusters" value={icpRoles} onChange={(e) => setIcpRoles(e.target.value)} />
-            <div>
+            <IndustryPicker
+              label="Industries you want to connect with"
+              selected={icpIndustries}
+              onToggle={(ind) =>
+                setIcpIndustries((prev) => (prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]))
+              }
+            />
+            <FormField
+              label="Roles you want to meet"
+              name="icpRoles"
+              placeholder="agents, brokers, adjusters"
+              hint="Separate with commas."
+              value={icpRoles}
+              onChange={(e) => setIcpRoles(e.target.value)}
+            />
+            <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-gray-900">Problems they solve for YOUR clients</label>
-              <textarea rows={3} value={icpProblems} onChange={(e) => setIcpProblems(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="One per line:&#10;Homebuyer needs roof inspection&#10;Storm damage insurance claims" />
+              <textarea
+                rows={3}
+                value={icpProblems}
+                onChange={(e) => setIcpProblems(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder={'One per line:\nHomebuyer needs roof inspection\nStorm damage insurance claims'}
+              />
             </div>
-            <FormField label="Typical deal size" name="icpDealSize" hint="e.g. $5K-$25K" value={icpDealSize} onChange={(e) => setIcpDealSize(e.target.value)} />
+            <FormField
+              label="Typical deal size"
+              name="icpDealSize"
+              placeholder="$5K–$25K"
+              hint="Optional — helps rank the strongest matches."
+              value={icpDealSize}
+              onChange={(e) => setIcpDealSize(e.target.value)}
+            />
           </StepCard>
         )}
 
         {step === 'referrals' && (
           <StepCard
             icon={<ArrowRight size={20} />}
-            title="Who can YOU refer business to?"
+            title="Who do you regularly refer clients to?"
             subtitle="This completes the two-sided matching engine. When someone in the network needs a pro you can vouch for, the AI connects them through you."
           >
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-900">Industries you regularly refer clients to</label>
-              <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map((ind) => (
-                  <button
-                    key={ind}
-                    type="button"
-                    onClick={() => setCanReferIndustries((prev) => prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind])}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${canReferIndustries.includes(ind) ? 'bg-primary text-white' : 'border border-gray-200 bg-white text-gray-700 hover:border-primary'}`}
-                  >
-                    {canReferIndustries.includes(ind) && <Check size={10} className="mr-1 inline" />}
-                    {ind}
-                  </button>
-                ))}
-              </div>
+            <IndustryPicker
+              label="Industries you regularly refer clients to"
+              selected={canReferIndustries}
+              onToggle={(ind) =>
+                setCanReferIndustries((prev) => (prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]))
+              }
+            />
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-900">What clients do you usually refer?</label>
+              <textarea
+                rows={3}
+                value={canReferTypes}
+                onChange={(e) => setCanReferTypes(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder={'One per line:\nFirst-time home buyers\nSmall business owners\nProperty investors'}
+              />
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-900">Types of clients you can send them</label>
-              <textarea rows={3} value={canReferTypes} onChange={(e) => setCanReferTypes(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="One per line:&#10;Homeowners needing repairs&#10;New construction projects" />
-            </div>
+
+            {/* Barter */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-primary">
+              <input
+                type="checkbox"
+                checked={openToBarter}
+                onChange={(e) => setOpenToBarter(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                  <Handshake size={15} className="text-primary" /> Show my profile to members looking to barter
+                </span>
+                <span className="mt-0.5 block text-xs text-gray-500">
+                  Exchange services with trusted members (e.g. AI automation ↔ web design). You always
+                  decide whether to accept an offer — default is cash-only.
+                </span>
+              </span>
+            </label>
           </StepCard>
         )}
 
-        {step === 'video' && (
+        {step === 'media' && (
           <StepCard
             icon={<Video size={20} />}
-            title="Record your 60-second intro"
-            subtitle="Members are 3x more likely to accept an intro when they can see a face. You can skip this for now and add it later."
+            title="Add your photo & intro video"
+            subtitle="Profiles with a photo and a short video get far more accepted intros. You can record right now, upload files, or skip and add them later from your dashboard."
           >
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-              <Video size={48} className="mx-auto mb-3 text-gray-300" />
-              <p className="mb-4 text-sm text-gray-600">
-                Video upload is coming next. For now, your text profile is enough to start getting matched.
-              </p>
-              <Button onClick={() => setStep('done')}>Skip for now →</Button>
-            </div>
+            <ProfileMedia
+              accessToken={accessToken ?? undefined}
+              photoUrl={photoUrl}
+              videoUrl={videoUrl}
+              onPhoto={setPhotoUrl}
+              onVideo={(u) => setVideoUrl(u || null)}
+            />
           </StepCard>
         )}
 
@@ -249,9 +404,10 @@ export function IgorIntake() {
             </div>
             <h2 className="mb-2 text-2xl font-bold text-gray-900">You&rsquo;re all set!</h2>
             <p className="mb-6 text-sm text-gray-600">
-              The AI is now scanning the network for people you should meet. Check your dashboard for your first suggested introductions.
+              The AI is now scanning the network for people you should meet. Check your dashboard for
+              your first suggested introductions.
             </p>
-            <Button onClick={() => router.push('/dashboard')}>Go to my dashboard →</Button>
+            <Button onClick={() => void finish()}>Go to my dashboard →</Button>
           </motion.div>
         )}
 
@@ -266,13 +422,86 @@ export function IgorIntake() {
             >
               ← Back
             </button>
-            <Button onClick={next} loading={saving} disabled={step === 'business' && (!businessName || !industry)}>
-              {step === 'referrals' ? 'Save & continue' : 'Next →'}
-            </Button>
+            {step === 'media' ? (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep('done')}
+                  className="text-sm font-medium text-gray-500 hover:text-primary"
+                >
+                  Skip for now
+                </button>
+                <Button onClick={() => setStep('done')}>Finish →</Button>
+              </div>
+            ) : (
+              <Button
+                onClick={next}
+                loading={saving}
+                disabled={step === 'business' && (!businessName || !industry)}
+              >
+                {step === 'referrals' ? 'Save & continue' : 'Next →'}
+              </Button>
+            )}
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+function IndustryPicker({
+  label,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  selected: string[];
+  onToggle: (ind: string) => void;
+}) {
+  const [q, setQ] = useState('');
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return INDUSTRIES;
+    return INDUSTRIES.filter((i) => i.toLowerCase().includes(needle));
+  }, [q]);
+
+  return (
+    <div className="mb-4">
+      <div className="mb-2 flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-900">{label}</label>
+        <span className="text-xs font-medium text-primary">{selected.length} selected</span>
+      </div>
+      <div className="relative mb-2">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search industries…"
+          className="w-full rounded-md border border-gray-300 py-2 pl-8 pr-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {filtered.map((ind) => {
+          const active = selected.includes(ind);
+          return (
+            <button
+              key={ind}
+              type="button"
+              onClick={() => onToggle(ind)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                active
+                  ? 'bg-primary text-white'
+                  : 'border border-gray-200 bg-white text-gray-700 hover:border-primary'
+              }`}
+            >
+              {active && <Check size={10} className="mr-1 inline" />}
+              {ind}
+            </button>
+          );
+        })}
+        {filtered.length === 0 && <p className="text-xs text-gray-400">No industries match “{q}”.</p>}
+      </div>
+    </div>
   );
 }
 

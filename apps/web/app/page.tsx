@@ -30,6 +30,14 @@ export default function HomePage() {
 
   return (
     <>
+      {/* ═══ FOUNDING-MEMBER ANNOUNCEMENT BAR ═══ */}
+      <Link
+        href="https://virtualprosnetwork.com/signup"
+        className="block bg-gradient-to-r from-primary via-blue-600 to-cyan-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:brightness-110"
+      >
+        🎉 Founding offer — the first <span className="underline underline-offset-2">200 businesses get every feature free</span>. No credit card, no subscription. Claim your spot →
+      </Link>
+
       {/* ═══ HERO ═══ */}
       <section className="relative overflow-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-primary/20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />

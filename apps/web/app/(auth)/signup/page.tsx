@@ -78,6 +78,9 @@ export default function SignupPage() {
         </>
       }
     >
+      <div className="mb-5 rounded-lg border border-primary/20 bg-primary-light px-4 py-3 text-center text-sm text-primary">
+        🎉 <strong>Founding offer:</strong> the first 200 businesses get <strong>every feature free</strong> — no subscription. Sign up now to lock in your spot.
+      </div>
       <GoogleButton label="Sign up with Google" />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />

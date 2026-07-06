@@ -91,28 +91,29 @@ function scoreMatch(me: ProfileData, them: ProfileData): MatchResult {
   const factors: Record<string, number> = {};
 
   // 1. Industry alignment: do they work in an industry I want to meet?
-  const industryMatch = me.icpIndustries.some(
-    (ind) => them.industry.toLowerCase().includes(ind) ||
-      them.keywords.some((k) => k.includes(ind)),
+  //    NB: industries/keywords are stored with their original casing (e.g.
+  //    "Real Estate"), so every comparison must be case-insensitive on BOTH
+  //    sides — otherwise well-formed profiles silently score 0.
+  const industryMatch = me.icpIndustries.some((ind) =>
+    industryMatches(ind, them.industry, them.keywords),
   );
   factors.industryAlignment = industryMatch ? 25 : 0;
 
   // 2. Reverse: am I in an industry THEY want to meet?
-  const reverseIndustry = them.icpIndustries.some(
-    (ind) => me.industry.toLowerCase().includes(ind) ||
-      me.keywords.some((k) => k.includes(ind)),
+  const reverseIndustry = them.icpIndustries.some((ind) =>
+    industryMatches(ind, me.industry, me.keywords),
   );
   factors.reverseAlignment = reverseIndustry ? 20 : 0;
 
   // 3. Referral compatibility: can they refer business to MY industry?
-  const theyCanReferMe = them.canReferIndustries.some(
-    (ind) => me.industry.toLowerCase().includes(ind),
+  const theyCanReferMe = them.canReferIndustries.some((ind) =>
+    industryMatches(ind, me.industry, me.keywords),
   );
   factors.referralToMe = theyCanReferMe ? 15 : 0;
 
   // 4. I can refer to them
-  const iCanReferThem = me.canReferIndustries.some(
-    (ind) => them.industry.toLowerCase().includes(ind),
+  const iCanReferThem = me.canReferIndustries.some((ind) =>
+    industryMatches(ind, them.industry, them.keywords),
   );
   factors.referralFromMe = iCanReferThem ? 15 : 0;
 
@@ -161,6 +162,25 @@ function scoreMatch(me: ProfileData, them: ProfileData): MatchResult {
     reason,
     factors,
   };
+}
+
+/**
+ * Case-insensitive industry match. `target` is another member's industry
+ * label (e.g. "Real Estate"); `wanted` is a single entry from someone's
+ * ICP / referral list (e.g. "real estate" or "Real Estate / Agent").
+ * Matches if either string contains the other, OR any of the target's
+ * keywords line up. Normalising both sides is what makes the engine
+ * actually fire on real onboarding data.
+ */
+function industryMatches(wanted: string, target: string, keywords: string[]): boolean {
+  const w = wanted.toLowerCase().trim();
+  if (!w) return false;
+  const t = target.toLowerCase().trim();
+  if (t.includes(w) || w.includes(t)) return true;
+  return keywords.some((k) => {
+    const kk = k.toLowerCase().trim();
+    return kk.includes(w) || w.includes(kk);
+  });
 }
 
 function countOverlap(a: string[], b: string[]): number {

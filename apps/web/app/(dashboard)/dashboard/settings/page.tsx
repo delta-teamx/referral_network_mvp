@@ -21,6 +21,7 @@ interface Profile {
   industry: string;
   headline: string | null;
   bio: string | null;
+  photoUrl: string | null;
   keywords: string[];
   servicesOffered: string[];
   yearsInBusiness: number | null;
@@ -72,6 +73,35 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  async function uploadHeadshot(file: File) {
+    if (!accessToken) return;
+    setPhotoUploading(true);
+    setError(null);
+    try {
+      const presign = await api.post<{ uploadUrl: string; publicUrl: string; key: string; demo: boolean }>(
+        '/api/v1/profiles/photo/presign',
+        { contentType: file.type, sizeBytes: file.size },
+        { accessToken: accessToken ?? undefined },
+      );
+      if (!presign.demo && presign.uploadUrl.startsWith('http')) {
+        const put = await fetch(presign.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+      }
+      await api.post('/api/v1/profiles/photo/confirm', { photoUrl: presign.publicUrl }, { accessToken: accessToken ?? undefined });
+      const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
+      setProfile(p);
+    } catch {
+      setError('Photo upload failed.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   useEffect(() => {
     if (!accessToken) return;
@@ -156,9 +186,16 @@ export default function SettingsPage() {
             <div className="relative h-24 rounded-t-2xl bg-gradient-to-r from-primary via-blue-500 to-cyan-500" />
             <div className="px-6 pb-6">
               <div className="-mt-10 mb-4 flex items-end justify-between">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-primary text-2xl font-bold text-white shadow-lg">
-                  {profile.businessName[0]?.toUpperCase()}
-                </div>
+                {profile.photoUrl ? (
+                  <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={profile.photoUrl} alt={profile.businessName} className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-primary text-2xl font-bold text-white shadow-lg">
+                    {profile.businessName[0]?.toUpperCase()}
+                  </div>
+                )}
                 <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                   <Edit3 size={14} /> Edit profile
                 </button>
@@ -185,9 +222,9 @@ export default function SettingsPage() {
                     if (!accessToken) return;
                     setVideoUploading(true);
                     try {
-                      const presign = await api.post<{ uploadUrl: string; videoUrl: string; videoKey: string; demo: boolean }>('/api/v1/profiles/video/presign', { contentType: 'video/webm', sizeBytes: blob.size }, { accessToken: accessToken ?? undefined });
-                      if (!presign.demo) await fetch(presign.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'video/webm' }, body: blob });
-                      await api.post('/api/v1/profiles/video/confirm', { videoUrl: presign.videoUrl, videoKey: presign.videoKey, durationSec: 60, demo: presign.demo }, { accessToken: accessToken ?? undefined });
+                      const presign = await api.post<{ uploadUrl: string; publicUrl: string; key: string; demo: boolean }>('/api/v1/profiles/video/presign', { contentType: 'video/webm', sizeBytes: blob.size }, { accessToken: accessToken ?? undefined });
+                      if (!presign.demo && presign.uploadUrl.startsWith('http')) await fetch(presign.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'video/webm' }, body: blob });
+                      await api.post('/api/v1/profiles/video/confirm', { videoUrl: presign.publicUrl, videoKey: presign.key, durationSec: 60, demo: presign.demo }, { accessToken: accessToken ?? undefined });
                       const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
                       setProfile(p); setShowVideoRecorder(false);
                     } catch { setError('Video upload failed.'); } finally { setVideoUploading(false); }
@@ -234,7 +271,13 @@ export default function SettingsPage() {
           <section>
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Business identity</h2>
             <div className="space-y-4">
-              <PhotoUpload label="Business photo" hint="Logo or photo of your business" onSelected={() => {}} />
+              <PhotoUpload
+                label="Profile photo"
+                hint="A headshot or logo — shown on your profile and in match suggestions."
+                currentUrl={profile.photoUrl}
+                uploading={photoUploading}
+                onSelected={(file) => void uploadHeadshot(file)}
+              />
               <FormField label="Business name *" name="businessName" defaultValue={profile.businessName} required />
               <FormField label="Industry *" name="industry" defaultValue={profile.industry} required />
               <FormField label="Headline" name="headline" defaultValue={profile.headline ?? ''} />

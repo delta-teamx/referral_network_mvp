@@ -4,10 +4,53 @@
  *
  * Idempotent: re-running won't duplicate rows. Safe to run in CI.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
 import { CATEGORY_SEEDS } from '@refnet/shared';
 
 const prisma = new PrismaClient();
+
+/**
+ * Seeds the interconnected demo referral network (see seed-demo.sql) and then
+ * asks the matching engine to generate introductions between them, so the AI
+ * feed is populated out of the box. Both steps are best-effort and never abort
+ * the main seed.
+ */
+async function seedDemoNetwork(): Promise<void> {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sql = readFileSync(join(here, 'seed-demo.sql'), 'utf8');
+    const statements = sql
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('--'))
+      .join('\n')
+      .split(';')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const stmt of statements) {
+      await prisma.$executeRawUnsafe(stmt);
+    }
+    const count = await prisma.memberProfile.count({
+      where: { user: { email: { endsWith: '@vpn-demo.com' } } },
+    });
+    console.log(`[seed] demo referral network ready — ${count} interconnected members.`);
+  } catch (err) {
+    console.error('[seed] demo member seed failed (non-fatal):', err);
+    return;
+  }
+
+  try {
+    const { refreshAllSuggestions } = await import(
+      '../src/domains/matching/ai/ai-matching.service.js'
+    );
+    const res = await refreshAllSuggestions();
+    console.log(`[seed] generated ${res.intros} AI introductions across ${res.users} members.`);
+  } catch (err) {
+    console.error('[seed] AI intro generation skipped (non-fatal):', err);
+  }
+}
 
 const LISTINGS = [
   {
@@ -664,6 +707,8 @@ async function main() {
       });
     }
   }
+
+  await seedDemoNetwork();
 
   console.log('[seed] all done!');
   console.log('');

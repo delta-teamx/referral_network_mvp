@@ -11,7 +11,12 @@ import {
   searchMembers,
   upsertMemberProfile,
 } from './profiles.service.js';
-import { confirmVideoUpload, presignVideoUpload } from './video.service.js';
+import {
+  confirmPhotoUpload,
+  confirmVideoUpload,
+  presignPhotoUpload,
+  presignVideoUpload,
+} from './video.service.js';
 
 export const profilesRouter: Router = Router();
 
@@ -101,6 +106,37 @@ profilesRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const result = await presignVideoUpload(req.user.id, req.body.contentType, req.body.sizeBytes);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+const photoPresignSchema = z.object({
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+});
+
+profilesRouter.post(
+  '/photo/presign',
+  validate(photoPresignSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await presignPhotoUpload(req.user.id, req.body.contentType, req.body.sizeBytes);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+const photoConfirmSchema = z.object({
+  photoUrl: z.string().url(),
+});
+
+profilesRouter.post(
+  '/photo/confirm',
+  validate(photoConfirmSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await confirmPhotoUpload(req.user.id, req.body);
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),

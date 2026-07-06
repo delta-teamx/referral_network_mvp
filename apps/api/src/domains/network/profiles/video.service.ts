@@ -135,6 +135,82 @@ export async function confirmVideoUpload(
   return { transcribed: false, demo: false };
 }
 
+// ---------------------------------------------------------------------------
+// Profile headshot photo upload — same presign→PUT→confirm pattern as video,
+// but stored on MemberProfile.photoUrl. Demo mode returns a placeholder image
+// so the onboarding flow is fully testable without AWS keys.
+// ---------------------------------------------------------------------------
+
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB
+const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+export async function presignPhotoUpload(
+  userId: string,
+  contentType: string,
+  sizeBytes: number,
+): Promise<VideoPresignResult> {
+  if (!ALLOWED_PHOTO_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported image format. Use JPEG, PNG, or WebP.');
+  }
+  if (sizeBytes > MAX_PHOTO_BYTES) {
+    throw AppError.badRequest(`Image too large. Max ${MAX_PHOTO_BYTES / (1024 * 1024)}MB.`);
+  }
+
+  const profile = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) throw AppError.notFound('Complete your profile first before uploading a photo.');
+
+  const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1] ?? 'jpg';
+  const key = `headshots/${userId}/${crypto.randomUUID()}.${ext}`;
+
+  if (!isS3Configured()) {
+    return {
+      uploadUrl: 'demo://skip-upload',
+      publicUrl: `https://i.pravatar.cc/600?u=${encodeURIComponent(userId)}`,
+      key,
+      demo: true,
+    };
+  }
+
+  // @ts-expect-error — AWS SDK is optional.
+  const s3Mod = await import('@aws-sdk/client-s3');
+  // @ts-expect-error — ditto.
+  const presignerMod = await import('@aws-sdk/s3-request-presigner');
+  const { S3Client, PutObjectCommand } = s3Mod;
+  const { getSignedUrl } = presignerMod;
+
+  const s3 = new S3Client({
+    region: env.AWS_REGION,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+  const cmd = new PutObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+    ContentType: contentType,
+    ContentLength: sizeBytes,
+  });
+  const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 15 });
+  const publicUrl = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+  return { uploadUrl, publicUrl, key, demo: false };
+}
+
+export async function confirmPhotoUpload(
+  userId: string,
+  input: { photoUrl: string },
+): Promise<{ ok: true; photoUrl: string }> {
+  assertExternalUrl(input.photoUrl);
+  await prisma.memberProfile.update({
+    where: { userId },
+    data: { photoUrl: input.photoUrl },
+  });
+  return { ok: true, photoUrl: input.photoUrl };
+}
+
 async function transcribeAsync(userId: string, videoUrl: string): Promise<void> {
   // @ts-expect-error — openai SDK is optional.
   const OpenAI = (await import('openai')).default;
