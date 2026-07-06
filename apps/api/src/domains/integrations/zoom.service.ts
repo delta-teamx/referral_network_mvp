@@ -46,63 +46,68 @@ async function getZoomAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+/**
+ * A REAL, joinable fallback video room. Unlike a fabricated zoom.us/j/<random>
+ * link (which 404s), a Jitsi Meet room is created implicitly by its URL, so the
+ * generated link works with no API keys. The random token keeps it unguessable.
+ * Used when Zoom isn't configured OR when a real Zoom call fails — so a booking
+ * always ends up with a working meeting link.
+ */
+function jitsiFallback(topic: string): ZoomMeetingResult {
+  const token = crypto.randomBytes(9).toString('hex');
+  const slug = topic
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  const room = `VPN-${slug || 'call'}-${token}`;
+  return { meetingId: room, joinUrl: `https://meet.jit.si/${room}`, demo: true };
+}
+
 export async function createZoomMeeting(
   params: ZoomMeetingParams,
 ): Promise<ZoomMeetingResult> {
   if (!isZoomConfigured()) {
-    // No Zoom credentials configured — fall back to a Jitsi Meet room.
-    // Unlike a fabricated zoom.us/j/<random> link (which 404s), a Jitsi room
-    // is created implicitly by its URL, so the generated link is a REAL,
-    // joinable video call with no API keys required. Room names are made
-    // unguessable by embedding a random token.
-    const token = crypto.randomBytes(9).toString('hex');
-    const slug = params.topic
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40);
-    const room = `VPN-${slug || 'call'}-${token}`;
-    return {
-      meetingId: room,
-      joinUrl: `https://meet.jit.si/${room}`,
-      demo: true,
-    };
+    return jitsiFallback(params.topic);
   }
 
-  const token = await getZoomAccessToken();
-  const res = await fetch(
-    'https://api.zoom.us/v2/users/me/meetings',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        topic: params.topic,
-        type: 2, // scheduled
-        start_time: params.startsAt.toISOString(),
-        duration: params.durationMin,
-        timezone: 'UTC',
-        settings: {
-          join_before_host: true,
-          waiting_room: false,
-          approval_type: 2,
+  let data: { id: number; join_url: string; start_url: string };
+  try {
+    const token = await getZoomAccessToken();
+    const res = await fetch(
+      'https://api.zoom.us/v2/users/me/meetings',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    },
-  );
-  if (!res.ok) {
-    const err = await res.text();
+        body: JSON.stringify({
+          topic: params.topic,
+          type: 2, // scheduled
+          start_time: params.startsAt.toISOString(),
+          duration: params.durationMin,
+          timezone: 'UTC',
+          settings: {
+            join_before_host: true,
+            waiting_room: false,
+            approval_type: 2,
+          },
+        }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Zoom meeting create failed: ${res.status} ${err}`);
+    }
+    data = (await res.json()) as { id: number; join_url: string; start_url: string };
+  } catch (err) {
+    // Bad credentials / missing scope / Zoom outage must NOT break the booking —
+    // fall back to a working Jitsi room and log for follow-up.
     // eslint-disable-next-line no-console
-    console.error('[zoom] meeting create failed:', res.status, err);
-    throw new Error(`Zoom meeting create failed: ${res.status} ${err}`);
+    console.error('[zoom] falling back to Jitsi after error:', err);
+    return jitsiFallback(params.topic);
   }
-  const data = (await res.json()) as {
-    id: number;
-    join_url: string;
-    start_url: string;
-  };
   return {
     meetingId: String(data.id),
     joinUrl: data.join_url,
