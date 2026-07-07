@@ -6,6 +6,8 @@
 
 const HTML_TAG_RE = /<\/?[^>]+(>|$)/g;
 const SCRIPT_RE = /javascript\s*:|data\s*:|vbscript\s*:/gi;
+// Intentionally matches control characters to strip them from user input.
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 
 export function sanitizeText(input: string): string {
