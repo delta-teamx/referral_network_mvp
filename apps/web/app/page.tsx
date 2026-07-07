@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
+import { FoundingOffer } from '../components/marketing/FoundingOffer';
 
 export default function HomePage() {
   // On virtualprosnetwork.com, redirect to login (product domain = app only)
@@ -31,12 +32,7 @@ export default function HomePage() {
   return (
     <>
       {/* ═══ FOUNDING-MEMBER ANNOUNCEMENT BAR ═══ */}
-      <Link
-        href="https://virtualprosnetwork.com/signup"
-        className="block bg-gradient-to-r from-primary via-blue-600 to-cyan-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:brightness-110"
-      >
-        🎉 Founding offer - the first <span className="underline underline-offset-2">200 businesses get every feature free</span>. No credit card, no subscription. Claim your spot →
-      </Link>
+      <FoundingOffer variant="bar" />
 
       {/* ═══ HERO ═══ */}
       <section className="relative overflow-hidden bg-gradient-to-br from-gray-950 via-gray-900 to-primary/20">

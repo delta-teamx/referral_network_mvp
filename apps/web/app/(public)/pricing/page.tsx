@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Sparkles, Users } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
+import { FoundingOffer } from '../../../components/marketing/FoundingOffer';
 
 type Tab = 'individual' | 'group';
 
@@ -110,15 +111,7 @@ export default function PricingPage() {
           </p>
 
           {/* Founding offer */}
-          <div className="mx-auto mb-8 max-w-xl rounded-2xl border border-primary/20 bg-primary-light px-5 py-4">
-            <p className="text-sm font-bold text-primary md:text-base">
-              🎉 Founding offer: the first 200 businesses get every paid feature free
-            </p>
-            <p className="mt-1 text-xs text-gray-600 md:text-sm">
-              Join now and you get full Pro access at no cost, for as long as you stay. After the
-              first 200 members, the plans below apply. No card needed to start.
-            </p>
-          </div>
+          <FoundingOffer variant="card" />
 
           {/* Tab switcher */}
           <div className="mx-auto inline-flex rounded-full border border-gray-200 bg-white p-1">

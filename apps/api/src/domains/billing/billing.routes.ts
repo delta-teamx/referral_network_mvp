@@ -7,6 +7,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AppError } from '../../utils/AppError.js';
 import { createCheckoutSession, finaliseUpgrade } from './billing.service.js';
 import { canReceiveMoreLeads, TIERS, type Tier } from './billing.tiers.js';
+import { getFoundingStatus } from './founding.service.js';
 
 export const billingRouter: Router = Router();
 
@@ -28,6 +29,16 @@ billingRouter.get(
       };
     });
     const body: ApiResponse<typeof plans> = { success: true, data: plans };
+    res.json(body);
+  }),
+);
+
+// Public - powers the "first 200 businesses free" promo counter on the site.
+billingRouter.get(
+  '/founding-status',
+  asyncHandler(async (_req, res) => {
+    const status = await getFoundingStatus();
+    const body: ApiResponse<typeof status> = { success: true, data: status };
     res.json(body);
   }),
 );

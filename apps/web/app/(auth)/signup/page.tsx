@@ -12,6 +12,7 @@ import { FacebookButton } from '../../../components/auth/FacebookButton';
 import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
+import { FoundingOffer } from '../../../components/marketing/FoundingOffer';
 import { useAuthStore } from '../../../stores/auth';
 
 export default function SignupPage() {
@@ -78,9 +79,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <div className="mb-5 rounded-lg border border-primary/20 bg-primary-light px-4 py-3 text-center text-sm text-primary">
-        🎉 <strong>Founding offer:</strong> the first 200 businesses get <strong>every feature free</strong> - no subscription. Sign up now to lock in your spot.
-      </div>
+      <FoundingOffer variant="card" />
       <GoogleButton label="Sign up with Google" />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />

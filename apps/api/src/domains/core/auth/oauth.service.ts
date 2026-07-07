@@ -5,6 +5,7 @@ import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../events/index.js';
 import { toAuthenticatedUserDto } from '../users/users.service.js';
+import { resolveSignupTier } from '../../billing/founding.service.js';
 import {
   accessTokenSeconds,
   signAccessToken,
@@ -122,6 +123,7 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user:
       lastName: profile.family_name?.trim() || 'Last',
       avatarUrl: profile.picture ?? null,
       role: 'CONSUMER',
+      subscriptionTier: await resolveSignupTier(),
       emailVerified: profile.email_verified === true,
     },
   });
@@ -245,6 +247,7 @@ async function upsertFromFbProfile(profile: FbProfile): Promise<{ user: User; is
       lastName: profile.last_name?.trim() || 'Last',
       avatarUrl: profile.picture?.data?.url ?? null,
       role: 'CONSUMER',
+      subscriptionTier: await resolveSignupTier(),
       emailVerified: true,
     },
   });

@@ -809,6 +809,9 @@ export function getMockResponse(method: string, path: string): unknown {
     if (url === '/api/v1/dashboard/metrics') {
       return MOCK_DASHBOARD_METRICS;
     }
+    if (url === '/api/v1/billing/founding-status') {
+      return { limit: 200, taken: 57, remaining: 143, isOpen: true };
+    }
     if (url === '/api/v1/dashboard/analytics') {
       const labels = Array.from({ length: 12 }, (_, i) => `W-${11 - i}`);
       return {

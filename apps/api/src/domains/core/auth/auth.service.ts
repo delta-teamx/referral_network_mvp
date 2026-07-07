@@ -21,6 +21,7 @@ import { eventBus } from '../events/index.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { env } from '../../../config/env.js';
 import { assertEmailIsCredible } from './email.credibility.js';
+import { resolveSignupTier } from '../../billing/founding.service.js';
 
 /**
  * Internal service return — carries the refresh token that the route
@@ -48,6 +49,9 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   const passwordHash = await hashPassword(input.password);
   const emailVerifyToken = generateToken(32);
 
+  // Founding-member promo: the first 200 genuine sign-ups get full paid access.
+  const subscriptionTier = await resolveSignupTier();
+
   const user = await prisma.user.create({
     data: {
       email: input.email.toLowerCase().trim(),
@@ -56,6 +60,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
       lastName: input.lastName,
       phone: input.phone ?? null,
       role: input.role,
+      subscriptionTier,
       emailVerifyToken: hashToken(emailVerifyToken),
     },
   });
