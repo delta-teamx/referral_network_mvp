@@ -69,7 +69,7 @@ export default function LeadsPage() {
       { status },
       { accessToken: accessToken ?? undefined },
     );
-    // optimistic — refetch list after
+    // optimistic - refetch list after
     setLeads((prev) =>
       prev.map((l) =>
         l.id === id

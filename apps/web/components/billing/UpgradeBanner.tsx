@@ -20,7 +20,7 @@ export function UpgradeBanner() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">
-              You&rsquo;re on the Free plan — 3 leads/month, 1 listing
+              You&rsquo;re on the Free plan - 3 leads/month, 1 listing
             </p>
             <p className="text-xs text-gray-600">
               Upgrade to Pro for 30 leads, 3 listings, full analytics, and match insights.

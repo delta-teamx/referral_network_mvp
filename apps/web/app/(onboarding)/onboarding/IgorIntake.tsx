@@ -134,7 +134,7 @@ export function IgorIntake() {
       try {
         await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
       } catch {
-        // best-effort — the feed also self-refreshes when empty.
+        // best-effort - the feed also self-refreshes when empty.
       }
     }
     router.push('/dashboard');
@@ -169,7 +169,7 @@ export function IgorIntake() {
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
               <span>
-                Step {stepNum + 1} of {totalSteps} — {currentLabel}
+                Step {stepNum + 1} of {totalSteps} - {currentLabel}
               </span>
               <span>{progress}%</span>
             </div>
@@ -298,7 +298,7 @@ export function IgorIntake() {
           <StepCard
             icon={<Users size={20} />}
             title="Who do you want to meet?"
-            subtitle="We use this to scan the network and suggest introductions to people who match — so every connection is worth your time."
+            subtitle="We use this to scan the network and suggest introductions to people who match - so every connection is worth your time."
           >
             <IndustryPicker
               label="Industries you want to connect with"
@@ -328,8 +328,8 @@ export function IgorIntake() {
             <FormField
               label="Typical deal size"
               name="icpDealSize"
-              placeholder="$5K–$25K"
-              hint="Optional — helps rank the strongest matches."
+              placeholder="$5K-$25K"
+              hint="Optional - helps rank the strongest matches."
               value={icpDealSize}
               onChange={(e) => setIcpDealSize(e.target.value)}
             />
@@ -374,7 +374,7 @@ export function IgorIntake() {
                 </span>
                 <span className="mt-0.5 block text-xs text-gray-500">
                   Exchange services with trusted members (e.g. AI automation ↔ web design). You always
-                  decide whether to accept an offer — default is cash-only.
+                  decide whether to accept an offer - default is cash-only.
                 </span>
               </span>
             </label>

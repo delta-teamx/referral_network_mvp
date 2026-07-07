@@ -35,7 +35,7 @@ export default function HomePage() {
         href="https://virtualprosnetwork.com/signup"
         className="block bg-gradient-to-r from-primary via-blue-600 to-cyan-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:brightness-110"
       >
-        🎉 Founding offer — the first <span className="underline underline-offset-2">200 businesses get every feature free</span>. No credit card, no subscription. Claim your spot →
+        🎉 Founding offer - the first <span className="underline underline-offset-2">200 businesses get every feature free</span>. No credit card, no subscription. Claim your spot →
       </Link>
 
       {/* ═══ HERO ═══ */}
@@ -46,7 +46,7 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
           <div className="grid items-center gap-12 md:grid-cols-2">
-            {/* Left — copy */}
+            {/* Left - copy */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
@@ -72,14 +72,14 @@ export default function HomePage() {
                 className="mb-4 max-w-lg text-lg leading-relaxed text-gray-300"
               >
                 Referral Nova is the technology company behind{' '}
-                <strong className="text-white">VirtualProsNetwork</strong> &mdash; an AI-powered platform
+                <strong className="text-white">VirtualProsNetwork</strong> - an AI-powered platform
                 where business owners get matched, meet live on Zoom, and exchange warm referrals automatically.
               </motion.p>
               <motion.p
                 variants={fadeInUp}
                 className="mb-8 max-w-lg text-base leading-relaxed text-gray-400"
               >
-                Whether you serve clients locally, remotely, or internationally &mdash; our AI finds your perfect referral partners.
+                Whether you serve clients locally, remotely, or internationally - our AI finds your perfect referral partners.
               </motion.p>
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
@@ -113,7 +113,7 @@ export default function HomePage() {
               </motion.div>
             </motion.div>
 
-            {/* Right — 3D animated showcase */}
+            {/* Right - 3D animated showcase */}
             <motion.div
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
@@ -153,7 +153,7 @@ export default function HomePage() {
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-gray-600">
               Manual referrals. Memory-based introductions. &ldquo;Who do I know?&rdquo; over
-              breakfast. The result: missed connections and lost revenue — every single week.
+              breakfast. The result: missed connections and lost revenue - every single week.
             </p>
           </div>
 
@@ -223,7 +223,7 @@ export default function HomePage() {
                 step: '03',
                 icon: Sparkles,
                 title: 'AI finds your matches',
-                desc: 'Our engine scans every member and surfaces the people you should meet — with a reason why.',
+                desc: 'Our engine scans every member and surfaces the people you should meet - with a reason why.',
               },
               {
                 step: '04',
@@ -269,7 +269,7 @@ export default function HomePage() {
               { icon: Brain, title: 'AI Matching Engine', desc: '7-factor scoring: industry, ICP alignment, referral compatibility, keywords, location, barter, and more.' },
               { icon: Video, title: 'Video Profiles', desc: '60-second intro videos auto-transcribed by Whisper AI and indexed for smarter matching.' },
               { icon: Calendar, title: 'Direct Booking', desc: 'Set availability, pick a reason, book 30-min Zoom calls directly from any profile.' },
-              { icon: Zap, title: 'Smart Introductions', desc: '"You should meet Sarah (Real Estate) — she can refer you clients." Request intros in one click.' },
+              { icon: Zap, title: 'Smart Introductions', desc: '"You should meet Sarah (Real Estate) - she can refer you clients." Request intros in one click.' },
               { icon: Network, title: 'Live Zoom Events', desc: 'Weekly referral rooms, expert panels, industry meetups. Register and join from the platform.' },
               { icon: Handshake, title: 'Barter Exchange', desc: 'Trade services with other members. "I\'ll do your taxes if you design my website."' },
               { icon: Globe, title: 'White-Label for Groups', desc: 'BNI chapters, Chambers, Masterminds can each run their own branded instance.' },
@@ -303,14 +303,14 @@ export default function HomePage() {
                 Power your networking group with AI
               </h2>
               <p className="mb-6 text-gray-600">
-                Whether you run a BNI chapter, a Chamber of Commerce, or a private Mastermind — our
+                Whether you run a BNI chapter, a Chamber of Commerce, or a private Mastermind - our
                 platform replaces manual referral tracking with an AI engine that never forgets a
                 connection.
               </p>
               <ul className="mb-8 space-y-3">
                 {[
                   'Your own branded instance with custom logo + colors',
-                  'Per-seat or flat-rate billing — you set the price',
+                  'Per-seat or flat-rate billing - you set the price',
                   'Admin dashboard: manage members, approve profiles, create events',
                   'AI generates introductions scoped to YOUR group\'s members',
                   'Zoom events managed from one panel',
@@ -380,7 +380,7 @@ export default function HomePage() {
                 stars: 5,
               },
               {
-                quote: 'I booked 4 Zoom calls in my first week — all warm intros from the AI. One turned into a $12K project.',
+                quote: 'I booked 4 Zoom calls in my first week - all warm intros from the AI. One turned into a $12K project.',
                 name: 'Emma C.',
                 role: 'Photographer, STL',
                 stars: 5,
@@ -458,7 +458,7 @@ export default function HomePage() {
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
             Built by Referral Nova, powered by AI. Sign up, complete your profile, and get your first
-            introduction in under 5 minutes &mdash; whether you serve clients locally or worldwide.
+            introduction in under 5 minutes - whether you serve clients locally or worldwide.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link

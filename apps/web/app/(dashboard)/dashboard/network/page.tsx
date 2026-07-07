@@ -231,7 +231,7 @@ function AcceptedList({ items }: { items: Connection[] }) {
               Strength {Number(c.strengthScore).toFixed(1)}
             </span>
             <span className="text-gray-500">
-              since {c.acceptedAt ? new Date(c.acceptedAt).toLocaleDateString() : '—'}
+              since {c.acceptedAt ? new Date(c.acceptedAt).toLocaleDateString() : '-'}
             </span>
           </div>
         </motion.li>

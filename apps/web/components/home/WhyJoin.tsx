@@ -6,7 +6,7 @@ import { fadeInUp, slideInLeft, slideInRight } from '../../lib/animations';
 import { SectionShell } from './SectionShell';
 
 const BENEFITS = [
-  'Real leads matched by life event — not category spam',
+  'Real leads matched by life event - not category spam',
   'Trust score makes quality transparent from the first click',
   'Exchange referrals inside vetted groups, track who earned what',
   'Every interaction strengthens (or weakens) your network rank',
@@ -26,7 +26,7 @@ export function WhyJoin() {
             business.
           </h2>
           <p className="mb-7 text-base text-gray-600 md:text-lg">
-            The old referral world is a Rolodex — you know the names but not the quality. We measure
+            The old referral world is a Rolodex - you know the names but not the quality. We measure
             both, in public, and reward the pros who show up consistently.
           </p>
           <ul className="space-y-3">

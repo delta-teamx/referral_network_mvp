@@ -29,7 +29,7 @@ const CONSUMER_FEATURES = [
     title: 'Verified pros only',
     body: 'Real name, real address, real phone. Every listing is manually reviewed.',
   },
-  { title: 'Match by moment', body: 'Tell us "I\'m buying a house" — we handle the rest.' },
+  { title: 'Match by moment', body: 'Tell us "I\'m buying a house" - we handle the rest.' },
   {
     title: 'Trust over hype',
     body: 'Our score weighs conversions, not just reviews people write after a freebie.',
@@ -53,7 +53,7 @@ export function ForOwners() {
           </h2>
           <p className="mb-8 text-base text-gray-600">
             Thumbtack sells the same lead to 5 competitors. We route leads to the one pro most
-            likely to win — based on trust, specialty, and proven conversion.
+            likely to win - based on trust, specialty, and proven conversion.
           </p>
           <div className="space-y-4">
             {OWNER_FEATURES.map((f) => (
@@ -76,7 +76,7 @@ export function ForOwners() {
             href="/signup?role=BUSINESS_OWNER"
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90"
           >
-            Claim your business — free →
+            Claim your business - free →
           </Link>
         </motion.div>
 
@@ -85,7 +85,7 @@ export function ForOwners() {
             For consumers
           </p>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
-            Finally — a way to find a pro without the paid-ad roulette.
+            Finally - a way to find a pro without the paid-ad roulette.
           </h2>
           <p className="mb-8 text-base text-gray-600">
             No one should have to vet five strangers on five platforms to hire a plumber. Tell us

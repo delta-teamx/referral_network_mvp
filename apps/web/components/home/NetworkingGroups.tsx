@@ -27,7 +27,7 @@ const GROUPS = [
     icon: Repeat,
     name: 'Referral Groups',
     description:
-      'BNI-style accountability — commit to exchanging N referrals/month, track who earned what.',
+      'BNI-style accountability - commit to exchanging N referrals/month, track who earned what.',
     accent: 'bg-violet-50 text-violet-700',
     stat: '310 groups',
   },
@@ -37,7 +37,7 @@ export function NetworkingGroups() {
   return (
     <SectionShell
       eyebrow="Your network"
-      title="Join a group — or start your own"
+      title="Join a group - or start your own"
       subtitle="Three flavours, one goal: turn loose connections into durable business relationships."
       background="bg-gray-50"
     >

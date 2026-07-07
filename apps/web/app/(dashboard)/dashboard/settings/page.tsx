@@ -273,7 +273,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <PhotoUpload
                 label="Profile photo"
-                hint="A headshot or logo — shown on your profile and in match suggestions."
+                hint="A headshot or logo - shown on your profile and in match suggestions."
                 currentUrl={profile.photoUrl}
                 uploading={photoUploading}
                 onSelected={(file) => void uploadHeadshot(file)}

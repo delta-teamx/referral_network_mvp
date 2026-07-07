@@ -24,7 +24,7 @@ export function PhotoUpload({ label, hint, currentUrl, onSelected, onRemove, upl
     setError(null);
 
     if (file.size > maxSizeMb * 1024 * 1024) {
-      setError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — max ${maxSizeMb} MB allowed.`);
+      setError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB - max ${maxSizeMb} MB allowed.`);
       return;
     }
 

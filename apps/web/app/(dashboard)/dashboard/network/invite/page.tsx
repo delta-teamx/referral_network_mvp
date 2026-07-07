@@ -95,7 +95,7 @@ export default function InvitePage() {
           </div>
           {sent.status === 'accepted' ? (
             <p className="mb-4 text-sm text-gray-700">
-              <strong>{sent.recipientEmail}</strong> already has an account — we sent them a
+              <strong>{sent.recipientEmail}</strong> already has an account - we sent them a
               connection request instead. Check your pending connections.
             </p>
           ) : (
@@ -151,7 +151,7 @@ export default function InvitePage() {
               name="message"
               rows={4}
               maxLength={500}
-              placeholder="Hey Alex — you'd be a great fit for our referral network. No cost, 5 min to sign up."
+              placeholder="Hey Alex - you'd be a great fit for our referral network. No cost, 5 min to sign up."
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
             <p className="mt-1 text-xs text-gray-500">Max 500 characters.</p>

@@ -8,17 +8,17 @@ const STEPS = [
   {
     num: 1,
     title: 'Tell us the moment',
-    body: 'Pick one of 14 life events — buying a house, starting a business, planning a wedding. No generic "category" search.',
+    body: 'Pick one of 14 life events - buying a house, starting a business, planning a wedding. No generic "category" search.',
   },
   {
     num: 2,
     title: 'We match + rank',
-    body: 'Our engine scores every nearby pro on trust, distance, conversion history, and category relevance — then shows the top 5–10.',
+    body: 'Our engine scores every nearby pro on trust, distance, conversion history, and category relevance - then shows the top 5-10.',
   },
   {
     num: 3,
     title: 'Connect instantly',
-    body: 'One tap notifies the right providers via SMS + email. They reach out to you the same day — or we route to a backup.',
+    body: 'One tap notifies the right providers via SMS + email. They reach out to you the same day - or we route to a backup.',
   },
 ];
 

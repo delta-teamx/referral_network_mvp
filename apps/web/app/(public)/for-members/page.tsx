@@ -28,7 +28,7 @@ const benefits = [
   {
     icon: Brain,
     title: 'AI-Powered Matching',
-    description: 'Our 7-factor engine finds the people most likely to send you qualified referrals — automatically, every day.',
+    description: 'Our 7-factor engine finds the people most likely to send you qualified referrals - automatically, every day.',
   },
   {
     icon: Video,
@@ -132,7 +132,7 @@ export default function ForMembersPage() {
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
             No more rubber-chicken dinners. No more swapping cards with people who will never refer you.
-            Referral Nova uses AI to connect you with the right partners — fast.
+            Referral Nova uses AI to connect you with the right partners - fast.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8">
             <Link
@@ -160,7 +160,7 @@ export default function ForMembersPage() {
             What you get as a member
           </motion.h2>
           <motion.p variants={fadeInUp} className="mt-4 max-w-2xl text-gray-600">
-            Everything you need to find, connect with, and convert high-quality referral partners — all in one platform.
+            Everything you need to find, connect with, and convert high-quality referral partners - all in one platform.
           </motion.p>
 
           <motion.div

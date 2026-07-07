@@ -57,7 +57,7 @@ export function RecentListings() {
     <SectionShell
       eyebrow="Recently added"
       title="Fresh businesses joining the network"
-      subtitle="Every listing is verified. Every business owner has put skin in the game — a real name, a real address, a real phone number."
+      subtitle="Every listing is verified. Every business owner has put skin in the game - a real name, a real address, a real phone number."
     >
       {state === 'loading' && <ListingsSkeleton />}
 

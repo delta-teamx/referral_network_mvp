@@ -39,7 +39,7 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-gray-900">4. Subscriptions</h2>
             <p>
               Paid plans (Pro and Premium) are billed monthly via Stripe. You can cancel at
-              any time — cancellation takes effect at the end of the current billing period.
+              any time - cancellation takes effect at the end of the current billing period.
               We do not issue prorated refunds.
             </p>
           </section>

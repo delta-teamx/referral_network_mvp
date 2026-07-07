@@ -12,7 +12,7 @@ export function Newsletter() {
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Newsletter backend lands later — for now, just acknowledge.
+    // Newsletter backend lands later - for now, just acknowledge.
     setSent(true);
   }
 

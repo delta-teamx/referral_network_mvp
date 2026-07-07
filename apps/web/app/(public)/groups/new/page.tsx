@@ -75,7 +75,7 @@ export default function NewGroupPage() {
           <h1 className="mt-1 text-2xl font-bold text-gray-900">Start a networking group</h1>
           <p className="mt-1 text-sm text-gray-500">
             You&rsquo;ll be the first leader. Invite peers who don&rsquo;t compete with each other
-            — one category per seat.
+            - one category per seat.
           </p>
         </header>
 

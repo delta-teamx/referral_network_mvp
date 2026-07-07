@@ -6,7 +6,7 @@ import { ArrowRight, Search, Sparkles } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../lib/animations';
 
 /**
- * Hero — animated gradient mesh background, dual CTAs, live trust-proof
+ * Hero - animated gradient mesh background, dual CTAs, live trust-proof
  * counters. The visual differentiator vs. the competitor's static hero.
  */
 export function Hero() {
@@ -36,7 +36,7 @@ export function Hero() {
           variants={fadeInUp}
           className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur"
         >
-          <Sparkles size={14} className="text-secondary" />A new kind of referral network — built
+          <Sparkles size={14} className="text-secondary" />A new kind of referral network - built
           around life&rsquo;s moments
         </motion.div>
 
@@ -56,7 +56,7 @@ export function Hero() {
           className="mx-auto mb-10 max-w-2xl text-lg text-white/80 md:text-xl"
         >
           Buying a house, starting a business, planning a wedding? Pick what&rsquo;s happening in
-          your life — we match you with verified pros who specialise in exactly that, backed by a
+          your life - we match you with verified pros who specialise in exactly that, backed by a
           trust score, not just star ratings.
         </motion.p>
 
@@ -76,7 +76,7 @@ export function Hero() {
             href="/signup"
             className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
           >
-            List your business — free
+            List your business - free
           </Link>
         </motion.div>
 

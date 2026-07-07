@@ -55,7 +55,7 @@ export default function DashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Dashboard</p>
         <h1 className="mt-1 text-2xl font-bold text-gray-900">Welcome back</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Your AI-powered referral hub — suggested introductions and business metrics in one place.
+          Your AI-powered referral hub - suggested introductions and business metrics in one place.
         </p>
       </header>
 

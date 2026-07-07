@@ -54,9 +54,17 @@ export function Pricing() {
   return (
     <SectionShell
       eyebrow="Pricing"
-      title="Free forever — upgrade when you&rsquo;re ready"
+      title="Free forever - upgrade when you&rsquo;re ready"
       subtitle="Pay only when the network is earning you business. Cancel anytime."
     >
+      <div className="mx-auto mb-8 max-w-2xl rounded-2xl border border-primary/20 bg-primary-light px-5 py-4 text-center">
+        <p className="text-sm font-bold text-primary md:text-base">
+          🎉 Founding offer: the first 200 businesses get every paid feature free
+        </p>
+        <p className="mt-1 text-xs text-gray-600 md:text-sm">
+          Sign up now and keep full Pro access at no cost. After the first 200 members, the plans below apply.
+        </p>
+      </div>
       <motion.div variants={staggerContainer} className="grid gap-6 md:grid-cols-3">
         {TIERS.map((t) => (
           <motion.div

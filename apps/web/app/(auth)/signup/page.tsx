@@ -48,7 +48,7 @@ export default function SignupPage() {
       // globalError is already set by the store
       return;
     }
-    // Account created — send OTP and redirect
+    // Account created - send OTP and redirect
     const email = parsed.data.email;
     try {
       await fetch(
@@ -60,7 +60,7 @@ export default function SignupPage() {
         },
       );
     } catch {
-      // OTP send failed — user can resend from the verify page
+      // OTP send failed - user can resend from the verify page
     }
     window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
   }
@@ -79,7 +79,7 @@ export default function SignupPage() {
       }
     >
       <div className="mb-5 rounded-lg border border-primary/20 bg-primary-light px-4 py-3 text-center text-sm text-primary">
-        🎉 <strong>Founding offer:</strong> the first 200 businesses get <strong>every feature free</strong> — no subscription. Sign up now to lock in your spot.
+        🎉 <strong>Founding offer:</strong> the first 200 businesses get <strong>every feature free</strong> - no subscription. Sign up now to lock in your spot.
       </div>
       <GoogleButton label="Sign up with Google" />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">

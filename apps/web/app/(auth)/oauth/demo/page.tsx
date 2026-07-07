@@ -39,7 +39,7 @@ export default function OAuthDemoPage() {
       <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
         <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <p className="text-sm text-gray-600">Signing you in with Google…</p>
-        <p className="mt-2 text-xs text-gray-400">(Demo mode — no real Google call is made.)</p>
+        <p className="mt-2 text-xs text-gray-400">(Demo mode - no real Google call is made.)</p>
       </div>
     </main>
   );

@@ -38,7 +38,7 @@ const groupBenefits = [
   {
     icon: LayoutDashboard,
     title: 'Admin Dashboard',
-    description: 'Manage members, monitor engagement, view match activity, and export reports — all from a single control panel.',
+    description: 'Manage members, monitor engagement, view match activity, and export reports - all from a single control panel.',
   },
   {
     icon: Brain,
@@ -138,7 +138,7 @@ export default function ForGroupsPage() {
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
             Whether you run a BNI chapter, a Chamber of Commerce, or a private mastermind, Referral Nova
-            gives your members AI-powered referral matching, Zoom scheduling, and analytics — under your brand.
+            gives your members AI-powered referral matching, Zoom scheduling, and analytics - under your brand.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link

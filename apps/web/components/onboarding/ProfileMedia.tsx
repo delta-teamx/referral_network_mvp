@@ -89,7 +89,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
-      setError(`Photo is ${(file.size / 1024 / 1024).toFixed(1)} MB — max ${MAX_PHOTO_MB} MB.`);
+      setError(`Photo is ${(file.size / 1024 / 1024).toFixed(1)} MB - max ${MAX_PHOTO_MB} MB.`);
       return;
     }
     setError(null);
@@ -109,7 +109,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      setError(`Video is ${(file.size / 1024 / 1024).toFixed(1)} MB — max ${MAX_VIDEO_MB} MB.`);
+      setError(`Video is ${(file.size / 1024 / 1024).toFixed(1)} MB - max ${MAX_VIDEO_MB} MB.`);
       return;
     }
     const ct = ['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type)
@@ -151,7 +151,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         if (livePreview.current) livePreview.current.srcObject = null;
         if (blob.size > MAX_VIDEO_MB * 1024 * 1024) {
-          setError(`Recording is too large — keep it under ${MAX_VIDEO_MB} MB / ~60 seconds.`);
+          setError(`Recording is too large - keep it under ${MAX_VIDEO_MB} MB / ~60 seconds.`);
           return;
         }
         setVideoBusy(true);
@@ -249,7 +249,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
             <p className="mb-3 text-sm text-gray-600">
               {videoBusy
                 ? 'Uploading your video…'
-                : 'Record yourself right now, or upload a video file. Members are 3× more likely to accept an intro when they can see your face.'}
+                : 'Record yourself right now, or upload a video file. Members are 3x more likely to accept an intro when they can see your face.'}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {recordSupported &&

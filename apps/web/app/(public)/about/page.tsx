@@ -11,7 +11,7 @@ export default function AboutPage() {
           <p className="text-lg leading-relaxed">
             Referral Nova is an AI-powered referral network built on a simple
             observation: the best referrals come from people who <em>know</em> what you do and
-            who you want to meet — but in a room of 50 business owners, no one can remember
+            who you want to meet - but in a room of 50 business owners, no one can remember
             everyone&rsquo;s specialty, ideal client, or referral capability.
           </p>
 
@@ -27,18 +27,18 @@ export default function AboutPage() {
           <p>
             We built a platform where each member fills out a structured profile: what they do,
             who their ideal client is, who they can refer business to. An AI engine reads every
-            profile and automatically surfaces the best introductions — complete with a reason
+            profile and automatically surfaces the best introductions - complete with a reason
             and a one-click way to request a call or join a live networking event.
           </p>
 
           <h2 className="mt-10 text-2xl font-bold text-gray-900">Two products</h2>
           <ul className="my-4 space-y-2">
             <li>
-              <strong>Virtual Pros Network</strong> — our own flagship network, open to any
+              <strong>Virtual Pros Network</strong> - our own flagship network, open to any
               business owner looking for quality referrals.
             </li>
             <li>
-              <strong>White-label for existing groups</strong> — BNI chapters, Chambers of
+              <strong>White-label for existing groups</strong> - BNI chapters, Chambers of
               Commerce, and mastermind groups can license the AI engine to power their own
               community.
             </li>

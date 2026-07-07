@@ -44,21 +44,21 @@ export default function AdminOverview() {
   }, [accessToken]);
 
   const cards = [
-    { key: 'users', label: 'Users', icon: Users, value: data?.counts.users ?? '—' },
-    { key: 'listings', label: 'Listings', icon: Store, value: data?.counts.listings ?? '—' },
-    { key: 'leads', label: 'Consumer leads', icon: Briefcase, value: data?.counts.leads ?? '—' },
+    { key: 'users', label: 'Users', icon: Users, value: data?.counts.users ?? '-' },
+    { key: 'listings', label: 'Listings', icon: Store, value: data?.counts.listings ?? '-' },
+    { key: 'leads', label: 'Consumer leads', icon: Briefcase, value: data?.counts.leads ?? '-' },
     {
       key: 'referrals',
       label: 'B2B referrals',
       icon: UserCheck,
-      value: data?.counts.referrals ?? '—',
+      value: data?.counts.referrals ?? '-',
     },
-    { key: 'groups', label: 'Active groups', icon: Network, value: data?.counts.groups ?? '—' },
+    { key: 'groups', label: 'Active groups', icon: Network, value: data?.counts.groups ?? '-' },
     {
       key: 'pending',
       label: 'Pending approval',
       icon: AlertTriangle,
-      value: data?.counts.pendingListings ?? '—',
+      value: data?.counts.pendingListings ?? '-',
       highlight: true,
     },
   ];

@@ -99,7 +99,7 @@ const SLIDES = [
             <Sparkles size={14} className="text-emerald-400" />
             <span className="text-xs font-semibold text-emerald-400">AI Suggestion</span>
           </div>
-          <p className="text-sm text-white">&ldquo;Sarah needs a roofer for her client — you do residential roofing in her area.&rdquo;</p>
+          <p className="text-sm text-white">&ldquo;Sarah needs a roofer for her client - you do residential roofing in her area.&rdquo;</p>
           <div className="mt-3 flex gap-2">
             <div className="rounded-full bg-emerald-500/30 px-3 py-1.5 text-[10px] font-bold text-emerald-300">Request Intro</div>
             <div className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-semibold text-gray-300">Save for later</div>
@@ -144,7 +144,7 @@ const SLIDES = [
           <MessageSquare size={14} className="text-amber-400" />
           <div className="flex-1">
             <p className="text-xs text-white">&ldquo;Great session! Got 3 warm intros.&rdquo;</p>
-            <p className="text-[10px] text-gray-500">— Maya P.</p>
+            <p className="text-[10px] text-gray-500">- Maya P.</p>
           </div>
         </div>
       </div>

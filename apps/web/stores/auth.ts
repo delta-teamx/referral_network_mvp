@@ -35,7 +35,7 @@ function scheduleRefresh(set: (patch: Partial<AuthState>) => void): void {
       const data = await api.post<AuthSuccessDto>('/api/v1/auth/refresh');
       applyAuthSuccess(data, set);
     } catch {
-      // Refresh failed — token will expire, next API call handles it
+      // Refresh failed - token will expire, next API call handles it
     }
   }, refreshIn);
 }

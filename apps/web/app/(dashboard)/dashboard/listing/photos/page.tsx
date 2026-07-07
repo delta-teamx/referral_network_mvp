@@ -63,7 +63,7 @@ export default function PhotosPage() {
     const file = e.target.files?.[0];
     if (!file || !listing || !accessToken) return;
     if (file.size > 5 * 1024 * 1024) {
-      setError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — max 5 MB allowed.`);
+      setError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB - max 5 MB allowed.`);
       if (fileRef.current) fileRef.current.value = '';
       return;
     }

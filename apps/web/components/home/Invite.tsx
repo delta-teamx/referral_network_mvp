@@ -39,7 +39,7 @@ export function Invite() {
           </div>
           <h3 className="mb-2 text-xl font-semibold">Refer a quality business</h3>
           <p className="mb-6 text-sm text-white/80">
-            Spotted a great plumber? Chef? Accountant? Refer them in — earn points, build
+            Spotted a great plumber? Chef? Accountant? Refer them in - earn points, build
             reputation, pay it forward.
           </p>
           <button className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-secondary transition hover:bg-white/90">

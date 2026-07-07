@@ -159,7 +159,7 @@ export default function MessagesPage() {
   return (
     <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Left panel — conversation list */}
+      {/* Left panel - conversation list */}
       <aside className="w-80 shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
         <div className="sticky top-0 border-b border-gray-100 bg-white p-4">
           <h1 className="flex items-center gap-2 text-lg font-bold text-gray-900">
@@ -219,7 +219,7 @@ export default function MessagesPage() {
         )}
       </aside>
 
-      {/* Right panel — message thread */}
+      {/* Right panel - message thread */}
       <section className="flex flex-1 flex-col bg-gray-50">
         {!activeId ? (
           <div className="flex flex-1 items-center justify-center text-sm text-gray-400">

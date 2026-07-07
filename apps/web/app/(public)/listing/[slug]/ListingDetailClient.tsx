@@ -121,7 +121,7 @@ export default function ListingDetailClient() {
         );
         if (!cancelled) setConnState(res.state);
       } catch {
-        /* silent — connection feature is non-critical */
+        /* silent - connection feature is non-critical */
       }
     }
     void loadState();

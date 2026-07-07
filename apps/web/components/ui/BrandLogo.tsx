@@ -1,5 +1,5 @@
 /**
- * VPN brand logo — a stylized network/referral icon paired with the wordmark.
+ * VPN brand logo - a stylized network/referral icon paired with the wordmark.
  * Uses primary blue from the palette. Two nodes connected by a handshake arc.
  */
 export function BrandLogo({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) {

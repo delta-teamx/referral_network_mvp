@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  /* Single primary palette — blue with tints. No random accent colors. */
+  /* Single primary palette - blue with tints. No random accent colors. */
   --color-primary: #2563eb;
   --color-primary-light: #eff6ff;
   --color-primary-dark: #1d4ed8;

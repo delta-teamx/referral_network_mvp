@@ -24,7 +24,7 @@ export default function ConnectLandingPage() {
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-600">
             Pick the closest moment. We&rsquo;ll translate it into the right pros and route you to
-            the top 5–10 nearby — ranked by trust score, not ad spend.
+            the top 5-10 nearby - ranked by trust score, not ad spend.
           </p>
         </motion.div>
 

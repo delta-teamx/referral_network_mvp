@@ -62,7 +62,7 @@ const INDIVIDUAL_PLANS = [
 const GROUP_PLANS = [
   {
     name: 'Per Seat',
-    price: '$10–30',
+    price: '$10-30',
     unit: '/user/mo',
     desc: 'Pay per active member. Scales with your group.',
     features: [
@@ -77,7 +77,7 @@ const GROUP_PLANS = [
   },
   {
     name: 'Flat Rate',
-    price: '$99–499',
+    price: '$99-499',
     unit: '/mo',
     desc: 'Predictable cost regardless of group size.',
     features: [
@@ -105,9 +105,20 @@ export default function PricingPage() {
           <h1 className="mb-4 text-3xl font-bold text-gray-900 md:text-5xl">
             Simple pricing for members <em className="not-italic text-primary">&</em> organizations
           </h1>
-          <p className="mx-auto mb-8 max-w-xl text-gray-600">
+          <p className="mx-auto mb-6 max-w-xl text-gray-600">
             No long-term contracts. No hidden fees. Start free, upgrade when referrals start closing.
           </p>
+
+          {/* Founding offer */}
+          <div className="mx-auto mb-8 max-w-xl rounded-2xl border border-primary/20 bg-primary-light px-5 py-4">
+            <p className="text-sm font-bold text-primary md:text-base">
+              🎉 Founding offer: the first 200 businesses get every paid feature free
+            </p>
+            <p className="mt-1 text-xs text-gray-600 md:text-sm">
+              Join now and you get full Pro access at no cost, for as long as you stay. After the
+              first 200 members, the plans below apply. No card needed to start.
+            </p>
+          </div>
 
           {/* Tab switcher */}
           <div className="mx-auto inline-flex rounded-full border border-gray-200 bg-white p-1">
@@ -274,14 +285,14 @@ export default function PricingPage() {
                       {vpn ? (
                         <Check size={16} className="mx-auto text-primary" />
                       ) : (
-                        <span className="text-gray-600">—</span>
+                        <span className="text-gray-600">-</span>
                       )}
                     </td>
                     <td className="px-6 py-3 text-center">
                       {trad ? (
                         <Check size={16} className="mx-auto text-gray-400" />
                       ) : (
-                        <span className="text-gray-600">—</span>
+                        <span className="text-gray-600">-</span>
                       )}
                     </td>
                   </tr>

@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
       {status === 'sent' ? (
         <p className="rounded-md border border-success/30 bg-success/5 px-3 py-3 text-sm text-success">
           If an account exists for that email, a reset link is on its way. Check your inbox (and the
-          dev console in this build — the link logs to server stdout until SendGrid is configured).
+          dev console in this build - the link logs to server stdout until SendGrid is configured).
         </p>
       ) : (
         <form onSubmit={onSubmit} noValidate>

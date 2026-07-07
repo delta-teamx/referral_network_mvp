@@ -82,7 +82,7 @@ export default function GroupsPage() {
                 Find a networking group near you
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-gray-600">
-                Weekly or monthly BNI-style circles. Every seat is one category — no competition
+                Weekly or monthly BNI-style circles. Every seat is one category - no competition
                 inside the room, only referrals.
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function GroupsPage() {
             <p className="font-semibold text-gray-900">No groups match.</p>
             <p className="mt-1 text-sm text-gray-600">
               {user
-                ? 'Be the first — start a group and invite your peers.'
+                ? 'Be the first - start a group and invite your peers.'
                 : 'Log in to start a group in your city.'}
             </p>
           </div>

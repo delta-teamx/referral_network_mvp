@@ -75,7 +75,7 @@ export default function AvailabilityPage() {
   function validateWindows(ws: Window[]): string | null {
     for (const w of ws) {
       if (w.startMin < 0 || w.endMin > 1440 || w.startMin >= w.endMin) {
-        return `${DAYS[w.dayOfWeek]} window has an invalid time range — end must be after start.`;
+        return `${DAYS[w.dayOfWeek]} window has an invalid time range - end must be after start.`;
       }
       if (w.endMin - w.startMin < 30) {
         return `${DAYS[w.dayOfWeek]} window is shorter than 30 minutes.`;

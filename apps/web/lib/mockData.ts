@@ -3,7 +3,7 @@
  * is unreachable. Lets us ship a frontend-only demo to Netlify and have every
  * page look real to a client/stakeholder.
  *
- * Triggered by `lib/api.ts` — see `isDemoMode()` and the fetch fallback.
+ * Triggered by `lib/api.ts` - see `isDemoMode()` and the fetch fallback.
  */
 
 export interface MockListing {
@@ -83,7 +83,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-johnson',
     slug: 'johnson-realty-group',
     name: 'Johnson Realty Group',
-    shortDescription: '5th-generation St. Louis realtor — 200+ closings since 2018.',
+    shortDescription: '5th-generation St. Louis realtor - 200+ closings since 2018.',
     description:
       'Johnson Realty Group has been helping St. Louis families buy and sell homes for over 35 years. Sarah Johnson, our lead agent, has personally closed 200+ transactions since 2018 with an average days-on-market of 12. We specialize in first-time buyers, downsizers, and luxury relocations across the metro.',
     address: '4520 Laclede Ave',
@@ -106,7 +106,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-cap-city',
     slug: 'cap-city-electric',
     name: 'Cap City Electric',
-    shortDescription: 'Licensed master electrician — emergency calls answered in 60 minutes.',
+    shortDescription: 'Licensed master electrician - emergency calls answered in 60 minutes.',
     description:
       'Cap City Electric is a family-owned electrical contractor serving the greater St. Louis area for 22 years. We handle residential rewiring, panel upgrades, EV charger installation, and 24/7 emergency calls. Master license #E-44210, bonded and insured up to $2M.',
     address: '812 N Broadway',
@@ -129,7 +129,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-stonegate',
     slug: 'stonegate-wedding-planning',
     name: 'Stonegate Wedding Planning',
-    shortDescription: 'Boutique wedding planning — 80+ weddings, zero "wedding-day disasters."',
+    shortDescription: 'Boutique wedding planning - 80+ weddings, zero "wedding-day disasters."',
     description:
       'Stonegate Wedding Planning is a boutique full-service planning firm. Founder Maya Patel has planned 80+ weddings in Missouri and Illinois with a perfect 5-star vendor coordination record. Packages range from day-of coordination to 18-month full planning.',
     address: '32 Maryland Plaza',
@@ -152,7 +152,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-river-bend',
     slug: 'river-bend-mortgage',
     name: 'River Bend Mortgage',
-    shortDescription: 'Conventional, FHA, VA, jumbo — fastest pre-approval in the metro.',
+    shortDescription: 'Conventional, FHA, VA, jumbo - fastest pre-approval in the metro.',
     description:
       'River Bend Mortgage is a local mortgage broker offering conventional, FHA, VA, and jumbo loans. Our average pre-approval turnaround is 4 hours and we close in under 21 days on 92% of files. We work with 47 wholesale lenders to get you the best rate, not just one bank\u2019s rate.',
     address: '1100 Olive St Suite 410',
@@ -175,7 +175,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-keystone-inspect',
     slug: 'keystone-home-inspection',
     name: 'Keystone Home Inspection',
-    shortDescription: 'InterNACHI-certified — 200-point inspection, same-day report.',
+    shortDescription: 'InterNACHI-certified - 200-point inspection, same-day report.',
     description:
       'Keystone Home Inspection is an InterNACHI-certified inspection firm. Every inspection includes 200+ checkpoints, drone roof imaging, thermal scan, and a same-day digital report your buyer agent can forward immediately.',
     address: '4200 Manchester Ave',
@@ -198,7 +198,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-two-rivers-cpa',
     slug: 'two-rivers-cpa',
     name: 'Two Rivers CPA',
-    shortDescription: 'Small-business CPA — bookkeeping, taxes, payroll under one roof.',
+    shortDescription: 'Small-business CPA - bookkeeping, taxes, payroll under one roof.',
     description:
       'Two Rivers CPA serves 180+ small businesses across Missouri and Illinois. Founder Daniel Reyes is a CPA + EA (Enrolled Agent) who specializes in S-corp election strategy, R&D tax credits, and IRS audit defense.',
     address: '7733 Forsyth Blvd',
@@ -269,7 +269,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     name: 'Greenleaf Cleaning Co.',
     shortDescription: 'Eco-friendly residential + Airbnb cleaning. Same-cleaner guarantee.',
     description:
-      'Greenleaf Cleaning Co. uses 100% non-toxic, child- and pet-safe cleaning products. We offer weekly, biweekly, monthly, deep-clean, and Airbnb turnover services. Same cleaner every visit \u2014 we don\u2019t rotate strangers through your home.',
+      'Greenleaf Cleaning Co. uses 100% non-toxic, child- and pet-safe cleaning products. We offer weekly, biweekly, monthly, deep-clean, and Airbnb turnover services. Same cleaner every visit - we don\u2019t rotate strangers through your home.',
     address: '1456 S Grand Blvd',
     city: 'St. Louis',
     state: 'MO',
@@ -290,7 +290,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-gateway-law',
     slug: 'gateway-family-law',
     name: 'Gateway Family Law',
-    shortDescription: 'Divorce, custody, adoption \u2014 free 30-min consult.',
+    shortDescription: 'Divorce, custody, adoption - free 30-min consult.',
     description:
       'Gateway Family Law is a Missouri-licensed family law practice. Lead attorney Karen Vasquez has 18 years of practice and offers a free 30-minute consultation. Sliding-scale billing available for qualifying families.',
     address: '720 Olive St Suite 1900',
@@ -336,7 +336,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     id: 'list-summit-insurance',
     slug: 'summit-insurance-agency',
     name: 'Summit Insurance Agency',
-    shortDescription: 'Independent broker \u2014 18 carriers, auto/home/life/business.',
+    shortDescription: 'Independent broker - 18 carriers, auto/home/life/business.',
     description:
       'Summit Insurance Agency is an independent broker representing 18 top-rated carriers. We compare auto, home, life, umbrella, and small-business policies to find you the right coverage at the lowest premium. No captive obligations.',
     address: '14323 S Outer Forty Rd',
@@ -371,7 +371,7 @@ export const MOCK_AI_SUGGESTIONS = [
   {
     id: 'intro-1',
     reason:
-      'Sarah works in Real Estate — an industry you want to connect with. She can refer clients to your business, and you can send her business.',
+      'Sarah works in Real Estate - an industry you want to connect with. She can refer clients to your business, and you can send her business.',
     matchScore: '82',
     status: 'suggested',
     createdAt: isoDaysAgo(1),
@@ -390,7 +390,7 @@ export const MOCK_AI_SUGGESTIONS = [
       memberProfile: mockMemberProfile(
         'Johnson Realty Group',
         'Real Estate',
-        '5th-generation St. Louis realtor — 200+ closings since 2018.',
+        '5th-generation St. Louis realtor - 200+ closings since 2018.',
         'St. Louis',
         true,
       ),
@@ -418,7 +418,7 @@ export const MOCK_AI_SUGGESTIONS = [
       memberProfile: mockMemberProfile(
         'Two Rivers CPA',
         'Accounting / CPA',
-        'Small-business CPA — bookkeeping, taxes, payroll under one roof.',
+        'Small-business CPA - bookkeeping, taxes, payroll under one roof.',
         'Clayton',
       ),
     },
@@ -438,7 +438,7 @@ export const MOCK_AI_SUGGESTIONS = [
       memberProfile: mockMemberProfile(
         'Stonegate Wedding Planning',
         'Wedding Planning',
-        'Boutique wedding planning — 80+ weddings.',
+        'Boutique wedding planning - 80+ weddings.',
       ),
     },
     target: {
@@ -483,7 +483,7 @@ export const MOCK_EVENTS = [
   {
     id: 'evt-3',
     title: 'STL Wedding Vendors Meetup',
-    description: 'Planners, photographers, caterers, florists — monthly virtual coffee.',
+    description: 'Planners, photographers, caterers, florists - monthly virtual coffee.',
     startsAt: new Date(Date.now() + 14 * 86400_000).toISOString(),
     durationMin: 45,
     zoomUrl: 'https://meet.jit.si/VPN-stl-wedding-vendors-7a8b9c',
@@ -499,7 +499,7 @@ export const MOCK_BOOKINGS = [
   {
     id: 'bk-1',
     reason: 'referral',
-    notes: 'Have a client looking for a roofer — want to see if you\u2019re a fit.',
+    notes: 'Have a client looking for a roofer - want to see if you\u2019re a fit.',
     startsAt: new Date(Date.now() + 2 * 86400_000 + 10 * 3600_000).toISOString(),
     endsAt: new Date(Date.now() + 2 * 86400_000 + 10.5 * 3600_000).toISOString(),
     status: 'confirmed',
@@ -541,7 +541,7 @@ export const MOCK_GROUPS = [
     id: 'grp-2',
     slug: 'stl-wedding-pros',
     name: 'Wedding Pros of St. Louis',
-    description: 'Photographers, planners, caterers, DJs, florists — one seat each.',
+    description: 'Photographers, planners, caterers, DJs, florists - one seat each.',
     city: 'St. Louis',
     state: 'MO',
     meetingSchedule: 'First Wednesday of the month · virtual',
@@ -630,7 +630,7 @@ export const MOCK_INVITATIONS = [
   {
     id: 'inv-1',
     recipientEmail: 'karen@gatewayfamilylaw.com',
-    message: "We've been sending each other referrals for months — let's make it official.",
+    message: "We've been sending each other referrals for months - let's make it official.",
     status: 'pending',
     expiresAt: new Date(Date.now() + 12 * 86400_000).toISOString(),
     createdAt: isoDaysAgo(2),
@@ -641,7 +641,7 @@ export const MOCK_INVITATIONS = [
 export const MOCK_PUBLIC_INVITE = {
   id: 'demo-token-1',
   recipientEmail: 'friend@example.com',
-  message: 'Hey — you\u2019d be a great fit for our referral network.',
+  message: 'Hey - you\u2019d be a great fit for our referral network.',
   status: 'pending' as const,
   expiresAt: new Date(Date.now() + 12 * 86400_000).toISOString(),
   sender: {
@@ -669,7 +669,7 @@ export const MOCK_REVIEWS: MockReview[] = [
   {
     id: 'rev-2',
     rating: 5,
-    title: 'First-time buyer \u2014 she made it easy',
+    title: 'First-time buyer - she made it easy',
     text: 'I was terrified of buying a house. Sarah walked me through every step, never made me feel dumb for asking basic questions. Closed on a duplex 4 months later. Already referred my brother.',
     isVerified: true,
     createdAt: isoDaysAgo(34),

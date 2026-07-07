@@ -81,13 +81,13 @@ export default function DemoPage() {
           </h1>
           <p className="mx-auto mb-6 max-w-2xl text-gray-600">
             Explore the full dashboard with sample data. See AI suggestions, analytics, booking system,
-            messaging, and network management — exactly what your members will use.
+            messaging, and network management - exactly what your members will use.
           </p>
           <Link
             href="https://virtualprosnetwork.com/signup"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            Start free — no credit card <ArrowRight size={14} />
+            Start free - no credit card <ArrowRight size={14} />
           </Link>
         </div>
       </section>

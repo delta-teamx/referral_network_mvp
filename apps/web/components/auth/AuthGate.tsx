@@ -8,7 +8,7 @@ import { useAuthStore } from '../../stores/auth';
 
 /**
  * Wrap any page that should only be visible to signed-in users.
- * Shows a "Please log in" card instead of redirecting — keeps the URL
+ * Shows a "Please log in" card instead of redirecting - keeps the URL
  * so they can come back after login.
  */
 export function AuthGate({ children }: { children: ReactNode }) {

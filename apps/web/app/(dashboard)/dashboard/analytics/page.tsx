@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Analytics</p>
         <h1 className="mt-1 text-2xl font-bold text-gray-900">12-week activity</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Leads, referrals, reviews, and rating distribution. Driven by domain events — updates in
+          Leads, referrals, reviews, and rating distribution. Driven by domain events - updates in
           near-real time.
         </p>
       </header>

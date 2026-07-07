@@ -17,7 +17,7 @@ const CAUSES = [
   {
     icon: Church,
     title: 'Support your church',
-    body: 'Churches can list service needs — roofing, landscaping, tech — and members pitch in.',
+    body: 'Churches can list service needs - roofing, landscaping, tech - and members pitch in.',
     cta: 'Register a church',
     accent: 'bg-sky-50 text-sky-700 border-sky-100',
   },

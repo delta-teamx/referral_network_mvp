@@ -74,7 +74,7 @@ const matchingFactors = [
 
 const afterMatch = [
   { icon: Send, title: 'Intro Request', description: 'Send a personal note along with your profile. The recipient reviews your info before deciding to connect.' },
-  { icon: CalendarClock, title: 'Zoom Booking', description: 'Once accepted, pick a mutual time and jump on a video call — no third-party scheduler needed.' },
+  { icon: CalendarClock, title: 'Zoom Booking', description: 'Once accepted, pick a mutual time and jump on a video call - no third-party scheduler needed.' },
   { icon: BarChart3, title: 'Outcome Tracking', description: 'After the call, tag the result: referral given, partnership formed, or follow-up needed. This data trains the AI.' },
 ];
 
@@ -97,7 +97,7 @@ const faqs = [
   },
   {
     q: 'How is this different from LinkedIn?',
-    a: 'LinkedIn is a broad social network. Referral Nova is purpose-built for B2B referrals — every feature, from matching to scheduling, is designed to turn connections into revenue.',
+    a: 'LinkedIn is a broad social network. Referral Nova is purpose-built for B2B referrals - every feature, from matching to scheduling, is designed to turn connections into revenue.',
   },
   {
     q: 'What happens to my data?',
@@ -335,7 +335,7 @@ export default function HowItWorksPage() {
             Ready to get matched?
           </motion.h2>
           <motion.p variants={fadeInUp} className="mt-4 text-gray-600">
-            Join thousands of business owners who are growing revenue through AI-powered referrals — no cold calls, no awkward mixers.
+            Join thousands of business owners who are growing revenue through AI-powered referrals - no cold calls, no awkward mixers.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8">
             <Link

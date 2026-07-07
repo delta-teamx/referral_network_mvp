@@ -77,7 +77,7 @@ export function AiFeed() {
 
       // The feed reads persisted Introduction rows. A brand-new (or newly
       // completed) profile has none yet, so ask the engine to generate them
-      // on demand, then re-read — instead of showing an empty feed forever.
+      // on demand, then re-read - instead of showing an empty feed forever.
       if (data.length === 0) {
         let complete = true;
         try {
@@ -89,7 +89,7 @@ export function AiFeed() {
           complete = isProfileComplete(me);
           setProfileReady(complete);
         } catch {
-          // No profile yet (or unreadable) — treat as incomplete so the user
+          // No profile yet (or unreadable) - treat as incomplete so the user
           // is pointed at onboarding rather than an empty "all set" screen.
           complete = false;
           setProfileReady(false);
@@ -166,8 +166,8 @@ export function AiFeed() {
             People you should meet
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            The AI scans every member&rsquo;s profile — who they serve, who they want to meet, who
-            they can refer — and surfaces your best matches. Request an intro and we connect you.
+            The AI scans every member&rsquo;s profile - who they serve, who they want to meet, who
+            they can refer - and surfaces your best matches. Request an intro and we connect you.
           </p>
         </div>
         <div className="flex gap-2">
@@ -225,7 +225,7 @@ export function AiFeed() {
             <>
               <h3 className="mb-2 text-lg font-semibold text-gray-900">Finish setting up your profile</h3>
               <p className="mb-4 text-sm text-gray-600">
-                Add your industry and tell us who you want to meet — that&rsquo;s what the AI uses to find your matches.
+                Add your industry and tell us who you want to meet - that&rsquo;s what the AI uses to find your matches.
               </p>
               <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
                 Complete profile →
@@ -236,7 +236,7 @@ export function AiFeed() {
               <h3 className="mb-2 text-lg font-semibold text-gray-900">Your profile is all set 🎉</h3>
               <p className="mb-4 text-sm text-gray-600">
                 We&rsquo;re scanning the network for your best connections. New matches appear here
-                as more members join — check back soon, or invite people you already refer.
+                as more members join - check back soon, or invite people you already refer.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <button

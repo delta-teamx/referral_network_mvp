@@ -22,7 +22,7 @@ export function LifeEventsGrid() {
           Start from <span className="text-primary">what&rsquo;s happening</span>, not a category.
         </>
       }
-      subtitle="Pick a life event. We translate it into the right pros and route your lead to the ones most likely to convert — ranked by trust score, distance, and category relevance."
+      subtitle="Pick a life event. We translate it into the right pros and route your lead to the ones most likely to convert - ranked by trust score, distance, and category relevance."
       background="bg-primary-light/40"
     >
       <motion.div

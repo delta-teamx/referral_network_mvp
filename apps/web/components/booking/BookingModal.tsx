@@ -287,7 +287,7 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
               </a>
             ) : (
               <p className="text-xs text-gray-500">
-                Zoom link is being generated — check your email shortly.
+                Zoom link is being generated - check your email shortly.
               </p>
             )}
             <Button onClick={onClose} className="w-full">
