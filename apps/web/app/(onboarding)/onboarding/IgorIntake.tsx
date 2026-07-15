@@ -27,7 +27,8 @@ const INDUSTRIES = [
   'Photography', 'Wedding Planning', 'Catering / Food', 'Floral', 'DJ / Entertainment',
   'Accounting / CPA', 'Law', 'Insurance', 'Web Design / Development', 'Marketing',
   'Interior Design', 'Healthcare', 'Financial Planning', 'Roofing', 'HVAC',
-  'Landscaping', 'Auto Services', 'Consulting', 'Other',
+  'Landscaping', 'Auto Services', 'Consulting', 'Business Consultant',
+  'Franchise Consultant', 'Franchise Coach', 'Other',
 ];
 
 const SERVICE_AREAS = [
