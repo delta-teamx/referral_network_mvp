@@ -314,27 +314,28 @@ interface I18nValue {
 
 const I18nContext = createContext<I18nValue | null>(null);
 
-function detectLocale(): Locale {
-  if (typeof window === 'undefined') return 'en';
-  const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
-  if (saved && DICTS[saved]) return saved;
-  const nav = (window.navigator.language || 'en').slice(0, 2).toLowerCase() as Locale;
-  return DICTS[nav] ? nav : 'en';
-}
+// To RE-ENABLE languages: restore auto-detect (browser language + saved
+// preference) inside I18nProvider and re-add <LanguageSwitcher /> to TopNav.
+// function detectLocale(): Locale {
+//   if (typeof window === 'undefined') return 'en';
+//   const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
+//   if (saved && DICTS[saved]) return saved;
+//   const nav = (window.navigator.language || 'en').slice(0, 2).toLowerCase() as Locale;
+//   return DICTS[nav] ? nav : 'en';
+// }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
+  // TEMPORARILY DISABLED: the switcher is hidden and the site is locked to
+  // English until translation coverage is complete, so partial translations
+  // don't crack the layout. Re-enable auto-detect + persistence (see
+  // detectLocale / the effects below) when ready to relaunch languages.
   const [locale, setLocaleState] = useState<Locale>('en');
 
   useEffect(() => {
-    setLocaleState(detectLocale());
-  }, []);
-
-  useEffect(() => {
     if (typeof document === 'undefined') return;
-    const dir = RTL_LOCALES.includes(locale) ? 'rtl' : 'ltr';
-    document.documentElement.lang = locale;
-    document.documentElement.dir = dir;
-  }, [locale]);
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
+  }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);

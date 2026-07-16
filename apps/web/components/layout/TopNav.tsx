@@ -9,7 +9,6 @@ import { useI18n } from '../../lib/i18n';
 import { BrandLogo } from '../ui/BrandLogo';
 import { ReferralNovaLogo } from '../ui/ReferralNovaLogo';
 import { NotificationBell } from './NotificationBell';
-import { LanguageSwitcher } from './LanguageSwitcher';
 
 const NAV_LINKS = [
   { href: '/how-it-works', key: 'nav.howItWorks' },
@@ -64,7 +63,6 @@ export function TopNav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <LanguageSwitcher className="hidden md:block" />
           {status === 'authenticated' && user ? (
             <>
               <NotificationBell />
@@ -157,9 +155,6 @@ export function TopNav() {
                 </button>
               </>
             )}
-            <div className="mt-2 border-t border-gray-100 pt-2">
-              <LanguageSwitcher />
-            </div>
           </nav>
         </div>
       )}
