@@ -21,8 +21,10 @@ import {
 import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 import { FoundingOffer } from '../components/marketing/FoundingOffer';
+import { useI18n } from '../lib/i18n';
 
 export default function HomePage() {
+  const { t } = useI18n();
   // On virtualprosnetwork.com, redirect to login (product domain = app only)
   if (typeof window !== 'undefined' && window.location.hostname === 'virtualprosnetwork.com') {
     window.location.href = '/login';
@@ -49,33 +51,31 @@ export default function HomePage() {
               animate="visible"
             >
               <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-primary">
-                <Sparkles size={14} /> Built by Referral Nova
+                <Sparkles size={14} /> {t('hero.badge')}
               </motion.div>
 
               <motion.h1
                 variants={fadeInUp}
                 className="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
               >
-                We build{' '}
+                {t('hero.titleA')}{' '}
                 <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  AI-powered
+                  {t('hero.titleHighlight')}
                 </span>{' '}
-                referral networks
+                {t('hero.titleB')}
               </motion.h1>
 
               <motion.p
                 variants={fadeInUp}
                 className="mb-4 max-w-lg text-lg leading-relaxed text-gray-300"
               >
-                Referral Nova is the technology company behind{' '}
-                <strong className="text-white">VirtualProsNetwork</strong> - an AI-powered platform
-                where business owners get matched, meet live on Zoom, and exchange warm referrals automatically.
+                {t('hero.sub')}
               </motion.p>
               <motion.p
                 variants={fadeInUp}
                 className="mb-8 max-w-lg text-base leading-relaxed text-gray-400"
               >
-                Whether you serve clients locally, remotely, or internationally - our AI finds your perfect referral partners.
+                {t('hero.sub2')}
               </motion.p>
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
@@ -83,13 +83,13 @@ export default function HomePage() {
                   href="https://virtualprosnetwork.com/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
-                  Join VirtualProsNetwork free <ArrowRight size={16} />
+                  {t('hero.ctaJoin')} <ArrowRight size={16} />
                 </Link>
                 <Link
                   href="/how-it-works"
                   className="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800/50 px-8 py-4 text-base font-semibold text-gray-200 backdrop-blur transition hover:border-gray-600 hover:bg-gray-800"
                 >
-                  <Play size={16} /> See how it works
+                  <Play size={16} /> {t('hero.ctaHow')}
                 </Link>
               </motion.div>
 

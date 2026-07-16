@@ -5,20 +5,23 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
+import { useI18n } from '../../lib/i18n';
 import { BrandLogo } from '../ui/BrandLogo';
 import { ReferralNovaLogo } from '../ui/ReferralNovaLogo';
 import { NotificationBell } from './NotificationBell';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 const NAV_LINKS = [
-  { href: '/how-it-works', label: 'How It Works' },
-  { href: '/for-members', label: 'For Members' },
-  { href: '/for-groups', label: 'For Groups' },
-  { href: '/events', label: 'Events' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/how-it-works', key: 'nav.howItWorks' },
+  { href: '/for-members', key: 'nav.forMembers' },
+  { href: '/for-groups', key: 'nav.forGroups' },
+  { href: '/events', key: 'nav.events' },
+  { href: '/pricing', key: 'nav.pricing' },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -55,12 +58,13 @@ export function TopNav() {
               href={link.href}
               className="rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher className="hidden md:block" />
           {status === 'authenticated' && user ? (
             <>
               <NotificationBell />
@@ -68,13 +72,13 @@ export function TopNav() {
                 href={`${vpnBase}/dashboard`}
                 className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
-                Dashboard
+                {t('nav.dashboard')}
               </a>
               <button
                 onClick={() => void logout()}
                 className="hidden rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 md:inline"
               >
-                Log out
+                {t('nav.logout')}
               </button>
             </>
           ) : (
@@ -82,7 +86,7 @@ export function TopNav() {
               {!isVpnDomain && (
                 <a
                   href="/demo"
-                  className="hidden rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white md:inline"
+                  className="hidden rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white lg:inline"
                 >
                   Live Demo
                 </a>
@@ -91,13 +95,13 @@ export function TopNav() {
                 href={`${vpnBase}/login`}
                 className="hidden rounded-md px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 md:inline"
               >
-                Log in
+                {t('nav.login')}
               </a>
               <a
                 href={`${vpnBase}/signup`}
                 className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
-                Join free
+                {t('nav.signup')}
               </a>
             </>
           )}
@@ -122,7 +126,7 @@ export function TopNav() {
                 onClick={() => setMobileOpen(false)}
                 className="rounded-md px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
               >
-                {link.label}
+                {t(link.key)}
               </Link>
             ))}
             {!user ? (
@@ -131,7 +135,7 @@ export function TopNav() {
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
               >
-                Log in
+                {t('nav.login')}
               </a>
             ) : (
               <>
@@ -140,7 +144,7 @@ export function TopNav() {
                   onClick={() => setMobileOpen(false)}
                   className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
                 >
-                  Dashboard
+                  {t('nav.dashboard')}
                 </a>
                 <button
                   onClick={() => {
@@ -149,10 +153,13 @@ export function TopNav() {
                   }}
                   className="rounded-md px-3 py-2.5 text-left text-sm text-gray-500 hover:bg-gray-50"
                 >
-                  Log out
+                  {t('nav.logout')}
                 </button>
               </>
             )}
+            <div className="mt-2 border-t border-gray-100 pt-2">
+              <LanguageSwitcher />
+            </div>
           </nav>
         </div>
       )}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Montserrat } from "next/font/google";
 import { DomainHead } from "../components/layout/DomainHead";
 import { LayoutShell } from "../components/layout/LayoutShell";
+import { I18nProvider } from "../lib/i18n";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -25,8 +26,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={montserrat.variable}>
       <body className="bg-white text-gray-900 antialiased">
-        <DomainHead />
-        <LayoutShell>{children}</LayoutShell>
+        <I18nProvider>
+          <DomainHead />
+          <LayoutShell>{children}</LayoutShell>
+        </I18nProvider>
       </body>
     </html>
   );

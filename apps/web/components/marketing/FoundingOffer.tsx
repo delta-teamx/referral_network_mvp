@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useFoundingStatus } from '../../lib/useFoundingStatus';
+import { useI18n } from '../../lib/i18n';
 
 const SIGNUP_URL = 'https://virtualprosnetwork.com/signup';
 
@@ -16,10 +17,13 @@ const SIGNUP_URL = 'https://virtualprosnetwork.com/signup';
  * we fall back to the evergreen offer copy rather than hiding it.
  */
 export function FoundingOffer({ variant }: { variant: 'bar' | 'card' }) {
+  const { t } = useI18n();
   const status = useFoundingStatus();
   const closed = status !== null && !status.isOpen;
   const spotsLeft =
-    status && status.isOpen ? ` Only ${status.remaining} of ${status.limit} spots left.` : '';
+    status && status.isOpen
+      ? ' ' + t('founding.barSpots', { n: status.remaining, limit: status.limit })
+      : '';
 
   if (variant === 'bar') {
     if (closed) return null; // promo is over — don't show the strip
@@ -28,9 +32,7 @@ export function FoundingOffer({ variant }: { variant: 'bar' | 'card' }) {
         href={SIGNUP_URL}
         className="block bg-gradient-to-r from-primary via-blue-600 to-cyan-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:brightness-110"
       >
-        🎉 Founding offer — the first{' '}
-        <span className="underline underline-offset-2">200 businesses get every feature free</span>.
-        {spotsLeft} No credit card. Claim your spot →
+        🎉 {t('founding.bar')}{spotsLeft} {t('founding.barCta')}
       </Link>
     );
   }
@@ -39,24 +41,17 @@ export function FoundingOffer({ variant }: { variant: 'bar' | 'card' }) {
   if (closed) {
     return (
       <div className="mx-auto mb-8 max-w-2xl rounded-2xl border border-gray-200 bg-white px-5 py-4 text-center">
-        <p className="text-sm font-semibold text-gray-900">
-          All 200 founding spots have been claimed 🙌
-        </p>
-        <p className="mt-1 text-xs text-gray-600 md:text-sm">
-          The plans below now apply to new members. Thank you to our founding businesses!
-        </p>
+        <p className="text-sm font-semibold text-gray-900">{t('founding.closedTitle')}</p>
+        <p className="mt-1 text-xs text-gray-600 md:text-sm">{t('founding.closedBody')}</p>
       </div>
     );
   }
 
   return (
     <div className="mx-auto mb-8 max-w-2xl rounded-2xl border border-primary/20 bg-primary-light px-5 py-4 text-center">
-      <p className="text-sm font-bold text-primary md:text-base">
-        🎉 Founding offer: the first 200 businesses get every paid feature free
-      </p>
+      <p className="text-sm font-bold text-primary md:text-base">🎉 {t('founding.cardTitle')}</p>
       <p className="mt-1 text-xs text-gray-600 md:text-sm">
-        Sign up now and keep full Pro access at no cost.{spotsLeft} After the first 200 members, the
-        plans below apply.
+        {t('founding.cardBody')}{spotsLeft} {t('founding.cardAfter')}
       </p>
     </div>
   );

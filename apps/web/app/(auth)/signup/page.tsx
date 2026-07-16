@@ -13,10 +13,12 @@ import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { FoundingOffer } from '../../../components/marketing/FoundingOffer';
+import { useI18n } from '../../../lib/i18n';
 import { useAuthStore } from '../../../stores/auth';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const signup = useAuthStore((s) => s.signup);
   const status = useAuthStore((s) => s.status);
   const globalError = useAuthStore((s) => s.error);
@@ -68,35 +70,35 @@ export default function SignupPage() {
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="It takes under a minute. No credit card required."
+      title={t('auth.signupTitle')}
+      subtitle={t('auth.signupSub')}
       footer={
         <>
-          Already have an account?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
-            Log in
+            {t('auth.logIn')}
           </Link>
         </>
       }
     >
       <FoundingOffer variant="card" />
-      <GoogleButton label="Sign up with Google" />
+      <GoogleButton label={t('auth.googleSignup')} />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />
-        <span>or with email</span>
+        <span>{t('auth.orEmail')}</span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
       <form onSubmit={onSubmit} noValidate>
         <div className="grid grid-cols-2 gap-3">
           <FormField
-            label="First name"
+            label={t('auth.firstName')}
             name="firstName"
             autoComplete="given-name"
             required
             error={fieldErrors.firstName}
           />
           <FormField
-            label="Last name"
+            label={t('auth.lastName')}
             name="lastName"
             autoComplete="family-name"
             required
@@ -104,7 +106,7 @@ export default function SignupPage() {
           />
         </div>
         <FormField
-          label="Email"
+          label={t('auth.email')}
           name="email"
           type="email"
           autoComplete="email"
@@ -112,7 +114,7 @@ export default function SignupPage() {
           error={fieldErrors.email}
         />
         <FormField
-          label="Password"
+          label={t('auth.password')}
           name="password"
           type="password"
           autoComplete="new-password"
@@ -159,7 +161,7 @@ export default function SignupPage() {
         )}
 
         <Button type="submit" loading={status === 'loading'} className="w-full">
-          Create account
+          {t('auth.createAccount')}
         </Button>
       </form>
     </AuthShell>

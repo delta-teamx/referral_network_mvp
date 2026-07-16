@@ -11,9 +11,11 @@ import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { useAuthStore } from '../../../stores/auth';
+import { useI18n } from '../../../lib/i18n';
 
 function LoginInner() {
   const router = useRouter();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const status = useAuthStore((s) => s.status);
@@ -55,26 +57,26 @@ function LoginInner() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to your VirtualProsNetwork account"
+      title={t('auth.loginTitle')}
+      subtitle={t('auth.loginSub')}
       footer={
         <>
-          Need an account?{' '}
+          {t('auth.noAccount')}{' '}
           <Link href="/signup" className="font-medium text-primary hover:underline">
-            Sign up
+            {t('nav.signup')}
           </Link>
         </>
       }
     >
-      <GoogleButton />
+      <GoogleButton label={t('auth.googleLogin')} />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />
-        <span>or sign in with email</span>
+        <span>{t('auth.orEmail')}</span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
       <form onSubmit={onSubmit} noValidate>
         <FormField
-          label="Email"
+          label={t('auth.email')}
           name="email"
           type="email"
           autoComplete="email"
@@ -82,7 +84,7 @@ function LoginInner() {
           error={fieldErrors.email}
         />
         <FormField
-          label="Password"
+          label={t('auth.password')}
           name="password"
           type="password"
           autoComplete="current-password"
@@ -97,7 +99,7 @@ function LoginInner() {
         )}
 
         <Button type="submit" loading={status === 'loading'} className="w-full">
-          Log in
+          {t('auth.logIn')}
         </Button>
         <p className="mt-4 text-center text-sm">
           <Link href="/forgot-password" className="text-primary hover:underline">
