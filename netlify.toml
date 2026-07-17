@@ -14,7 +14,7 @@
 # Dynamic route fallbacks
 [[redirects]]
   from = "/listing/*"
-  to = "/listing/johnson-realty-group/index.html"
+  to = "/listing/listing/index.html"
   status = 200
 
 [[redirects]]

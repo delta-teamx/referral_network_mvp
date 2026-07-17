@@ -1,23 +1,19 @@
 import type { ApiResponse } from '@refnet/shared';
-import { getMockResponse } from './mockData';
 
 /**
  * Typed fetch wrapper. Always hits `NEXT_PUBLIC_API_URL`, always sends
- * credentials so the HTTP-only refresh-token cookie rides along, and
- * always decodes the canonical `ApiResponse<T>` envelope.
+ * credentials so the HTTP-only refresh-token cookie rides along, and always
+ * decodes the canonical `ApiResponse<T>` envelope.
  *
- * **Demo mode**: when `NEXT_PUBLIC_API_URL` is unset OR the API rejects the
- * request with a network error, we fall back to `lib/mockData.ts`. This lets
- * us ship a frontend-only build to Netlify for client demos without a live
- * backend. Set `NEXT_PUBLIC_DEMO_MODE=force` to always use mocks.
+ * There is no mock/demo fallback: the app talks only to the real API, and
+ * surfaces real errors instead of ever showing placeholder data.
  */
 
 const RAW_API = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined;
 const API_BASE = RAW_API && RAW_API.length > 0 ? RAW_API : '';
-const FORCE_DEMO =
-  typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEMO_MODE === 'force';
 
-export const isDemoMode = (): boolean => FORCE_DEMO || !API_BASE;
+/** True only when no API URL is configured (e.g. a preview build). */
+export const isDemoMode = (): boolean => !API_BASE;
 
 export class ApiError extends Error {
   constructor(
@@ -37,37 +33,11 @@ export interface ApiOptions {
   signal?: AbortSignal;
 }
 
-function buildPathWithQuery(path: string, query?: ApiOptions['query']): string {
-  if (!query) return path;
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(query)) {
-    if (v !== undefined) sp.set(k, String(v));
-  }
-  const qs = sp.toString();
-  return qs ? `${path}?${qs}` : path;
-}
-
-function mockOrThrow<T>(method: string, path: string, originalErr: unknown): T {
-  const mock = getMockResponse(method, path);
-  if (mock !== undefined) return mock as T;
-  if (originalErr instanceof ApiError) throw originalErr;
-  throw new ApiError('Demo mode: no mock for this endpoint', 0);
-}
-
 export async function apiRequest<T>(
   method: string,
   path: string,
   opts: ApiOptions = {},
 ): Promise<T> {
-  const fullPath = buildPathWithQuery(path, opts.query);
-
-  // Force demo mode: short-circuit before any network call.
-  if (isDemoMode()) {
-    const mock = getMockResponse(method, fullPath);
-    if (mock !== undefined) return mock as T;
-    throw new ApiError('Demo mode: no mock for this endpoint', 0);
-  }
-
   const doFetch = async (token?: string): Promise<T> => {
     const url = path.startsWith('http') ? new URL(path) : new URL(`${API_BASE}${path}`);
     if (opts.query) {
@@ -90,29 +60,18 @@ export async function apiRequest<T>(
         body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
         signal: opts.signal,
       });
-    } catch (networkErr) {
-      return mockOrThrow<T>(method, fullPath, networkErr);
+    } catch {
+      throw new ApiError('Network error — please try again.', 0);
     }
 
     let envelope: ApiResponse<T>;
     try {
       envelope = (await res.json()) as ApiResponse<T>;
     } catch {
-      return mockOrThrow<T>(method, fullPath, new ApiError(`Unexpected response (${res.status})`, res.status));
+      throw new ApiError(`Unexpected response (${res.status})`, res.status);
     }
 
     if (!res.ok || envelope.success === false) {
-      if (res.status >= 500 || res.status === 0) {
-        return mockOrThrow<T>(
-          method,
-          fullPath,
-          new ApiError(envelope.error ?? `Request failed (${res.status})`, res.status, envelope.details),
-        );
-      }
-      if (res.status === 401) {
-        const mock = getMockResponse(method, fullPath);
-        if (mock !== undefined) return mock as T;
-      }
       throw new ApiError(
         envelope.error ?? `Request failed (${res.status})`,
         res.status,

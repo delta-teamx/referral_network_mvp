@@ -1,12 +1,27 @@
 import { z } from 'zod';
 import { emailSchema, passwordSchema, phoneSchema, zipCodeSchema } from './common';
 
+/**
+ * Rejects links / URLs / spam markup in human-name fields. Spam bots were
+ * signing up with names like "⏳ Click https://bit.ly/… ⏳" to inject links
+ * into the members directory. A real name never contains a URL, "@", angle
+ * brackets, or newlines.
+ */
+const LINK_OR_MARKUP_RE = /(https?:\/\/|www\.|bit\.ly|t\.me|\b[a-z0-9-]+\.(com|net|org|ru|io|xyz|top|link|click|info|biz)\b|[<>]|[\r\n]|@)/i;
+const nameSchema = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} is required`)
+    .max(60)
+    .refine((v) => !LINK_OR_MARKUP_RE.test(v), `${label} can't contain links or symbols`);
+
 /** Shared between signup form (frontend) and /api/v1/auth/signup (backend). */
 export const signupSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  firstName: z.string().trim().min(1, 'First name is required').max(80),
-  lastName: z.string().trim().min(1, 'Last name is required').max(80),
+  firstName: nameSchema('First name'),
+  lastName: nameSchema('Last name'),
   phone: phoneSchema.optional(),
   /**
    * CONSUMER or BUSINESS_OWNER — chosen at signup. Admin / group-leader /
