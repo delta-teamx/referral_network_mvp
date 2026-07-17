@@ -1,55 +1,92 @@
 /**
- * Seed — populates demo data so the homepage, directory, and life-events
- * connector all work out of the box after a fresh `prisma migrate`.
+ * Seed — populates reference data (categories, life-event → category map) and
+ * admin accounts. It NO LONGER creates any demo/test businesses or members, and
+ * it actively removes any that were seeded previously (see cleanupDemoData).
  *
  * Idempotent: re-running won't duplicate rows. Safe to run in CI.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
 import { CATEGORY_SEEDS } from '@refnet/shared';
 
 const prisma = new PrismaClient();
 
+// Accounts previously created by this seed (and by the removed seed-demo.sql).
+// Anything matching these emails, or the @vpn-demo.com pattern, is test data.
+const DEMO_EMAILS = [
+  'demo-owner@virtualprosnetwork.local',
+  'sarah@johnsonrealty.com',
+  'daniel@tworiverscpa.com',
+  'maya@stonegateweddings.com',
+  'emma@bloomphoto.com',
+];
+const DEMO_GROUP_SLUG = 'stl-virtual-pros';
+
 /**
- * Seeds the interconnected demo referral network (see seed-demo.sql) and then
- * asks the matching engine to generate introductions between them, so the AI
- * feed is populated out of the box. Both steps are best-effort and never abort
- * the main seed.
+ * Hard-delete every seeded/demo/test account, listing, group and all of their
+ * dependent rows. Child rows are removed first because most relations have no
+ * ON DELETE CASCADE. Only matches the demo email set + @vpn-demo.com pattern,
+ * so real sign-ups are never touched. Idempotent — a no-op once clean.
  */
-async function seedDemoNetwork(): Promise<void> {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const sql = readFileSync(join(here, 'seed-demo.sql'), 'utf8');
-    const statements = sql
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('--'))
-      .join('\n')
-      .split(';')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    for (const stmt of statements) {
-      await prisma.$executeRawUnsafe(stmt);
-    }
-    const count = await prisma.memberProfile.count({
-      where: { user: { email: { endsWith: '@vpn-demo.com' } } },
-    });
-    console.log(`[seed] demo referral network ready — ${count} interconnected members.`);
-  } catch (err) {
-    console.error('[seed] demo member seed failed (non-fatal):', err);
+async function cleanupDemoData(): Promise<void> {
+  const demoUsers = await prisma.user.findMany({
+    where: { OR: [{ email: { in: DEMO_EMAILS } }, { email: { endsWith: '@vpn-demo.com' } }] },
+    select: { id: true },
+  });
+  const ids = demoUsers.map((u) => u.id);
+  const demoListings = await prisma.listing.findMany({
+    where: { userId: { in: ids } },
+    select: { id: true },
+  });
+  const listingIds = demoListings.map((l) => l.id);
+
+  if (ids.length === 0 && listingIds.length === 0) {
+    console.log('[seed] no demo/test data to remove.');
     return;
   }
 
-  try {
-    const { refreshAllSuggestions } = await import(
-      '../src/domains/matching/ai/ai-matching.service.js'
-    );
-    const res = await refreshAllSuggestions();
-    console.log(`[seed] generated ${res.intros} AI introductions across ${res.users} members.`);
-  } catch (err) {
-    console.error('[seed] AI intro generation skipped (non-fatal):', err);
-  }
+  await prisma.introduction.deleteMany({
+    where: { OR: [{ senderId: { in: ids } }, { targetId: { in: ids } }] },
+  });
+  await prisma.referralTracking.deleteMany({
+    where: { OR: [{ referrerUserId: { in: ids } }, { inviteeUserId: { in: ids } }] },
+  });
+  await prisma.referral.deleteMany({
+    where: { OR: [{ senderId: { in: ids } }, { receiverId: { in: ids } }, { listingId: { in: listingIds } }] },
+  });
+  await prisma.businessInvitation.deleteMany({
+    where: { OR: [{ senderId: { in: ids } }, { recipientUserId: { in: ids } }] },
+  });
+  await prisma.businessConnection.deleteMany({
+    where: { OR: [{ initiatorId: { in: ids } }, { targetId: { in: ids } }] },
+  });
+  await prisma.bookingCall.deleteMany({
+    where: { OR: [{ hostId: { in: ids } }, { guestId: { in: ids } }] },
+  });
+  await prisma.message.deleteMany({ where: { senderId: { in: ids } } });
+  await prisma.eventRegistration.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.podMember.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.podFeedback.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.review.deleteMany({
+    where: { OR: [{ userId: { in: ids } }, { listingId: { in: listingIds } }] },
+  });
+  await prisma.consumerLead.deleteMany({
+    where: { OR: [{ consumerId: { in: ids } }, { listingId: { in: listingIds } }] },
+  });
+  await prisma.favorite.deleteMany({
+    where: { OR: [{ userId: { in: ids } }, { listingId: { in: listingIds } }] },
+  });
+  await prisma.notification.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.subscription.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.onboardingProgress.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.groupMember.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.listing.deleteMany({ where: { id: { in: listingIds } } });
+  await prisma.memberProfile.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.group.deleteMany({ where: { slug: DEMO_GROUP_SLUG } });
+  const deleted = await prisma.user.deleteMany({ where: { id: { in: ids } } });
+
+  console.log(
+    `[seed] removed ${deleted.count} demo account(s), ${listingIds.length} demo listing(s), and their data.`,
+  );
 }
 
 const LISTINGS = [
@@ -417,6 +454,8 @@ async function main() {
     });
   }
 
+  // Demo listings/businesses only seed when SEED_DEMO=true (never in production).
+  if (process.env.SEED_DEMO === 'true') {
   console.log('[seed] ensuring demo business owner');
   const owner = await prisma.user.upsert({
     where: { email: 'demo-owner@virtualprosnetwork.local' },
@@ -468,6 +507,7 @@ async function main() {
       },
     });
   }
+  } // end SEED_DEMO (demo listings)
 
   console.log('[seed] upserting event→category relevance map');
   for (const [eventType, entries] of Object.entries(EVENT_CATEGORY_MAP)) {
@@ -560,6 +600,8 @@ async function main() {
     console.log('  Set ADMIN_EMAILS=a@x.com,b@x.com and ADMIN_PASSWORD=StrongPass123! in your .env');
   }
 
+  // Demo members + demo group only seed when SEED_DEMO=true (never in production).
+  if (process.env.SEED_DEMO === 'true') {
   console.log('[seed] creating demo member accounts + profiles');
   const members = [
     {
@@ -707,8 +749,10 @@ async function main() {
       });
     }
   }
+  } // end SEED_DEMO (demo members + group)
 
-  await seedDemoNetwork();
+  // Always remove any demo/test data that a previous seed created.
+  await cleanupDemoData();
 
   console.log('[seed] all done!');
   console.log('');
@@ -716,7 +760,6 @@ async function main() {
   if (adminEmails.length > 0) {
     console.log(`Admin(s): ${adminEmails.join(', ')} (password set via ADMIN_PASSWORD env var)`);
   }
-  console.log('Demo members: sarah, daniel, maya, emma (passwords redacted from logs)');
   console.log('');
 }
 
