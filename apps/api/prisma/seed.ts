@@ -716,9 +716,9 @@ async function main() {
   const group = await prisma.group.upsert({
     where: { slug: 'stl-virtual-pros' },
     create: {
-      name: 'STL Virtual Pros',
+      name: 'STL Referral Nova',
       slug: 'stl-virtual-pros',
-      description: 'Virtual Pros St. Louis chapter — the AI-powered referral network.',
+      description: 'Referral Nova St. Louis chapter — the AI-powered referral network.',
       city: 'St. Louis',
       state: 'MO',
       meetingSchedule: 'Every Tuesday 7am (virtual)',

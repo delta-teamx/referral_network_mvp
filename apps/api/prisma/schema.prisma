@@ -1,4 +1,4 @@
-// VirtualProsNetwork — Prisma schema
+// Referral Nova — Prisma schema
 // See /root/.claude/plans/valiant-sprouting-island.md for context.
 
 generator client {

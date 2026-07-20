@@ -60,7 +60,7 @@ function jitsiFallback(topic: string): ZoomMeetingResult {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
-  const room = `VPN-${slug || 'call'}-${token}`;
+  const room = `RN-${slug || 'call'}-${token}`;
   return { meetingId: room, joinUrl: `https://meet.jit.si/${room}`, demo: true };
 }
 

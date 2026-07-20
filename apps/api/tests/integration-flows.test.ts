@@ -26,7 +26,7 @@ describe('Admin 1: Onboarding + Profile validation', () => {
     expect(isDisposableEmail('test@mailinator.com')).toBe(true);
     expect(isDisposableEmail('test@yopmail.com')).toBe(true);
     expect(isDisposableEmail('legit@gmail.com')).toBe(false);
-    expect(isDisposableEmail('pro@virtualprosnetwork.com')).toBe(false);
+    expect(isDisposableEmail('pro@referralnova.com')).toBe(false);
   });
 
   it('blocklist covers at least 20 providers', () => {
@@ -158,7 +158,7 @@ describe('Admin 3: Booking + Calendar (.ics)', () => {
     const ics = generateIcs(event);
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('END:VCALENDAR');
-    expect(ics).toContain('UID:test-123@virtualprosnetwork.app');
+    expect(ics).toContain('UID:test-123@referralnova.com');
     expect(ics).toContain('SUMMARY:Partnership Discussion');
     expect(ics).toContain('LOCATION:https://zoom.us/j/123');
     expect(ics).toContain('ORGANIZER:mailto:host@example.com');
@@ -166,7 +166,7 @@ describe('Admin 3: Booking + Calendar (.ics)', () => {
     expect(ics).toContain('mailto:guest@example.com');
     expect(ics).toContain('DTSTART:20260501T140000Z');
     expect(ics).toContain('DTEND:20260501T143000Z');
-    expect(ics).toContain('PRODID:-//VirtualProsNetwork//Booking//EN');
+    expect(ics).toContain('PRODID:-//Referral Nova//Booking//EN');
     expect(ics).toContain('METHOD:REQUEST');
   });
 

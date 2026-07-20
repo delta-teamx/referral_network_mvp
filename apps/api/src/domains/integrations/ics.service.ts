@@ -35,7 +35,7 @@ export function generateIcs(event: IcsEvent): string {
     'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'BEGIN:VEVENT',
-    `UID:${event.uid}@virtualprosnetwork.app`,
+    `UID:${event.uid}@referralnova.com`,
     `DTSTAMP:${now}`,
     `DTSTART:${fmtDateUtc(event.startsAt)}`,
     `DTEND:${fmtDateUtc(event.endsAt)}`,
