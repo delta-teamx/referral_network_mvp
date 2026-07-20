@@ -16,6 +16,7 @@ export type EmailTemplate =
   | 'otp'
   | 'password_reset'
   | 'welcome'
+  | 'new_signup_admin'
   | 'invitation'
   | 'lead_received'
   | 'referral_received'
@@ -88,6 +89,19 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: basicLayout(
           `Welcome aboard`,
           `<p>Your account is ready. Tell us a little about your goals and we\u2019ll match you to the right pros and partners.</p>${cta('Complete onboarding', String(d.onboardingUrl))}`,
+        ),
+      };
+    case 'new_signup_admin':
+      return {
+        subject: `New ${appName} sign-up: ${d.name}`,
+        text: `New sign-up on ${appName}: ${d.name} (${d.email}) as ${d.role}. Admin: ${d.dashboardUrl}`,
+        html: basicLayout(
+          'New member sign-up',
+          `<p>A new member just joined <strong>${appName}</strong>:</p>
+           <p><strong>Name:</strong> ${escapeHtml(String(d.name ?? ''))}<br>
+           <strong>Email:</strong> ${escapeHtml(String(d.email ?? ''))}<br>
+           <strong>Type:</strong> ${escapeHtml(String(d.role ?? ''))}</p>
+           ${cta('Open admin console', String(d.dashboardUrl ?? '#'))}`,
         ),
       };
     case 'invitation':

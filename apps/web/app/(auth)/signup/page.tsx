@@ -51,21 +51,9 @@ export default function SignupPage() {
       // globalError is already set by the store
       return;
     }
-    // Account created - send OTP and redirect
-    const email = parsed.data.email;
-    try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/auth/send-otp`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
-    } catch {
-      // OTP send failed - user can resend from the verify page
-    }
-    window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
+    // Account is active immediately — send them straight into onboarding so
+    // they can build their profile and start getting matched right away.
+    window.location.href = '/onboarding';
   }
 
   return (

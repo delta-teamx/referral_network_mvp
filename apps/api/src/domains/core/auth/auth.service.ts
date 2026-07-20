@@ -47,7 +47,6 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   }
 
   const passwordHash = await hashPassword(input.password);
-  const emailVerifyToken = generateToken(32);
 
   // Founding-member promo: the first 200 genuine sign-ups get full paid access.
   const subscriptionTier = await resolveSignupTier();
@@ -61,7 +60,11 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
       phone: input.phone ?? null,
       role: input.role,
       subscriptionTier,
-      emailVerifyToken: hashToken(emailVerifyToken),
+      // Launch: email delivery isn't gating the funnel. New accounts are active
+      // immediately so real sign-ups can onboard and use the product without
+      // waiting on a verification email. Spam is held back by name validation,
+      // disposable-email checks and signup rate limiting.
+      emailVerified: true,
     },
   });
 
@@ -71,17 +74,48 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     role: user.role,
   });
 
-  // Fire-and-forget — email service logs to console in dev.
-  void sendEmail({
-    to: user.email,
-    template: 'verify_email',
-    data: {
-      firstName: user.firstName,
-      verifyUrl: `${env.FRONTEND_URL.split(',')[0]}/verify-email?token=${emailVerifyToken}`,
-    },
-  });
+  // Notify admins that someone signed up (best-effort; needs email configured).
+  void notifyAdminsOfSignup(user);
 
   return buildAuthSuccess(user);
+}
+
+/**
+ * Email every admin when a new member signs up. Best-effort — never throws and
+ * never blocks the signup response. Delivers once an email provider
+ * (SENDGRID_API_KEY) is configured; otherwise it logs to the server console.
+ */
+async function notifyAdminsOfSignup(user: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}): Promise<void> {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN', deletedAt: null },
+      select: { email: true },
+    });
+    if (admins.length === 0) return;
+    const dashboardUrl = `${env.FRONTEND_URL.split(',')[0]}/admin/users`;
+    await Promise.all(
+      admins.map((a) =>
+        sendEmail({
+          to: a.email,
+          template: 'new_signup_admin',
+          data: {
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            email: user.email,
+            role: user.role,
+            dashboardUrl,
+          },
+        }),
+      ),
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[signup] admin notification failed', err);
+  }
 }
 
 /** Email+password login. */
