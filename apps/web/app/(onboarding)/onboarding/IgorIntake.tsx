@@ -279,7 +279,7 @@ export function IgorIntake() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <FormField label="City" name="city" placeholder="Albany" value={city} onChange={(e) => setCity(e.target.value)} />
               <FormField label="State" name="state" placeholder="NY" maxLength={2} value={state} onChange={(e) => setState(e.target.value.toUpperCase())} />
               <FormField label="ZIP" name="zipCode" placeholder="12207" value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
