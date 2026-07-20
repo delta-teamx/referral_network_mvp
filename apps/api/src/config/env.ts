@@ -12,7 +12,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
-  APP_NAME: z.string().default('VirtualProsNetwork'),
+  APP_NAME: z.string().default('Referral Nova'),
   // Comma-separated list of allowed frontend origins (for CORS + cookie domain).
   // Single URL works too; splitting happens in index.ts.
   FRONTEND_URL: z
@@ -59,7 +59,7 @@ const envSchema = z.object({
   // Email — handles notifications, OTP, and all transactional email.
   // Provider is chosen by whichever key is set: Resend takes priority, then
   // SendGrid, otherwise emails are logged to the console.
-  EMAIL_FROM: z.string().email().default('noreply@virtualprosnetwork.com'),
+  EMAIL_FROM: z.string().email().default('noreply@referralnova.com'),
   RESEND_API_KEY: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
 

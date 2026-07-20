@@ -12,6 +12,8 @@ import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { useAuthStore } from '../../../stores/auth';
 import { useI18n } from '../../../lib/i18n';
+import { MAINTENANCE_MODE } from '../../../lib/maintenance';
+import { MaintenanceNotice } from '../../../components/marketing/MaintenanceNotice';
 
 function LoginInner() {
   const router = useRouter();
@@ -56,6 +58,9 @@ function LoginInner() {
   }
 
   return (
+    MAINTENANCE_MODE ? (
+      <MaintenanceNotice />
+    ) : (
     <AuthShell
       title={t('auth.loginTitle')}
       subtitle={t('auth.loginSub')}
@@ -108,6 +113,7 @@ function LoginInner() {
         </p>
       </form>
     </AuthShell>
+    )
   );
 }
 

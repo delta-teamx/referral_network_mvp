@@ -35,14 +35,15 @@ services:
       - key: PORT
         value: 10000
       - key: APP_NAME
-        value: VirtualProsNetwork
+        value: Referral Nova
       - key: DATABASE_URL
         fromDatabase:
           name: refnet-db
           property: connectionString
-      # Comma-separated. Update with your Netlify domain after first deploy.
+      # Comma-separated allowed origins (CORS). MUST include the app domain, or
+      # the browser blocks API calls from it.
       - key: FRONTEND_URL
-        value: https://referral-network-usa.netlify.app,http://localhost:3000
+        value: https://dashboard.referralnova.com,https://referralnova.com,https://referral-network-usa.netlify.app,http://localhost:3000
       - key: API_URL
         sync: false
       - key: JWT_ACCESS_SECRET
@@ -54,7 +55,7 @@ services:
       - key: JWT_REFRESH_TTL
         value: 30d
       - key: EMAIL_FROM
-        value: noreply@virtualprosnetwork.com
+        value: noreply@referralnova.com
       # Unused on free deploy — keep schema happy.
       - key: REDIS_URL
         value: redis://localhost:6379

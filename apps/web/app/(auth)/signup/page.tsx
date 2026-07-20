@@ -13,6 +13,8 @@ import { GoogleButton } from '../../../components/auth/GoogleButton';
 import { FormField } from '../../../components/ui/FormField';
 import { Button } from '../../../components/ui/Button';
 import { FoundingOffer } from '../../../components/marketing/FoundingOffer';
+import { MaintenanceNotice } from '../../../components/marketing/MaintenanceNotice';
+import { MAINTENANCE_MODE } from '../../../lib/maintenance';
 import { useI18n } from '../../../lib/i18n';
 import { useAuthStore } from '../../../stores/auth';
 
@@ -55,6 +57,8 @@ export default function SignupPage() {
     // they can build their profile and start getting matched right away.
     window.location.href = '/onboarding';
   }
+
+  if (MAINTENANCE_MODE) return <MaintenanceNotice />;
 
   return (
     <AuthShell

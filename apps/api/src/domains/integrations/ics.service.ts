@@ -31,7 +31,7 @@ export function generateIcs(event: IcsEvent): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//VirtualProsNetwork//Booking//EN',
+    'PRODID:-//Referral Nova//Booking//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:REQUEST',
     'BEGIN:VEVENT',

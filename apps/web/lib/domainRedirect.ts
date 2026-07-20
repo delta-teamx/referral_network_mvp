@@ -1,22 +1,22 @@
 'use client';
 
 import { useEffect } from 'react';
+import { MARKETING_BASE_URL, isAppHost } from './domains';
 
 /**
- * Redirects public marketing pages from virtualprosnetwork.com to referralnova.com.
- * Returns true if redirect is happening (caller should return null).
+ * Redirects public marketing pages that are opened on the app domain
+ * (dashboard.referralnova.com, or the legacy virtualprosnetwork.com hosts)
+ * over to the marketing site (referralnova.com). Returns true while the
+ * redirect is happening so the caller can render nothing.
  */
 export function usePublicPageRedirect(): boolean {
-  const isVpn =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'virtualprosnetwork.com' ||
-      window.location.hostname === 'www.virtualprosnetwork.com');
+  const onAppDomain = isAppHost();
 
   useEffect(() => {
-    if (isVpn) {
-      window.location.href = `https://referralnova.com${window.location.pathname}`;
+    if (onAppDomain) {
+      window.location.href = `${MARKETING_BASE_URL}${window.location.pathname}`;
     }
-  }, [isVpn]);
+  }, [onAppDomain]);
 
-  return isVpn;
+  return onAppDomain;
 }

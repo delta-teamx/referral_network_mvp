@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useFoundingStatus } from '../../lib/useFoundingStatus';
 import { useI18n } from '../../lib/i18n';
 
-const SIGNUP_URL = 'https://virtualprosnetwork.com/signup';
+const SIGNUP_URL = 'https://dashboard.referralnova.com/signup';
 
 /**
  * Founding-member promo, backed by the live /billing/founding-status count.

@@ -34,7 +34,7 @@ export default function AboutPage() {
           <h2 className="mt-10 text-2xl font-bold text-gray-900">Two products</h2>
           <ul className="my-4 space-y-2">
             <li>
-              <strong>Virtual Pros Network</strong> - our own flagship network, open to any
+              <strong>Referral Nova</strong> - our own flagship network, open to any
               business owner looking for quality referrals.
             </li>
             <li>

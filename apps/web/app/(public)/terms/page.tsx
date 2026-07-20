@@ -82,8 +82,8 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold text-gray-900">9. Contact</h2>
             <p>
               Questions? Email{' '}
-              <a href="mailto:legal@virtualprosnetwork.com" className="font-semibold text-primary">
-                legal@virtualprosnetwork.com
+              <a href="mailto:legal@dashboard.referralnova.com" className="font-semibold text-primary">
+                legal@dashboard.referralnova.com
               </a>.
             </p>
           </section>

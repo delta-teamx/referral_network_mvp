@@ -48,7 +48,7 @@ interface RenderedEmail {
 
 function renderTemplate(req: EmailRequest): RenderedEmail {
   const d = req.data;
-  const appName = 'VirtualProsNetwork';
+  const appName = 'Referral Nova';
   switch (req.template) {
     case 'verify_email':
       return {
@@ -164,7 +164,7 @@ function basicLayout(heading: string, bodyHtml: string): string {
     <h1 style="font-size:20px;margin:0 0 16px;">${heading}</h1>
     ${bodyHtml}
     <hr style="border:0;border-top:1px solid #eee;margin:32px 0 16px;">
-    <p style="color:#888;font-size:12px;margin:0;">VirtualProsNetwork · Trusted local pros, matched to life\u2019s moments</p>
+    <p style="color:#888;font-size:12px;margin:0;">Referral Nova · Trusted local pros, matched to life\u2019s moments</p>
   </body></html>`;
 }
 

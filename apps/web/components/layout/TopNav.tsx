@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { useI18n } from '../../lib/i18n';
-import { BrandLogo } from '../ui/BrandLogo';
+import { APP_BASE_URL, MARKETING_BASE_URL, isAppHost } from '../../lib/domains';
 import { ReferralNovaLogo } from '../ui/ReferralNovaLogo';
 import { NotificationBell } from './NotificationBell';
 
@@ -31,15 +31,16 @@ export function TopNav() {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
-  const isVpnDomain = typeof window !== 'undefined' &&
-    (window.location.hostname === 'virtualprosnetwork.com' || window.location.hostname === 'www.virtualprosnetwork.com');
+  const isAppDomain = isAppHost();
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/forgot') || pathname.startsWith('/verify') || pathname.startsWith('/onboarding');
   const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
-  const Logo = (isDashboard || isVpnDomain) ? BrandLogo : ReferralNovaLogo;
-  const vpnBase = (isDashboard || isVpnDomain) ? '' : 'https://virtualprosnetwork.com';
+  const Logo = ReferralNovaLogo;
+  // On the app domain the links are same-origin; from the marketing site they
+  // point at the app domain.
+  const appBase = (isDashboard || isAppDomain) ? '' : APP_BASE_URL;
   const logoHref = isDashboard ? (user ? '/dashboard' : '/login')
-    : isAuthPage ? 'https://referralnova.com'
-    : isVpnDomain ? '/login'
+    : isAuthPage ? MARKETING_BASE_URL
+    : isAppDomain ? '/login'
     : '/';
 
   return (
@@ -67,7 +68,7 @@ export function TopNav() {
             <>
               <NotificationBell />
               <a
-                href={`${vpnBase}/dashboard`}
+                href={`${appBase}/dashboard`}
                 className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
                 {t('nav.dashboard')}
@@ -81,7 +82,7 @@ export function TopNav() {
             </>
           ) : (
             <>
-              {!isVpnDomain && (
+              {!isAppDomain && (
                 <a
                   href="/demo"
                   className="hidden rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white lg:inline"
@@ -90,13 +91,13 @@ export function TopNav() {
                 </a>
               )}
               <a
-                href={`${vpnBase}/login`}
+                href={`${appBase}/login`}
                 className="hidden rounded-md px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 md:inline"
               >
                 {t('nav.login')}
               </a>
               <a
-                href={`${vpnBase}/signup`}
+                href={`${appBase}/signup`}
                 className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
               >
                 {t('nav.signup')}
@@ -129,7 +130,7 @@ export function TopNav() {
             ))}
             {!user ? (
               <a
-                href={`${vpnBase}/login`}
+                href={`${appBase}/login`}
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
               >
@@ -138,7 +139,7 @@ export function TopNav() {
             ) : (
               <>
                 <a
-                  href={`${vpnBase}/dashboard`}
+                  href={`${appBase}/dashboard`}
                   onClick={() => setMobileOpen(false)}
                   className="mt-2 rounded-md px-3 py-2.5 text-sm font-medium text-primary"
                 >

@@ -22,11 +22,13 @@ import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 import { FoundingOffer } from '../components/marketing/FoundingOffer';
 import { useI18n } from '../lib/i18n';
+import { isAppHost } from '../lib/domains';
 
 export default function HomePage() {
   const { t } = useI18n();
-  // On virtualprosnetwork.com, redirect to login (product domain = app only)
-  if (typeof window !== 'undefined' && window.location.hostname === 'virtualprosnetwork.com') {
+  // On the app domain (dashboard.referralnova.com), redirect to login —
+  // the marketing homepage only renders on referralnova.com.
+  if (isAppHost()) {
     window.location.href = '/login';
     return null;
   }
@@ -80,7 +82,7 @@ export default function HomePage() {
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
                 <Link
-                  href="https://virtualprosnetwork.com/signup"
+                  href="https://dashboard.referralnova.com/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
                   {t('hero.ctaJoin')} <ArrowRight size={16} />
@@ -330,7 +332,7 @@ export default function HomePage() {
                   <Network size={24} />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">STL Virtual Pros</p>
+                  <p className="font-semibold text-gray-900">STL Referral Nova</p>
                   <p className="text-xs text-gray-500">Powered by Referral Nova</p>
                 </div>
               </div>
@@ -450,7 +452,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-6">
           <Sparkles size={32} className="mx-auto mb-4 text-primary" />
           <h2 className="mb-4 text-3xl font-bold md:text-5xl">
-            Your next referral partner is waiting on VirtualProsNetwork
+            Your next referral partner is waiting on Referral Nova
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
             Built by Referral Nova, powered by AI. Sign up, complete your profile, and get your first
@@ -458,7 +460,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="https://virtualprosnetwork.com/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
               Get started free <ArrowRight size={16} />
