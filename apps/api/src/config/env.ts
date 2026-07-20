@@ -56,8 +56,11 @@ const envSchema = z.object({
   AWS_REGION: z.string().default('us-east-1'),
   AWS_S3_BUCKET: z.string().optional(),
 
-  // Email (SendGrid) — handles notifications, OTP, and all transactional email
+  // Email — handles notifications, OTP, and all transactional email.
+  // Provider is chosen by whichever key is set: Resend takes priority, then
+  // SendGrid, otherwise emails are logged to the console.
   EMAIL_FROM: z.string().email().default('noreply@virtualprosnetwork.com'),
+  RESEND_API_KEY: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
 
   // Maps

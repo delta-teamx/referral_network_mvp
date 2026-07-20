@@ -195,6 +195,47 @@ class ConsoleEmailProvider implements EmailProvider {
   }
 }
 
+/**
+ * Resend provider (https://resend.com). Uses the plain REST API via fetch so
+ * no extra dependency is needed. Requires RESEND_API_KEY and a verified sender
+ * domain matching EMAIL_FROM (for testing you can send from onboarding@resend.dev
+ * to your own account email without domain verification).
+ */
+class ResendEmailProvider implements EmailProvider {
+  constructor(private readonly apiKey: string) {}
+
+  async send(req: EmailRequest): Promise<void> {
+    const r = renderTemplate(req);
+    const body: Record<string, unknown> = {
+      from: env.EMAIL_FROM,
+      to: [req.to],
+      subject: r.subject,
+      text: r.text,
+      html: r.html,
+    };
+    if (req.attachments && req.attachments.length > 0) {
+      body.attachments = req.attachments.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content).toString('base64'),
+      }));
+    }
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(`Resend send failed: ${res.status} ${detail}`);
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[email:resend] sent "${r.subject}" to ${req.to}`);
+  }
+}
+
 class SendGridEmailProvider implements EmailProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private client: any = null;
@@ -226,6 +267,11 @@ class SendGridEmailProvider implements EmailProvider {
 }
 
 async function createProvider(): Promise<EmailProvider> {
+  if (env.RESEND_API_KEY) {
+    // eslint-disable-next-line no-console
+    console.log('[email] Resend provider active');
+    return new ResendEmailProvider(env.RESEND_API_KEY);
+  }
   if (!env.SENDGRID_API_KEY) return new ConsoleEmailProvider();
   try {
     const mod = await import('@sendgrid/mail');
