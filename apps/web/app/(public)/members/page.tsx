@@ -1,9 +1,9 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Briefcase, Calendar, Film, HandCoins, MapPin } from 'lucide-react';
+import { Briefcase, Calendar, Film, HandCoins, MapPin, MessageSquare, Target } from 'lucide-react';
 import { fadeInUp } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
@@ -15,9 +15,13 @@ interface PublicProfile {
   industry: string;
   headline: string | null;
   bio: string | null;
+  photoUrl: string | null;
   videoUrl: string | null;
   servicesOffered: string[];
   yearsInBusiness: number | null;
+  icpIndustries: string[];
+  icpRoles: string[];
+  canReferIndustries: string[];
   city: string | null;
   state: string | null;
   openToBarter: boolean;
@@ -36,10 +40,30 @@ function MemberProfileInner() {
   const params = useSearchParams();
   const id = params.get('id') ?? '';
 
+  const router = useRouter();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  async function startConversation() {
+    if (!profile || !accessToken) return;
+    setMessaging(true);
+    try {
+      await api.post(
+        '/api/v1/messages/start',
+        { targetUserId: profile.user.id },
+        { accessToken: accessToken ?? undefined },
+      );
+      router.push('/dashboard/messages');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not start the conversation.');
+    } finally {
+      setMessaging(false);
+    }
+  }
 
   useEffect(() => {
     if (!id) {
@@ -99,9 +123,9 @@ function MemberProfileInner() {
         {/* Header */}
         <div className="bg-gradient-to-br from-primary to-blue-600 p-8 text-white">
           <div className="flex items-center gap-4">
-            {profile.user.avatarUrl ? (
+            {profile.photoUrl || profile.user.avatarUrl ? (
               <img
-                src={profile.user.avatarUrl}
+                src={profile.photoUrl ?? profile.user.avatarUrl ?? ''}
                 alt={initials}
                 className="h-16 w-16 rounded-full border-2 border-white/50 object-cover"
               />
@@ -125,12 +149,19 @@ function MemberProfileInner() {
             </p>
           )}
           {user && user.id !== profile.user.id && (
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
                 onClick={() => setBookingOpen(true)}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-lg shadow-black/10 transition hover:bg-white/90"
               >
-                <Calendar size={14} /> Book a call with {profile.user.firstName}
+                <Calendar size={14} /> Book a call
+              </button>
+              <button
+                onClick={() => void startConversation()}
+                disabled={messaging}
+                className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-60"
+              >
+                <MessageSquare size={14} /> {messaging ? 'Opening…' : 'Message'}
               </button>
             </div>
           )}
@@ -177,6 +208,38 @@ function MemberProfileInner() {
                 className="w-full rounded-xl"
                 preload="metadata"
               />
+            </section>
+          )}
+
+          {/* Who they want to meet */}
+          {(profile.icpIndustries.length > 0 || profile.icpRoles.length > 0) && (
+            <section>
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                <Target size={14} /> Who they want to meet
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {[...profile.icpIndustries, ...profile.icpRoles].map((s) => (
+                  <span key={s} className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Who they refer to */}
+          {profile.canReferIndustries.length > 0 && (
+            <section>
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                <HandCoins size={14} /> Refers clients to
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {profile.canReferIndustries.map((s) => (
+                  <span key={s} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                    {s}
+                  </span>
+                ))}
+              </div>
             </section>
           )}
 

@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Network,
+  Search,
   Settings,
   Store,
   Users,
@@ -22,6 +23,7 @@ import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/members', label: 'Members', icon: Search },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
   { href: '/dashboard/referrals', label: 'Referrals', icon: Users },

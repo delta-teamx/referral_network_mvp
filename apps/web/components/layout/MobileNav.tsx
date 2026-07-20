@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, Clock, LayoutDashboard, MessageSquare, Users } from 'lucide-react';
+import { Calendar, LayoutDashboard, MessageSquare, Search, Users } from 'lucide-react';
 
 /**
  * Mobile bottom navigation. Shown only on <md screens where the sidebar is
@@ -11,9 +11,9 @@ import { Calendar, Clock, LayoutDashboard, MessageSquare, Users } from 'lucide-r
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/dashboard/bookings', label: 'Calls', icon: Calendar },
-  { href: '/dashboard/availability', label: 'Hours', icon: Clock },
+  { href: '/dashboard/members', label: 'Members', icon: Search },
   { href: '/dashboard/messages', label: 'Chat', icon: MessageSquare },
+  { href: '/dashboard/bookings', label: 'Calls', icon: Calendar },
   { href: '/dashboard/network', label: 'Network', icon: Users },
 ];
 
