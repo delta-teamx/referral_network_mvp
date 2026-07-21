@@ -12,16 +12,8 @@ import type { ApiResponse } from '@refnet/shared';
 const RAW_API = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined;
 const DEFAULT_API_BASE = RAW_API && RAW_API.length > 0 ? RAW_API : '';
 
-/**
- * API base resolved per request so the migration is zero-downtime:
- * the new app domain (dashboard.referralnova.com) talks to api.referralnova.com,
- * while every existing domain keeps using the configured (working) API. When
- * the old domains are retired, this override can be removed.
- */
+/** The API the app talks to, configured via NEXT_PUBLIC_API_URL. */
 function apiBase(): string {
-  if (typeof window !== 'undefined' && window.location.hostname === 'dashboard.referralnova.com') {
-    return 'https://api.referralnova.com';
-  }
   return DEFAULT_API_BASE;
 }
 
