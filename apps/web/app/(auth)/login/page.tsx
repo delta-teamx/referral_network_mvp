@@ -73,6 +73,11 @@ function LoginInner() {
         </>
       }
     >
+      {searchParams.get('error') === 'google_signin_failed' && (
+        <p className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+          Google sign-in didn’t complete. Please try again, or use your email and password.
+        </p>
+      )}
       <GoogleButton label={t('auth.googleLogin')} />
       <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
         <div className="h-px flex-1 bg-gray-200" />

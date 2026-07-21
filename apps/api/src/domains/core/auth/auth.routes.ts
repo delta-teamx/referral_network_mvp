@@ -198,23 +198,31 @@ authRouter.get(
 authRouter.get(
   '/oauth/google/callback',
   asyncHandler(async (req, res) => {
-    const code = typeof req.query.code === 'string' ? req.query.code : '';
-    const state = typeof req.query.state === 'string' ? req.query.state : '';
-    if (!code || !state || !verifyOAuthState(state)) {
-      throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
-    }
-
-    const result = await completeGoogleOAuth(code);
-    setRefreshCookie(res, result.refreshToken);
-
     const origin = env.FRONTEND_URL.split(',')[0] ?? 'http://localhost:3000';
-    const fragment = new URLSearchParams({
-      access_token: result.dto.tokens.accessToken,
-      expires_in: String(result.dto.tokens.expiresIn),
-      user_id: result.dto.user.id,
-      is_new: result.isNew ? '1' : '0',
-    });
-    res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
+    try {
+      const code = typeof req.query.code === 'string' ? req.query.code : '';
+      const state = typeof req.query.state === 'string' ? req.query.state : '';
+      if (!code || !state || !verifyOAuthState(state)) {
+        throw AppError.badRequest('Invalid OAuth state. Try signing in again.');
+      }
+
+      const result = await completeGoogleOAuth(code);
+      setRefreshCookie(res, result.refreshToken);
+
+      const fragment = new URLSearchParams({
+        access_token: result.dto.tokens.accessToken,
+        expires_in: String(result.dto.tokens.expiresIn),
+        user_id: result.dto.user.id,
+        is_new: result.isNew ? '1' : '0',
+      });
+      res.redirect(`${origin}/oauth/complete#${fragment.toString()}`);
+    } catch (err) {
+      // Bounce back to a real page with an error flag instead of dumping raw
+      // JSON on the API host (e.g. on redirect-URI mismatch during setup).
+      // eslint-disable-next-line no-console
+      console.error('[oauth:google] callback failed', err);
+      res.redirect(`${origin}/login?error=google_signin_failed`);
+    }
   }),
 );
 
