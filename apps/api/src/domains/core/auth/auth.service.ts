@@ -49,7 +49,14 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   const passwordHash = await hashPassword(input.password);
 
   // Founding-member promo: the first 200 genuine sign-ups get full paid access.
-  const subscriptionTier = await resolveSignupTier();
+  // Never let the promo lookup block a signup — default to FREE if it fails.
+  let subscriptionTier: 'PREMIUM' | 'FREE' = 'FREE';
+  try {
+    subscriptionTier = await resolveSignupTier();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[signup] founding-tier lookup failed; defaulting to FREE', err);
+  }
 
   const user = await prisma.user.create({
     data: {
@@ -68,11 +75,19 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     },
   });
 
-  await eventBus.publish('user.signed_up', {
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
+  // Post-signup side effects (onboarding row, referral linking, welcome email)
+  // are best-effort. The account already exists, so a failure here must never
+  // turn a successful signup into a 500 — log it and continue.
+  try {
+    await eventBus.publish('user.signed_up', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[signup] post-signup side effects failed (account still created)', err);
+  }
 
   // Notify admins that someone signed up (best-effort; needs email configured).
   void notifyAdminsOfSignup(user);
