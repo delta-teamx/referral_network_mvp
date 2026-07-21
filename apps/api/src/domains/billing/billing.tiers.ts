@@ -67,7 +67,7 @@ export function planFor(tier: Tier): TierCaps {
 export async function canReceiveMoreLeads(userId: string): Promise<{
   allowed: boolean;
   used: number;
-  cap: number;
+  cap: number | null;
   tier: Tier;
 }> {
   const user = await prisma.user.findUnique({
@@ -91,7 +91,9 @@ export async function canReceiveMoreLeads(userId: string): Promise<{
   return {
     allowed: used < caps.maxLeadsPerMonth,
     used,
-    cap: caps.maxLeadsPerMonth,
+    // Infinity (PREMIUM/unlimited) serializes to null in JSON — expose it as
+    // null explicitly so clients get "unlimited" rather than a broken value.
+    cap: Number.isFinite(caps.maxLeadsPerMonth) ? caps.maxLeadsPerMonth : null,
     tier,
   };
 }

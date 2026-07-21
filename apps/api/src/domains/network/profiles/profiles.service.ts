@@ -66,7 +66,13 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
   await prisma.onboardingProgress.upsert({
     where: { userId },
     create: { userId, completedSteps: ['profile_submitted'], completedAt: new Date() },
-    update: { completedAt: new Date() },
+    // The row already exists (created at signup), so the update branch is what
+    // actually runs — record the step here too (set, not push, to stay
+    // idempotent when a member edits their profile again).
+    update: {
+      completedSteps: ['profile_submitted'],
+      completedAt: new Date(),
+    },
   });
 
   await eventBus.publish('onboarding.completed', { userId });

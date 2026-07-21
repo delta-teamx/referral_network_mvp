@@ -20,7 +20,9 @@ export async function countFoundingMembers(): Promise<number> {
   return prisma.user.count({
     where: {
       deletedAt: null,
-      role: { not: 'ADMIN' },
+      // Founding spots are for real businesses — exclude admins and consumers so
+      // consumer sign-ups don't burn through the 200 business slots.
+      role: { notIn: ['ADMIN', 'CONSUMER'] },
       NOT: { email: { endsWith: '@vpn-demo.com' } },
     },
   });

@@ -22,6 +22,15 @@ export async function getOrCreateConversation(
     throw AppError.badRequest("You can't message yourself.");
   }
 
+  // The route only validates that userIdB is a UUID — confirm the target user
+  // actually exists (and isn't soft-deleted) before creating participant rows,
+  // otherwise the FK insert throws a raw 500 instead of a clean 404.
+  const target = await prisma.user.findFirst({
+    where: { id: userIdB, deletedAt: null },
+    select: { id: true },
+  });
+  if (!target) throw AppError.notFound('That member no longer exists.');
+
   // Look for an existing 1-on-1 conversation between the two users.
   const existing = await prisma.conversation.findFirst({
     where: {

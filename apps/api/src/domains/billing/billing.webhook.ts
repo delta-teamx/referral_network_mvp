@@ -69,9 +69,17 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         payload: event as unknown as object,
       },
     });
-  } catch {
-    // Unique violation → duplicate event, ack and move on.
-    res.json({ received: true, duplicate: true });
+  } catch (err) {
+    // Only a unique-violation (P2002) means we've already processed this event;
+    // ack and move on. Any other failure (DB blip, oversized payload) must NOT
+    // be treated as a duplicate — return 500 so Stripe retries later.
+    if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') {
+      res.json({ received: true, duplicate: true });
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.error('[stripe:webhook] idempotency insert failed', err);
+    res.status(500).json({ success: false, error: 'Webhook persistence failed' });
     return;
   }
 
@@ -111,14 +119,25 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         });
         if (!user) break;
         const priceId = sub.items?.data?.[0]?.price?.id;
-        const tier = priceIdToTier(priceId);
         const active = sub.status === 'active' || sub.status === 'trialing';
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { subscriptionTier: active ? tier : 'FREE' },
-        });
         if (!active) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { subscriptionTier: 'FREE' },
+          });
           await eventBus.publish('subscription.canceled', { userId: user.id });
+          break;
+        }
+        // Active subscription: only apply a RECOGNIZED paid tier. Never downgrade
+        // an active subscriber to FREE just because the price id isn't one we know
+        // (unset price env vars, an annual/alternate price, a future price change) —
+        // that would silently strip paid access on routine renewal/update events.
+        const tier = priceIdToTier(priceId);
+        if (tier !== 'FREE') {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { subscriptionTier: tier },
+          });
         }
         break;
       }

@@ -15,7 +15,7 @@ interface AdminUser {
   subscriptionTier: string;
   emailVerified: boolean;
   createdAt: string;
-  _count: { listings: number; referralsSent: number };
+  _count: { listings: number; sentReferrals: number };
 }
 
 interface UserProfile {
@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
               </div>
               <div className="flex justify-between border-b border-gray-800 pb-2">
                 <span className="text-gray-500">Referrals sent</span>
-                <span className="text-gray-200">{viewingUser._count.referralsSent}</span>
+                <span className="text-gray-200">{viewingUser._count.sentReferrals}</span>
               </div>
               <div className="flex justify-between border-b border-gray-800 pb-2">
                 <span className="text-gray-500">Joined</span>

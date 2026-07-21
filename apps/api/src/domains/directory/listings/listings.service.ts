@@ -46,8 +46,8 @@ export async function listListings(filters: ListingListFilters = {}) {
   if (filters.zipPrefix) {
     where.zipCode = { startsWith: filters.zipPrefix };
   }
-  if (filters.city) where.city = filters.city;
-  if (filters.state) where.state = filters.state;
+  if (filters.city) where.city = { equals: filters.city, mode: 'insensitive' };
+  if (filters.state) where.state = filters.state.toUpperCase().slice(0, 2);
   if (filters.verifiedOnly) where.isVerified = true;
   if (filters.minRating !== undefined) where.avgRating = { gte: filters.minRating };
 
