@@ -6,9 +6,12 @@ import type { EventBus, EventHandler, Unsubscribe } from './EventBus.js';
  *
  * Behaviour:
  *   - Handlers for a single event type run in parallel (`Promise.all`).
- *   - A thrown handler does not prevent peer handlers from running; the
- *     first rejection surfaces back to the publisher. This matches the
- *     semantics of BullMQ per-job isolation we'll get in Branch 4.
+ *   - A thrown handler does not prevent peer handlers from running, and a
+ *     handler failure is logged but NOT surfaced to the publisher. Domain
+ *     events are side-effects (emails, audit rows, referral linking) fired
+ *     after the primary action has already committed, so a failing subscriber
+ *     must never roll back or 500 the request that triggered it. Durable
+ *     per-handler retry/DLQ semantics arrive with the BullMQ bus in Branch 4.
  *   - Synchronous handlers are allowed (wrapped via `Promise.resolve`).
  *
  * Not suitable beyond a single process — Branch 4 replaces this with a
@@ -34,12 +37,14 @@ export class InMemoryEventBus implements EventBus {
       ),
     );
 
-    // Surface the first failure after all handlers have had a chance to run.
-    const firstRejection = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-    if (firstRejection) {
-      // eslint-disable-next-line no-console
-      console.error(`[events] handler for "${String(type)}" failed:`, firstRejection.reason);
-      throw firstRejection.reason;
+    // Log every handler failure, but never surface it to the publisher — a
+    // side-effect subscriber must not break the primary action that already
+    // committed (see class docstring).
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        // eslint-disable-next-line no-console
+        console.error(`[events] handler for "${String(type)}" failed:`, r.reason);
+      }
     }
   }
 

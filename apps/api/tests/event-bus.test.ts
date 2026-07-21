@@ -52,7 +52,7 @@ describe('InMemoryEventBus', () => {
     expect(other).not.toHaveBeenCalled();
   });
 
-  it('runs every subscriber even if one throws, then surfaces the error', async () => {
+  it('runs every subscriber even if one throws, and never surfaces the error', async () => {
     const bus = new InMemoryEventBus();
     const bad = vi.fn(() => {
       throw new Error('boom');
@@ -61,11 +61,13 @@ describe('InMemoryEventBus', () => {
     bus.subscribe('listing.created', bad);
     bus.subscribe('listing.created', good);
 
+    // A failing side-effect subscriber must NOT reject the publish — the
+    // primary action has already committed by the time events fire.
     await expect(
       bus.publish('listing.created', { listingId: 'l1', userId: 'u1' }),
-    ).rejects.toThrow('boom');
+    ).resolves.toBeUndefined();
 
-    // Promise.allSettled semantics: both handlers got to run before the throw.
+    // Both handlers still got to run (Promise.allSettled semantics).
     expect(bad).toHaveBeenCalled();
     expect(good).toHaveBeenCalled();
   });
