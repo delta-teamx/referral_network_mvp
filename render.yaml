@@ -1,18 +1,14 @@
-# Render Blueprint: Express API + Managed Postgres.
+# Render Blueprint: Express API.
 # Web (Next.js) is hosted on Netlify — see netlify.toml.
+# Database is Supabase (managed outside Render).
 #
 # Deploy:
 #   1. Push repo to GitHub (already done).
 #   2. On Render → New → Blueprint → point at this repo.
-#   3. Render creates the DB + web service from this file.
-#   4. After first deploy, set FRONTEND_URL to the Netlify domain.
-
-databases:
-  - name: refnet-db
-    plan: free
-    databaseName: referral_network
-    user: refnet
-    postgresMajorVersion: "15"
+#   3. In the Render dashboard, set DATABASE_URL and DIRECT_DATABASE_URL to the
+#      Supabase connection strings (both are sync:false so the blueprint never
+#      overwrites them). Use the Supabase pooler host, NOT a Render Postgres.
+#   4. Set FRONTEND_URL to the app + marketing domains.
 
 services:
   - type: web
@@ -36,10 +32,15 @@ services:
         value: 10000
       - key: APP_NAME
         value: Referral Nova
+      # Supabase connection strings — set these in the Render dashboard.
+      # sync:false keeps a blueprint re-sync from overwriting them (that revert
+      # is what pointed the app at an empty Render Postgres and 500'd all auth).
+      # DATABASE_URL is used for runtime queries, DIRECT_DATABASE_URL for
+      # migrations — both must point at Supabase.
       - key: DATABASE_URL
-        fromDatabase:
-          name: refnet-db
-          property: connectionString
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false
       # Comma-separated allowed origins (CORS). MUST include the app domain, or
       # the browser blocks API calls from it.
       - key: FRONTEND_URL
