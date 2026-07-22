@@ -170,8 +170,14 @@ async function ensureRuntimeSchema(): Promise<void> {
     await prisma.$executeRawUnsafe(
       `DO $$ BEGIN ALTER TABLE "GroupMessage" ADD CONSTRAINT "GroupMessage_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
     );
+
+    // Columns added to schema.prisma without a matching migration (drift that
+    // otherwise 500s the queries that select them).
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "Availability" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'America/Chicago';`,
+    );
     // eslint-disable-next-line no-console
-    console.log('[schema] ensured GroupMessage table');
+    console.log('[schema] ensured GroupMessage table + drifted columns');
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('[schema] ensureRuntimeSchema failed (non-fatal):', String(err));
