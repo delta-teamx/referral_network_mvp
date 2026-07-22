@@ -68,12 +68,13 @@ export function MemberProfileView({ id }: { id: string }) {
     setMessaging(true);
     setError(null);
     try {
-      await api.post(
+      const conversation = await api.post<{ id: string }>(
         '/api/v1/messages/start',
         { targetUserId: profile.user.id },
         { accessToken: accessToken ?? undefined },
       );
-      router.push('/dashboard/messages');
+      // Land directly in this lead's thread, not just on the messages page.
+      router.push(`/dashboard/messages?c=${conversation.id}`);
     } catch (err) {
       // Include the HTTP status so a failure is self-diagnosing from the UI.
       setError(

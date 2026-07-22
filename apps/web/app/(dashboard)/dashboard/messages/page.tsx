@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MessageSquare, Send } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
@@ -43,9 +44,12 @@ interface Message {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function MessagesPage() {
+function MessagesInner() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
+  // ?c=<conversationId> — set when arriving from a member profile's Message
+  // button, so we open that lead's thread immediately.
+  const preselectId = useSearchParams().get('c');
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -80,6 +84,18 @@ export default function MessagesPage() {
       cancelled = true;
     };
   }, [accessToken]);
+
+  // ---- Auto-open a conversation -------------------------------------------
+  // Prefer the one passed via ?c= (from a profile's Message button);
+  // otherwise open the most recent so the page is never an empty pane.
+  useEffect(() => {
+    if (loading || activeId || conversations.length === 0) return;
+    const target =
+      preselectId && conversations.some((c) => c.id === preselectId)
+        ? preselectId
+        : conversations[0]!.id;
+    setActiveId(target);
+  }, [loading, activeId, conversations, preselectId]);
 
   // ---- Load messages for active conversation ------------------------------
 
@@ -317,5 +333,13 @@ export default function MessagesPage() {
       </section>
     </div>
     </UpgradeGate>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div className="h-[calc(100vh-4rem)] animate-pulse bg-gray-50" />}>
+      <MessagesInner />
+    </Suspense>
   );
 }
