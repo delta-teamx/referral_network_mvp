@@ -40,6 +40,12 @@ export interface MatchResult {
   score: number;
   reason: string;
   factors: Record<string, number>;
+  /**
+   * 'strong'  — a real two-sided fit (industry / referral / ICP overlap).
+   * 'discovery' — an out-of-the-box pick surfaced so the network is never
+   *   hidden; shown as "you might be interested" rather than a % match.
+   */
+  kind: 'strong' | 'discovery';
 }
 
 /**
@@ -77,17 +83,59 @@ export async function generateMatchesForUser(
     take: 200,
   });
 
-  // Score each candidate
-  const scored = candidates.map((c) => scoreMatch(myProfile, c)).filter((m) => m.score > 0);
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit);
+  // Score everyone (keep the candidate profile alongside its score so we can
+  // write a good reason for the discovery tier).
+  const scored = candidates
+    .map((them) => ({ them, m: scoreMatch(myProfile, them) }))
+    .sort((a, b) => b.m.score - a.m.score);
+
+  // Two tiers, so the network is NEVER hidden behind a strict threshold:
+  //   • strong    — real two-sided overlap (score ≥ floor), shown with reasons
+  //   • discovery — everyone else, surfaced as "you might be interested" picks
+  // We take the strong matches first, then fill the remaining slots with the
+  // best-ranked discovery members so a small/new network still feels alive.
+  const STRONG_FLOOR = 15;
+  const out: MatchResult[] = [];
+  for (const { m } of scored) {
+    if (m.score >= STRONG_FLOOR) out.push({ ...m, kind: 'strong' });
+  }
+  for (const { them, m } of scored) {
+    if (out.length >= limit) break;
+    if (m.score >= STRONG_FLOOR) continue; // already added as a strong match
+    out.push({
+      targetUserId: them.userId,
+      score: m.score,
+      reason: discoveryReason(myProfile, them),
+      factors: { ...m.factors, discovery: 1 },
+      kind: 'discovery',
+    });
+  }
+  return out.slice(0, limit);
+}
+
+/**
+ * Warm, referral-framed reason for a discovery (out-of-the-box) suggestion.
+ * Leans on any weak signal we do have (shared state, a hint of industry
+ * alignment) but never claims a match that isn't there.
+ */
+function discoveryReason(me: ProfileData, them: ProfileData): string {
+  const signals: string[] = [];
+  if (me.state && them.state && me.state === them.state) signals.push(`also in ${them.state}`);
+  if (me.city && them.city && me.city.toLowerCase() === them.city.toLowerCase()) {
+    signals.push(`based in ${them.city}`);
+  }
+  const who = them.businessName
+    ? `${them.businessName}${them.industry ? ` (${them.industry})` : ''}`
+    : 'A member of your network';
+  const context = signals.length ? ` — ${signals.join(', ')}` : '';
+  return `You might be interested: ${who}${context}. Not an obvious match on paper, but new referral partners often come from outside your usual circle — worth a look.`;
 }
 
 /**
  * Rules-based scoring (V1). Replaced by embedding similarity when
  * OPENAI_API_KEY is configured and embeddings are up-to-date.
  */
-function scoreMatch(me: ProfileData, them: ProfileData): MatchResult {
+function scoreMatch(me: ProfileData, them: ProfileData): Omit<MatchResult, 'kind'> {
   const factors: Record<string, number> = {};
 
   // 1. Industry alignment: do they work in an industry I want to meet?

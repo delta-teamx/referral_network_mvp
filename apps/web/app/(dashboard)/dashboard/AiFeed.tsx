@@ -22,6 +22,7 @@ interface IntroSuggestion {
   id: string;
   reason: string;
   matchScore: string;
+  matchFactors?: Record<string, number> | null;
   status: string;
   createdAt: string;
   sender: MemberBrief;
@@ -71,42 +72,35 @@ export function AiFeed() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      let data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
+      // Always top up first (best-effort): this pulls in members who joined
+      // since last time and regenerates the discovery ("you might be
+      // interested") picks, so the feed reflects the whole live network rather
+      // than a stale snapshot.
+      setScanning(true);
+      try {
+        await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
+      } catch {
+        // best-effort — fall through and show whatever is persisted
+      } finally {
+        setScanning(false);
+      }
+
+      const data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
         accessToken: accessToken ?? undefined,
       });
 
-      // The feed reads persisted Introduction rows. A brand-new (or newly
-      // completed) profile has none yet, so ask the engine to generate them
-      // on demand, then re-read - instead of showing an empty feed forever.
+      // If it's still empty, work out whether the reason is an incomplete
+      // profile (point them at onboarding) vs. genuinely no one to show.
       if (data.length === 0) {
-        let complete = true;
         try {
           const me = await api.get<{
             industry?: string;
             icpIndustries?: string[];
             canReferIndustries?: string[];
           }>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
-          complete = isProfileComplete(me);
-          setProfileReady(complete);
+          setProfileReady(isProfileComplete(me));
         } catch {
-          // No profile yet (or unreadable) - treat as incomplete so the user
-          // is pointed at onboarding rather than an empty "all set" screen.
-          complete = false;
           setProfileReady(false);
-        }
-
-        if (complete) {
-          setScanning(true);
-          try {
-            await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
-            data = await api.get<IntroSuggestion[]>('/api/v1/ai/suggestions', {
-              accessToken: accessToken ?? undefined,
-            });
-          } catch {
-            // Refresh is best-effort; fall through with whatever we have.
-          } finally {
-            setScanning(false);
-          }
         }
       } else {
         setProfileReady(true);
@@ -178,10 +172,10 @@ export function AiFeed() {
             Edit my profile
           </Link>
           <Link
-            href="/dashboard/network"
+            href="/dashboard/members"
             className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            <Users size={14} /> My network
+            <Users size={14} /> Browse all members
           </Link>
         </div>
       </header>
@@ -265,6 +259,7 @@ export function AiFeed() {
             const profile = peer.memberProfile;
             const isIncoming = intro.target.id === user?.id && intro.status === 'requested';
             const isSuggested = intro.status === 'suggested' && intro.sender.id === user?.id;
+            const isDiscovery = intro.matchFactors?.discovery === 1;
 
             return (
               <motion.li
@@ -312,10 +307,16 @@ export function AiFeed() {
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
-                      <TrendingUp size={10} />
-                      {Number(intro.matchScore).toFixed(0)}% match
-                    </span>
+                    {isDiscovery ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                        <Sparkles size={10} /> You might be interested
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
+                        <TrendingUp size={10} />
+                        {Number(intro.matchScore).toFixed(0)}% match
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -327,6 +328,12 @@ export function AiFeed() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/members?id=${peer.id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:border-primary hover:text-primary"
+                  >
+                    <ArrowRight size={14} /> View profile
+                  </Link>
                   {isSuggested && (
                     <button
                       onClick={() => void requestIntro(intro.id)}
