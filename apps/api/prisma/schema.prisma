@@ -107,6 +107,7 @@ model User {
   receivedReferrals      Referral[]     @relation("ReferralReceiver")
   consumerLeads          ConsumerLead[] @relation("ConsumerLeadConsumer")
   groupMemberships       GroupMember[]
+  groupMessages          GroupMessage[]
   favorites              Favorite[]
   notifications          Notification[]
   subscription           Subscription?
@@ -475,9 +476,23 @@ model Group {
   members       GroupMember[]
   events        GroupEvent[]
   introductions Introduction[]
+  messages      GroupMessage[]
 
   @@index([slug])
   @@index([city, state])
+}
+
+model GroupMessage {
+  id        String   @id @default(uuid())
+  groupId   String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([groupId, createdAt])
 }
 
 model GroupMember {

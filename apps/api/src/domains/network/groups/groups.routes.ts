@@ -10,8 +10,10 @@ import {
   getGroupBySlug,
   joinGroup,
   leaveGroup,
+  listGroupMessages,
   listGroups,
   listMyGroups,
+  postGroupMessage,
 } from './groups.service.js';
 
 export const groupsRouter: Router = Router();
@@ -93,6 +95,29 @@ groupsRouter.post(
     const result = await leaveGroup(req.params.id ?? '', req.user.id);
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
+  }),
+);
+
+// Group chat — members only
+groupsRouter.get(
+  '/:id/messages',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await listGroupMessages(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const groupMessageSchema = z.object({ text: z.string().trim().min(1).max(2000) });
+groupsRouter.post(
+  '/:id/messages',
+  validate(groupMessageSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await postGroupMessage(req.params.id ?? '', req.user.id, req.body.text);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.status(201).json(body);
   }),
 );
 

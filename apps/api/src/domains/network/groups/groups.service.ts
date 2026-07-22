@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
  * Groups — BNI-style local networking circles. A group is public-discoverable
@@ -245,6 +246,43 @@ export async function listMyGroups(userId: string): Promise<
     },
   });
   return rows.map((r) => ({ ...toListItem(r.group), role: r.role as GroupRole }));
+}
+
+// ---- Group chat ------------------------------------------------------------
+
+const groupMessageSelect = {
+  id: true,
+  text: true,
+  createdAt: true,
+  sender: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+} as const;
+
+async function assertGroupMember(groupId: string, userId: string): Promise<void> {
+  const member = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+    select: { id: true },
+  });
+  if (!member) throw AppError.forbidden('Join this group to see and post in its chat.');
+}
+
+export async function listGroupMessages(groupId: string, userId: string) {
+  await assertGroupMember(groupId, userId);
+  return prisma.groupMessage.findMany({
+    where: { groupId },
+    orderBy: { createdAt: 'asc' },
+    take: 200,
+    select: groupMessageSelect,
+  });
+}
+
+export async function postGroupMessage(groupId: string, userId: string, text: string) {
+  await assertGroupMember(groupId, userId);
+  const clean = sanitizeText(text).slice(0, 2000);
+  if (!clean) throw AppError.badRequest('Message cannot be empty.');
+  return prisma.groupMessage.create({
+    data: { groupId, senderId: userId, text: clean },
+    select: groupMessageSelect,
+  });
 }
 
 export interface WhitelabelSettings {

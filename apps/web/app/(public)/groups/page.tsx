@@ -207,6 +207,14 @@ export default function GroupsPage() {
                       Log in to join →
                     </Link>
                   )}
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <Link
+                      href={`/dashboard/groups?slug=${g.slug}`}
+                      className="text-xs font-semibold text-gray-500 hover:text-primary"
+                    >
+                      View group &amp; chat →
+                    </Link>
+                  </div>
                 </motion.div>
               );
             })}
