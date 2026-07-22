@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { loginSchema } from '@refnet/shared';
 import { AuthShell } from '../../../components/auth/AuthShell';
@@ -21,8 +21,23 @@ function LoginInner() {
   const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const status = useAuthStore((s) => s.status);
+  const hydrate = useAuthStore((s) => s.hydrate);
   const globalError = useAuthStore((s) => s.error);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // If the session is (or becomes) valid, never strand the user on the login
+  // form — send them straight to where they were headed / the dashboard.
+  useEffect(() => {
+    if (status === 'idle') void hydrate();
+  }, [status, hydrate]);
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const next = searchParams.get('next');
+      const safeNext = next && /^\/[a-zA-Z]/.test(next) ? next : null;
+      const role = useAuthStore.getState().user?.role;
+      window.location.href = safeNext ?? (role === 'ADMIN' ? '/admin' : '/dashboard');
+    }
+  }, [status, searchParams]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
