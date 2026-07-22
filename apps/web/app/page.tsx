@@ -18,19 +18,35 @@ import {
   Video,
   Zap,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 import { FoundingOffer } from '../components/marketing/FoundingOffer';
 import { useI18n } from '../lib/i18n';
 import { isAppHost } from '../lib/domains';
+import { useAuthStore } from '../stores/auth';
 
 export default function HomePage() {
   const { t } = useI18n();
-  // On the app domain (dashboard.referralnova.com), redirect to login —
-  // the marketing homepage only renders on referralnova.com.
-  if (isAppHost()) {
-    window.location.href = '/login';
-    return null;
+  const status = useAuthStore((s) => s.status);
+  const hydrate = useAuthStore((s) => s.hydrate);
+
+  // On the app domain (dashboard.referralnova.com) the root is the app entry:
+  // send signed-in members straight to their dashboard and everyone else to
+  // login. The marketing homepage below only renders on referralnova.com.
+  const onAppHost = typeof window !== 'undefined' && isAppHost();
+  useEffect(() => {
+    if (!onAppHost) return;
+    if (status === 'idle') {
+      void hydrate();
+      return;
+    }
+    if (status === 'authenticated') window.location.href = '/dashboard';
+    else if (status === 'unauthenticated') window.location.href = '/login';
+  }, [onAppHost, status, hydrate]);
+
+  if (onAppHost) {
+    return <div className="min-h-screen bg-primary-light" />;
   }
 
   return (
