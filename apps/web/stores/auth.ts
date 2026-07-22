@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthSuccessDto, AuthenticatedUserDto, LoginInput, SignupInput } from '@refnet/shared';
 import { api, ApiError } from '../lib/api';
 
@@ -51,7 +52,9 @@ function applyAuthSuccess(data: AuthSuccessDto, set: (patch: Partial<AuthState>)
   scheduleRefresh(set);
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
   user: null,
   accessToken: null,
   accessTokenExpiresAt: null,
@@ -131,4 +134,31 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
     scheduleRefresh(set);
   },
-}));
+    }),
+    {
+      // Persist the session so navigating to a public page (member profile) or
+      // reloading doesn't require a cross-domain refresh call to stay logged in.
+      // The short-lived access token is stored client-side; the refresh token
+      // stays HttpOnly. hydrate() still validates expiry and refreshes on time.
+      name: 'rn-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({
+        user: s.user,
+        accessToken: s.accessToken,
+        accessTokenExpiresAt: s.accessTokenExpiresAt,
+      }),
+      onRehydrateStorage: () => (state) => {
+        // A still-valid persisted token means we're authenticated right away —
+        // no need to wait on (or depend on) a refresh round-trip.
+        if (
+          state &&
+          state.accessToken &&
+          state.accessTokenExpiresAt &&
+          state.accessTokenExpiresAt > Date.now()
+        ) {
+          state.status = 'authenticated';
+        }
+      },
+    },
+  ),
+);
