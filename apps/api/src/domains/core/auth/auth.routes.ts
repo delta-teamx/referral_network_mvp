@@ -40,18 +40,30 @@ export const authRouter: Router = Router();
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 
+// The web app (dashboard.referralnova.com) and the API (api.referralnova.com)
+// are different origins, so the refresh cookie MUST be SameSite=None to be sent
+// on cross-site XHR — with SameSite=Strict the browser withholds it and every
+// token refresh 401s, logging the user out on any page reload / navigation.
+// SameSite=None requires Secure (HTTPS), which production is. Locally we fall
+// back to Lax over plain HTTP.
+const COOKIE_CROSS_SITE = env.NODE_ENV === 'production';
+
 function setRefreshCookie(res: Response, token: string): void {
   res.cookie(REFRESH_COOKIE, token, {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: COOKIE_CROSS_SITE,
+    sameSite: COOKIE_CROSS_SITE ? 'none' : 'lax',
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
     path: '/api/v1/auth',
   });
 }
 
 function clearRefreshCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
+  res.clearCookie(REFRESH_COOKIE, {
+    path: '/api/v1/auth',
+    sameSite: COOKIE_CROSS_SITE ? 'none' : 'lax',
+    secure: COOKIE_CROSS_SITE,
+  });
 }
 
 authRouter.post(
