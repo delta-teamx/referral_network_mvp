@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { requireVerified } from './middleware/requireVerified.js';
+import { optionalAuthenticate } from './middleware/authenticate.js';
 import { disconnectPrisma, prisma } from './config/prisma.js';
 import { healthRouter } from './domains/health/health.routes.js';
 import { authRouter } from './domains/core/auth/auth.routes.js';
@@ -106,10 +107,21 @@ registerGroupSubscribers(eventBus);
 // Write operations on content-creation routes require a verified email.
 // Read routes (GET) are unaffected so unverified users can still browse.
 const verifiedWriteGate: express.RequestHandler = (req, res, next) => {
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    return requireVerified(req, res, next);
-  }
-  next();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  // This gate runs BEFORE each router's own `authenticate`, so req.user is
+  // never populated at this point. Checking requireVerified directly here
+  // therefore 401'd EVERY write on gated routes (messages, groups, bookings,
+  // connections, listings, …) for everyone — which the client interpreted as
+  // "logged out", causing the endless bounce to the login page.
+  // Parse the token first (optional — routers still enforce auth), then only
+  // block writes from a genuinely-unverified account.
+  optionalAuthenticate(req, res, (err?: unknown) => {
+    if (err) return next(err);
+    if (req.user && !req.user.emailVerified) {
+      return requireVerified(req, res, next);
+    }
+    next();
+  });
 };
 
 // ---- Routes -----------------------------------------------------------------
