@@ -149,6 +149,34 @@ export function AiFeed() {
     }
   }
 
+  // One card per peer. The matcher can create an intro in each direction
+  // (me→them and them→me), so collapse to a single card per member and keep the
+  // most actionable one (an incoming request > a suggestion I can act on).
+  const visibleSuggestions = (() => {
+    const rank = (i: IntroSuggestion) => {
+      if (i.target.id === user?.id && i.status === 'requested') return 3; // incoming
+      if (i.sender.id === user?.id && i.status === 'suggested') return 2; // I can request
+      if (i.sender.id === user?.id) return 1;
+      return 0;
+    };
+    const byPeer = new Map<string, IntroSuggestion>();
+    for (const intro of suggestions) {
+      const peerId = intro.sender.id === user?.id ? intro.target.id : intro.sender.id;
+      const existing = byPeer.get(peerId);
+      if (
+        !existing ||
+        rank(intro) > rank(existing) ||
+        (rank(intro) === rank(existing) &&
+          Number(intro.matchScore) > Number(existing.matchScore))
+      ) {
+        byPeer.set(peerId, intro);
+      }
+    }
+    return Array.from(byPeer.values()).sort(
+      (a, b) => Number(b.matchScore) - Number(a.matchScore),
+    );
+  })();
+
   return (
     <div className="p-6 md:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -197,7 +225,7 @@ export function AiFeed() {
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" />
           ))}
         </div>
-      ) : suggestions.length === 0 ? (
+      ) : visibleSuggestions.length === 0 ? (
         <motion.div
           variants={fadeInUp}
           initial="hidden"
@@ -253,7 +281,7 @@ export function AiFeed() {
           animate="visible"
           className="space-y-4"
         >
-          {suggestions.map((intro) => {
+          {visibleSuggestions.map((intro) => {
             const peer =
               intro.sender.id === user?.id ? intro.target : intro.sender;
             const profile = peer.memberProfile;
