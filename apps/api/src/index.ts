@@ -39,6 +39,7 @@ import { podsRouter } from './domains/matching/pods/pods.routes.js';
 import { startMatchmakingScheduler } from './domains/matching/pods/pods.scheduler.js';
 import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
+import { registerGroupSubscribers } from './domains/network/groups/groups.subscribers.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -99,6 +100,7 @@ registerLeadSubscribers(eventBus);
 registerNotificationSubscribers(eventBus);
 registerTrustSubscribers(eventBus);
 registerReferralTrackingSubscribers(eventBus);
+registerGroupSubscribers(eventBus);
 
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.

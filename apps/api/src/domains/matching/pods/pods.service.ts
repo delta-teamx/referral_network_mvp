@@ -4,7 +4,11 @@ import { sendEmail } from '../../core/notifications/email.service.js';
 import { eventBus } from '../../core/events/index.js';
 import { env } from '../../../config/env.js';
 
-const POD_SIZE = { min: 10, target: 18, max: 20 };
+// A "weekly board" forms once there are a few eligible members. The old min of
+// 10 meant a young network (which is every network at launch) silently formed
+// zero pods — so no boards appeared for weeks. Keep it small so boards actually
+// happen, and grow to larger pods as membership grows.
+const POD_SIZE = { min: 3, target: 12, max: 20 };
 
 interface MemberProfile {
   userId: string;
@@ -47,7 +51,7 @@ export async function runDailyMatchmaking(): Promise<{ podsCreated: number; memb
     const tomorrow9am = getNextMeetingTime();
     try {
       const zoom = await createZoomMeeting({
-        topic: `Referral Nova — AI-Matched Networking Pod`,
+        topic: `Referral Nova — Weekly AI-Matched Networking Board`,
         startsAt: tomorrow9am,
         durationMin: 60,
       });
@@ -177,7 +181,10 @@ async function getEligibleMembers(): Promise<MemberProfile[]> {
 async function getMeetingHistory(): Promise<Set<string>> {
   const recent = await prisma.meetingHistory.findMany({
     where: {
-      metAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // last 30 days
+      // Only avoid re-pairing people who met in the last week, so a small
+      // network can still form a fresh board every week (a 30-day window would
+      // block re-forming for a month once everyone had met once).
+      metAt: { gte: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
     },
     select: { userAId: true, userBId: true },
   });
@@ -293,11 +300,14 @@ function formPods(members: MemberProfile[], history: Set<string>): MemberProfile
 }
 
 function getNextMeetingTime(): Date {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(9, 0, 0, 0); // 9 AM
-  return tomorrow;
+  // The weekly board runs the upcoming Tuesday at 9 AM (server local time).
+  const slot = new Date();
+  slot.setHours(9, 0, 0, 0);
+  const daysUntilTue = (2 - slot.getDay() + 7) % 7; // 2 = Tuesday
+  slot.setDate(slot.getDate() + daysUntilTue);
+  // If it's already Tuesday past 9 AM, roll to next week.
+  if (slot.getTime() <= Date.now()) slot.setDate(slot.getDate() + 7);
+  return slot;
 }
 
 // ---- Admin API: trigger manually or view pods ------------------------------

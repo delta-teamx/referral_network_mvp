@@ -3,17 +3,19 @@ import { runDailyMatchmaking } from './pods.service.js';
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start the daily matchmaking scheduler. Runs at the top of each hour
- * and triggers pod formation if it's 9 AM UTC. In production, replace
- * with a proper cron job (BullMQ repeatable job or external cron).
+ * Start the WEEKLY matchmaking scheduler. Checks hourly and forms the week's
+ * networking boards every Monday at 14:00 UTC. On a host that sleeps when idle
+ * (e.g. Render free tier) this may not fire on time — admins can always form
+ * the board on demand via POST /api/v1/pods/trigger. In production, replace
+ * with a proper cron (BullMQ repeatable job or external scheduler).
  */
 export function startMatchmakingScheduler(): void {
   if (intervalId) return;
 
-  // Check every hour
+  // Check every hour; run once a week on Monday at 14:00 UTC (9 AM EST).
   intervalId = setInterval(async () => {
     const now = new Date();
-    if (now.getUTCHours() === 14) { // 9 AM EST = 14 UTC
+    if (now.getUTCDay() === 1 && now.getUTCHours() === 14) {
       try {
         await runDailyMatchmaking();
       } catch (err) {
@@ -24,5 +26,5 @@ export function startMatchmakingScheduler(): void {
   }, 60 * 60 * 1000);
 
   // eslint-disable-next-line no-console
-  console.log('[matchmaking-scheduler] started — runs daily at 9 AM EST (14:00 UTC)');
+  console.log('[matchmaking-scheduler] started — runs weekly on Monday 14:00 UTC');
 }
