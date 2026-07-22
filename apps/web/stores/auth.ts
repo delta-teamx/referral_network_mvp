@@ -115,8 +115,24 @@ export const useAuthStore = create<AuthState>()(
     try {
       const data = await api.post<AuthSuccessDto>('/api/v1/auth/refresh');
       applyAuthSuccess(data, set);
-    } catch {
-      set({ status: 'unauthenticated', user: null, accessToken: null });
+    } catch (err) {
+      // Only a definitive 401 means the session is truly gone. Anything else
+      // (API cold-starting on Render's free tier, network blip, 5xx) must NOT
+      // log the user out — keep the persisted identity and retry shortly.
+      if (err instanceof ApiError && err.status === 401) {
+        set({ status: 'unauthenticated', user: null, accessToken: null });
+        return;
+      }
+      const s = useAuthStore.getState();
+      if (s.user) {
+        set({ status: 'authenticated' });
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+          void useAuthStore.getState().hydrate();
+        }, 8000);
+      } else {
+        set({ status: 'unauthenticated' });
+      }
     }
   },
 

@@ -73,6 +73,12 @@ export async function apiRequest<T>(
     try {
       envelope = (await res.json()) as ApiResponse<T>;
     } catch {
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        throw new ApiError(
+          'The server is waking up — please try again in about 30 seconds.',
+          res.status,
+        );
+      }
       throw new ApiError(`Unexpected response (${res.status})`, res.status);
     }
 
@@ -108,21 +114,28 @@ export async function apiRequest<T>(
           Date.now() + refreshed.tokens.expiresIn * 1000,
         );
         return await doFetch(refreshed.tokens.accessToken);
-      } catch {
-        const { useAuthStore } = await import('../stores/auth');
-        useAuthStore.setState({
-          status: 'unauthenticated',
-          user: null,
-          accessToken: null,
-          accessTokenExpiresAt: null,
-        });
-        if (typeof window !== 'undefined') {
-          // Preserve the full path INCLUDING query (e.g. /members?id=…) so a
-          // redirect through login lands the user back on the exact page.
-          window.location.href =
-            '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+      } catch (refreshErr) {
+        // Only a definitive 401 from the refresh endpoint means the session is
+        // dead — log out and round-trip through login. A cold-starting API
+        // (Render free tier), network blip or 5xx must NOT nuke the session;
+        // surface the original error so the page can show "try again".
+        if (refreshErr instanceof ApiError && refreshErr.status === 401) {
+          const { useAuthStore } = await import('../stores/auth');
+          useAuthStore.setState({
+            status: 'unauthenticated',
+            user: null,
+            accessToken: null,
+            accessTokenExpiresAt: null,
+          });
+          if (typeof window !== 'undefined') {
+            // Preserve the full path INCLUDING query (e.g. /members?id=…) so a
+            // redirect through login lands the user back on the exact page.
+            window.location.href =
+              '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+          }
+          return undefined as unknown as T;
         }
-        return undefined as unknown as T;
+        throw err;
       }
     }
     throw err;
