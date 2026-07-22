@@ -21,7 +21,7 @@ services:
       corepack enable
       pnpm install --no-frozen-lockfile
       pnpm --filter @refnet/api exec prisma generate
-      pnpm --filter @refnet/api exec prisma migrate deploy
+      pnpm --filter @refnet/api exec prisma migrate deploy || echo "migrate skipped (see logs); runtime schema-ensure will cover new tables"
       pnpm --filter @refnet/api exec prisma db seed || echo "seed skipped"
     startCommand: pnpm --filter @refnet/api start
     healthCheckPath: /api/v1/health

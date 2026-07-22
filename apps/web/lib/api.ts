@@ -117,7 +117,10 @@ export async function apiRequest<T>(
           accessTokenExpiresAt: null,
         });
         if (typeof window !== 'undefined') {
-          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+          // Preserve the full path INCLUDING query (e.g. /members?id=…) so a
+          // redirect through login lands the user back on the exact page.
+          window.location.href =
+            '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
         }
         return undefined as unknown as T;
       }

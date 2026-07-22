@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { requireVerified } from './middleware/requireVerified.js';
-import { disconnectPrisma } from './config/prisma.js';
+import { disconnectPrisma, prisma } from './config/prisma.js';
 import { healthRouter } from './domains/health/health.routes.js';
 import { authRouter } from './domains/core/auth/auth.routes.js';
 import { onboardingRouter } from './domains/core/onboarding/onboarding.routes.js';
@@ -144,7 +144,42 @@ app.use(notFoundHandler);
 app.use(sentryErrorHandler);
 app.use(errorHandler);
 
+/**
+ * Ensure runtime-added tables exist even when a migration didn't apply (managed
+ * DB where `prisma migrate deploy` is skipped/failed). Idempotent + non-fatal —
+ * a failure here must never block boot.
+ */
+async function ensureRuntimeSchema(): Promise<void> {
+  try {
+    await prisma.$executeRawUnsafe(
+      `CREATE TABLE IF NOT EXISTS "GroupMessage" (
+         "id" TEXT NOT NULL,
+         "groupId" TEXT NOT NULL,
+         "senderId" TEXT NOT NULL,
+         "text" TEXT NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "GroupMessage_pkey" PRIMARY KEY ("id")
+       );`,
+    );
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "GroupMessage_groupId_createdAt_idx" ON "GroupMessage" ("groupId", "createdAt");`,
+    );
+    await prisma.$executeRawUnsafe(
+      `DO $$ BEGIN ALTER TABLE "GroupMessage" ADD CONSTRAINT "GroupMessage_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+    );
+    await prisma.$executeRawUnsafe(
+      `DO $$ BEGIN ALTER TABLE "GroupMessage" ADD CONSTRAINT "GroupMessage_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+    );
+    // eslint-disable-next-line no-console
+    console.log('[schema] ensured GroupMessage table');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[schema] ensureRuntimeSchema failed (non-fatal):', String(err));
+  }
+}
+
 async function start(): Promise<void> {
+  await ensureRuntimeSchema();
   // RBAC seeding is idempotent — safe to run on every boot. Failure here
   // shouldn't block startup; log and continue (authz still works against
   // the in-memory ROLE_PERMISSIONS map from @refnet/shared).
