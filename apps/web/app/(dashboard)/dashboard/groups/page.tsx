@@ -280,7 +280,7 @@ function GroupDetailView({
                     </div>
                   </div>
                   {m.user.id !== meId && (
-                    <Link href={`/members?id=${m.user.id}`} className="text-xs font-semibold text-primary hover:underline">
+                    <Link href={`/dashboard/members/profile?id=${m.user.id}`} className="text-xs font-semibold text-primary hover:underline">
                       View
                     </Link>
                   )}

@@ -54,8 +54,12 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
+      # 7 days: the session must not depend on a refresh round-trip mid-use —
+      # a failed refresh (cold start, blip) was bouncing users to the login
+      # page in the middle of actions. Refresh still rotates tokens on login
+      # and before expiry.
       - key: JWT_ACCESS_TTL
-        value: 15m
+        value: 7d
       - key: JWT_REFRESH_TTL
         value: 30d
       - key: EMAIL_FROM

@@ -140,7 +140,7 @@ export default function MembersDirectoryPage() {
             return (
               <motion.li key={m.id} variants={fadeInUp}>
                 <Link
-                  href={`/members?id=${m.id}`}
+                  href={`/dashboard/members/profile?id=${m.id}`}
                   className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
                 >
                   <div className="mb-3 flex items-center gap-3">

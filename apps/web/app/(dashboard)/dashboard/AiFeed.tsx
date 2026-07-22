@@ -357,7 +357,7 @@ export function AiFeed() {
 
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href={`/members?id=${peer.id}`}
+                    href={`/dashboard/members/profile?id=${peer.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:border-primary hover:text-primary"
                   >
                     <ArrowRight size={14} /> View profile
