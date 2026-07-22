@@ -8,7 +8,7 @@ import { env } from '../config/env.js';
  * Global error handler. Coerces every thrown error into the canonical
  * ApiResponse shape so clients get a predictable envelope on failure.
  */
-export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof ZodError) {
     const body: ApiResponse = {
       success: false,
@@ -52,9 +52,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     }
   }
 
-  // Unknown error — log, return generic 500. Do not leak stack traces in prod.
+  // Unknown error — log with the route so Render logs name the failing
+  // endpoint directly. Do not leak stack traces to clients in prod.
   // eslint-disable-next-line no-console
-  console.error('[unhandled]', err);
+  console.error(`[unhandled] ${req.method} ${req.originalUrl}`, err);
   const body: ApiResponse = {
     success: false,
     error: env.NODE_ENV === 'production' ? 'Internal server error' : String(err),

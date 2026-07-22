@@ -188,6 +188,20 @@ async function ensureRuntimeSchema(): Promise<void> {
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "Availability" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'America/Chicago';`,
     );
+    // Messaging tables — the conversation LIST query selects columns the
+    // create path never touches (lastReadAt, message fields, timestamps);
+    // ensure every one of them exists.
+    for (const ddl of [
+      `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE "ConversationParticipant" ADD COLUMN IF NOT EXISTS "lastReadAt" TIMESTAMP(3);`,
+      `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "conversationId" TEXT;`,
+      `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "senderId" TEXT;`,
+      `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "text" TEXT;`,
+      `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+    ]) {
+      await prisma.$executeRawUnsafe(ddl);
+    }
     // Group white-label fields — prod was missing some, which 500'd group
     // creation (Prisma includes defaulted columns in the INSERT) and the
     // group-detail include (selects every column).
