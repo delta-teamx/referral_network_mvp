@@ -88,7 +88,8 @@ export default function AdminPodsPage() {
             <span className="text-sm font-normal text-gray-400">({pods.length})</span>
           </h1>
           <p className="mt-1 text-sm text-gray-400">
-            AI automatically creates pods daily at 9 AM EST. Each pod gets a unique Zoom link.
+            AI forms the weekly networking board (Mondays) and schedules it for Tuesday 9 AM. Each
+            board gets a unique Zoom link. Use “Run matchmaking now” to create this week’s board on demand.
           </p>
         </div>
         <Button onClick={() => void triggerMatchmaking()} loading={triggering}>
@@ -113,7 +114,7 @@ export default function AdminPodsPage() {
         <div className="rounded-2xl border border-gray-800 bg-gray-900 p-12 text-center text-gray-500">
           <Sparkles size={32} className="mx-auto mb-3 text-gray-600" />
           <p className="font-medium">No pods yet</p>
-          <p className="mt-1 text-sm">Click &ldquo;Run matchmaking now&rdquo; to create the first batch, or wait for the daily 9 AM run.</p>
+          <p className="mt-1 text-sm">Click &ldquo;Run matchmaking now&rdquo; to create this week&rsquo;s board, or wait for the weekly Monday run.</p>
         </div>
       ) : (
         <div className="space-y-4">
