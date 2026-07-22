@@ -63,9 +63,17 @@ export async function apiRequest<T>(
         headers,
         credentials: opts.credentials ?? 'include',
         body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
-        signal: opts.signal,
+        // Nothing may hang the UI forever: 25s cap on every request. A sleeping
+        // server or dead connection surfaces as a visible, retryable error.
+        signal: opts.signal ?? AbortSignal.timeout(25_000),
       });
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+        throw new ApiError(
+          'The server took too long to respond (it may be waking up). Please try again in ~30 seconds.',
+          0,
+        );
+      }
       throw new ApiError('Network error — please try again.', 0);
     }
 

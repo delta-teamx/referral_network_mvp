@@ -57,7 +57,14 @@ export function MemberProfileView({ id }: { id: string }) {
   }, [status, hydrate]);
 
   async function startConversation() {
-    if (!profile || !accessToken) return;
+    if (!profile) return;
+    // A click must never be a silent no-op: with no session token in this tab,
+    // route through login and come straight back here.
+    if (!accessToken) {
+      window.location.href =
+        '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+      return;
+    }
     setMessaging(true);
     setError(null);
     try {
@@ -68,7 +75,12 @@ export function MemberProfileView({ id }: { id: string }) {
       );
       router.push('/dashboard/messages');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not start the conversation.');
+      // Include the HTTP status so a failure is self-diagnosing from the UI.
+      setError(
+        err instanceof ApiError
+          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
+          : 'Could not start the conversation.',
+      );
     } finally {
       setMessaging(false);
     }

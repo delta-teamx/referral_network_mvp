@@ -31,7 +31,12 @@ export default function NewGroupPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!accessToken) return;
+    // Never a silent no-op: with no session token in this tab, go through
+    // login and come straight back to this form.
+    if (!accessToken) {
+      window.location.href = '/login?next=' + encodeURIComponent('/groups/new');
+      return;
+    }
     setError(null);
     setSaving(true);
     const form = new FormData(e.currentTarget);
@@ -53,7 +58,12 @@ export default function NewGroupPage() {
       });
       router.push(`/groups?created=${group.slug}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create group');
+      // Include the HTTP status so a failure is self-diagnosing from the UI.
+      setError(
+        err instanceof ApiError
+          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
+          : 'Could not create group',
+      );
       setSaving(false);
     }
   }
