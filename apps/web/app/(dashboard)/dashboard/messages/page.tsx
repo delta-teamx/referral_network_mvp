@@ -58,31 +58,37 @@ function MessagesInner() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ---- Load conversations -------------------------------------------------
 
-  useEffect(() => {
+  async function loadConversations() {
     if (!accessToken) return;
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await api.get<Conversation[]>('/api/v1/messages', {
-          accessToken: accessToken ?? undefined,
-        });
-        if (!cancelled) setConversations(data);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    setLoading(true);
+    setListError(null);
+    try {
+      const data = await api.get<Conversation[]>('/api/v1/messages', {
+        accessToken: accessToken ?? undefined,
+      });
+      setConversations(data);
+    } catch (err) {
+      // A failed list load must be VISIBLE (it used to fail silently into an
+      // empty panel) — show the message + status so it's self-diagnosing.
+      setListError(
+        err instanceof ApiError
+          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
+          : 'Could not load conversations',
+      );
+    } finally {
+      setLoading(false);
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
+  }
+
+  useEffect(() => {
+    void loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   // ---- Auto-open a conversation -------------------------------------------
@@ -188,6 +194,18 @@ function MessagesInner() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-100" />
             ))}
+          </div>
+        ) : listError ? (
+          <div className="p-6 text-center">
+            <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {listError}
+            </p>
+            <button
+              onClick={() => void loadConversations()}
+              className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+            >
+              Retry
+            </button>
           </div>
         ) : conversations.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-500">

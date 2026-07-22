@@ -63,6 +63,10 @@ export async function apiRequest<T>(
         headers,
         credentials: opts.credentials ?? 'include',
         body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
+        // API responses must never be served from the browser's HTTP cache —
+        // Express sends ETags, and a cached 304 has no JSON body, which parsed
+        // as a silent failure (empty lists).
+        cache: 'no-store',
         // Nothing may hang the UI forever: 25s cap on every request. A sleeping
         // server or dead connection surfaces as a visible, retryable error.
         signal: opts.signal ?? AbortSignal.timeout(25_000),
