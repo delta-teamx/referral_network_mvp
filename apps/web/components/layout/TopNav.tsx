@@ -18,6 +18,16 @@ const NAV_LINKS = [
   { href: '/pricing', key: 'nav.pricing' },
 ];
 
+// On the app domain the header is part of the product, not the marketing site —
+// link to the app's own sections instead of marketing pages.
+const APP_LINKS = [
+  { href: '/dashboard', label: 'Overview' },
+  { href: '/dashboard/members', label: 'Members' },
+  { href: '/dashboard/messages', label: 'Messages' },
+  { href: '/dashboard/groups', label: 'Groups' },
+  { href: '/dashboard/bookings', label: 'Bookings' },
+];
+
 export function TopNav() {
   const pathname = usePathname();
   const { t } = useI18n();
@@ -52,15 +62,25 @@ export function TopNav() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
-            >
-              {t(link.key)}
-            </Link>
-          ))}
+          {isAppDomain
+            ? APP_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                >
+                  {link.label}
+                </Link>
+              ))
+            : NAV_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                >
+                  {t(link.key)}
+                </Link>
+              ))}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -118,16 +138,27 @@ export function TopNav() {
       {mobileOpen && (
         <div className="border-t border-gray-100 bg-white px-6 py-4 md:hidden">
           <nav className="flex flex-col gap-1">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="rounded-md px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                {t(link.key)}
-              </Link>
-            ))}
+            {isAppDomain
+              ? APP_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-md px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    {link.label}
+                  </Link>
+                ))
+              : NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-md px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    {t(link.key)}
+                  </Link>
+                ))}
             {!user ? (
               <a
                 href={`${appBase}/login`}

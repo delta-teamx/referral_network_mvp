@@ -172,10 +172,25 @@ async function ensureRuntimeSchema(): Promise<void> {
     );
 
     // Columns added to schema.prisma without a matching migration (drift that
-    // otherwise 500s the queries that select them).
+    // otherwise 500s the queries that select or default-insert them).
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "Availability" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'America/Chicago';`,
     );
+    // Group white-label fields — prod was missing some, which 500'd group
+    // creation (Prisma includes defaulted columns in the INSERT) and the
+    // group-detail include (selects every column).
+    for (const ddl of [
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "logoUrl" TEXT;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "primaryColor" TEXT;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "welcomeMessage" TEXT;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "billingModel" TEXT NOT NULL DEFAULT 'platform';`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "seatPriceCents" INTEGER;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "groupPriceCents" INTEGER;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "stripeAccountId" TEXT;`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "customDomain" TEXT;`,
+    ]) {
+      await prisma.$executeRawUnsafe(ddl);
+    }
     // eslint-disable-next-line no-console
     console.log('[schema] ensured GroupMessage table + drifted columns');
   } catch (err) {

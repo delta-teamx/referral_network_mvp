@@ -47,10 +47,13 @@ services:
         value: https://dashboard.referralnova.com,https://referralnova.com,https://referral-network-usa.netlify.app,http://localhost:3000
       - key: API_URL
         sync: false
+      # Dashboard-managed: a Blueprint sync must NEVER regenerate these — doing
+      # so invalidates every access + refresh token and logs the whole userbase
+      # out mid-session.
       - key: JWT_ACCESS_SECRET
-        generateValue: true
+        sync: false
       - key: JWT_REFRESH_SECRET
-        generateValue: true
+        sync: false
       - key: JWT_ACCESS_TTL
         value: 15m
       - key: JWT_REFRESH_TTL

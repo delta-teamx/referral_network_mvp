@@ -47,6 +47,14 @@ function MemberProfileInner() {
   const [messaging, setMessaging] = useState(false);
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const status = useAuthStore((s) => s.status);
+  const hydrate = useAuthStore((s) => s.hydrate);
+
+  // Restore the session on this page directly — the Book/Message buttons must
+  // not depend on another component having hydrated the auth store.
+  useEffect(() => {
+    if (status === 'idle') void hydrate();
+  }, [status, hydrate]);
 
   async function startConversation() {
     if (!profile || !accessToken) return;
