@@ -204,6 +204,35 @@ const ATTACHMENT_TYPES = new Set([
 ]);
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15MB
 
+// The bucket's true region — resolved automatically on the first
+// PermanentRedirect (bucket created in a different region than AWS_REGION).
+let resolvedS3Region: string | null = null;
+
+async function makeS3(region: string) {
+  const { S3Client } = await import('@aws-sdk/client-s3');
+  return new S3Client({
+    region,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+}
+
+/** Pull the bucket's actual region out of a PermanentRedirect error. */
+function regionFromRedirect(err: unknown): string | null {
+  const e = err as {
+    $response?: { headers?: Record<string, string> };
+    Endpoint?: string;
+    message?: string;
+  };
+  const header = e.$response?.headers?.['x-amz-bucket-region'];
+  if (header) return header;
+  const source = `${e.Endpoint ?? ''} ${e.message ?? ''}`;
+  const m = /\.s3[.-]([a-z0-9-]+)\.amazonaws\.com/.exec(source);
+  return m?.[1] ?? null;
+}
+
 export async function presignChatAttachment(
   conversationId: string,
   userId: string,
@@ -282,32 +311,37 @@ export async function uploadChatAttachment(
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
   const key = `chat/${conversationId}/${crypto.randomUUID()}-${safeName}`;
 
-  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
-  const s3 = new S3Client({
-    region: env.AWS_REGION,
-    credentials: {
-      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
-      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
-    },
-  });
+  const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const put = () =>
+    new PutObjectCommand({
+      Bucket: env.AWS_S3_BUCKET,
+      Key: key,
+      ContentType: contentType,
+      Body: data,
+    });
+
   try {
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: env.AWS_S3_BUCKET,
-        Key: key,
-        ContentType: contentType,
-        Body: data,
-      }),
-    );
+    const s3 = await makeS3(resolvedS3Region ?? env.AWS_REGION);
+    await s3.send(put());
   } catch (err) {
-    // Surface S3's exact rejection so the failure is self-diagnosing from the
-    // UI (NoSuchBucket = bucket doesn't exist, AccessDenied = key lacks
-    // s3:PutObject, PermanentRedirect = wrong AWS_REGION, …).
     const name = (err as { name?: string })?.name ?? 'UnknownError';
+    // Bucket lives in a different region than AWS_REGION: S3 tells us which —
+    // resolve it once and retry, so region mismatches self-heal.
+    if (name === 'PermanentRedirect' || name === 'AuthorizationHeaderMalformed') {
+      const region = regionFromRedirect(err);
+      if (region) {
+        resolvedS3Region = region;
+        // eslint-disable-next-line no-console
+        console.log(`[chat-upload] bucket region resolved to ${region}; retrying`);
+        const s3 = await makeS3(region);
+        await s3.send(put());
+        return { key };
+      }
+    }
     // eslint-disable-next-line no-console
     console.error('[chat-upload] S3 rejected the upload:', err);
     throw AppError.badRequest(
-      `Storage rejected the upload: ${name}. Check the S3 bucket "${env.AWS_S3_BUCKET}" exists in ${env.AWS_REGION} and the AWS key has s3:PutObject permission.`,
+      `Storage rejected the upload: ${name}. Check the S3 bucket "${env.AWS_S3_BUCKET}" exists and the AWS key has s3:PutObject permission.`,
     );
   }
   return { key };
@@ -325,17 +359,24 @@ export async function getChatAttachmentStream(key: string): Promise<{
   if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
     throw AppError.notFound('File storage not configured');
   }
-  const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
-  const s3 = new S3Client({
-    region: env.AWS_REGION,
-    credentials: {
-      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
-      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
-    },
-  });
-  const out = await s3.send(
-    new GetObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key }),
-  );
+  const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+  const get = () => new GetObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key });
+
+  let out;
+  try {
+    const s3 = await makeS3(resolvedS3Region ?? env.AWS_REGION);
+    out = await s3.send(get());
+  } catch (err) {
+    const name = (err as { name?: string })?.name ?? '';
+    const region =
+      name === 'PermanentRedirect' || name === 'AuthorizationHeaderMalformed'
+        ? regionFromRedirect(err)
+        : null;
+    if (!region) throw AppError.notFound('Attachment not found');
+    resolvedS3Region = region;
+    const s3 = await makeS3(region);
+    out = await s3.send(get());
+  }
   return {
     body: out.Body as unknown as NodeJS.ReadableStream,
     contentType: out.ContentType ?? 'application/octet-stream',
