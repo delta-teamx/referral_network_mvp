@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { createZoomMeeting } from '../../integrations/zoom.service.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
 
 /**
  * Booking & availability service.
@@ -92,7 +93,7 @@ export async function getAvailableSlots(
   const existing = await prisma.bookingCall.findMany({
     where: {
       hostId: hostUserId,
-      status: 'confirmed',
+      status: { in: ['pending', 'confirmed'] },
       startsAt: { gte: from, lte: new Date(from.getTime() + days * 86400_000) },
     },
     select: { startsAt: true, endsAt: true },
@@ -161,11 +162,11 @@ export async function createBooking(input: CreateBookingInput) {
   if (!host) throw AppError.notFound('Host not found');
   if (!guest) throw AppError.notFound('Guest not found');
 
-  // Conflict check
+  // Conflict check — a pending request holds the slot too.
   const conflict = await prisma.bookingCall.findFirst({
     where: {
       hostId: input.hostUserId,
-      status: 'confirmed',
+      status: { in: ['pending', 'confirmed'] },
       OR: [
         {
           startsAt: { lt: input.endsAt },
@@ -177,14 +178,9 @@ export async function createBooking(input: CreateBookingInput) {
   });
   if (conflict) throw AppError.conflict('That time slot is no longer available.');
 
-  const durationMin = Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60_000);
-  const zoom = await createZoomMeeting({
-    topic: `${guest.firstName} ${guest.lastName} ↔ ${host.firstName} ${host.lastName} (${input.reason.replace('_', ' ')})`,
-    startsAt: input.startsAt,
-    durationMin,
-    hostEmail: host.email,
-  });
-
+  // A booking is a REQUEST: the host must accept before it's confirmed and a
+  // meeting link is provisioned — nobody gets a call on their calendar without
+  // prior notice.
   const booking = await prisma.bookingCall.create({
     data: {
       hostId: input.hostUserId,
@@ -193,20 +189,95 @@ export async function createBooking(input: CreateBookingInput) {
       notes: input.notes?.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
-      zoomUrl: zoom.joinUrl,
-      zoomMeetingId: zoom.meetingId,
-      status: 'confirmed',
+      status: 'pending',
     },
     select: bookingSelect,
   });
 
-  await eventBus.publish('booking.created', {
-    bookingId: booking.id,
-    hostId: input.hostUserId,
-    guestId: input.guestUserId,
-  });
+  // Alert the host in-app (best-effort).
+  void createNotification({
+    userId: input.hostUserId,
+    type: 'booking_request',
+    title: 'New call request',
+    body: `${guest.firstName} ${guest.lastName} requested a call on ${input.startsAt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Accept or decline in Bookings.`,
+    data: { bookingId: booking.id },
+  }).catch(() => undefined);
 
   return booking;
+}
+
+/**
+ * Host responds to a pending booking request. Accept provisions the Zoom
+ * meeting, confirms the booking and emails both parties; decline releases
+ * the slot. Only the host may respond.
+ */
+export async function respondToBooking(
+  bookingId: string,
+  hostUserId: string,
+  action: 'accept' | 'decline',
+) {
+  const booking = await prisma.bookingCall.findFirst({
+    where: { id: bookingId, hostId: hostUserId, status: 'pending' },
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      reason: true,
+      guestId: true,
+      host: { select: { firstName: true, lastName: true, email: true } },
+      guest: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!booking) throw AppError.notFound('Pending booking request not found');
+
+  if (action === 'decline') {
+    const updated = await prisma.bookingCall.update({
+      where: { id: booking.id },
+      data: { status: 'declined', canceledAt: new Date() },
+      select: bookingSelect,
+    });
+    void createNotification({
+      userId: booking.guestId,
+      type: 'booking_declined',
+      title: 'Call request declined',
+      body: `${booking.host.firstName} ${booking.host.lastName} can't make that time. Pick another slot from their profile.`,
+      data: { bookingId: booking.id },
+    }).catch(() => undefined);
+    return updated;
+  }
+
+  const durationMin = Math.round(
+    (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60_000,
+  );
+  const zoom = await createZoomMeeting({
+    topic: `${booking.guest.firstName} ${booking.guest.lastName} ↔ ${booking.host.firstName} ${booking.host.lastName} (${booking.reason.replace('_', ' ')})`,
+    startsAt: booking.startsAt,
+    durationMin,
+    hostEmail: booking.host.email,
+  });
+
+  const updated = await prisma.bookingCall.update({
+    where: { id: booking.id },
+    data: { status: 'confirmed', zoomUrl: zoom.joinUrl, zoomMeetingId: zoom.meetingId },
+    select: bookingSelect,
+  });
+
+  // Confirmation emails (with .ics) to both parties via the existing subscriber.
+  await eventBus.publish('booking.created', {
+    bookingId: booking.id,
+    hostId: hostUserId,
+    guestId: booking.guestId,
+  });
+
+  void createNotification({
+    userId: booking.guestId,
+    type: 'booking_confirmed',
+    title: 'Call confirmed 🎉',
+    body: `${booking.host.firstName} ${booking.host.lastName} accepted your call request — the Zoom link is in your Bookings tab.`,
+    data: { bookingId: booking.id },
+  }).catch(() => undefined);
+
+  return updated;
 }
 
 export async function cancelBooking(bookingId: string, userId: string) {
@@ -214,7 +285,7 @@ export async function cancelBooking(bookingId: string, userId: string) {
     where: {
       id: bookingId,
       OR: [{ hostId: userId }, { guestId: userId }],
-      status: 'confirmed',
+      status: { in: ['pending', 'confirmed'] },
     },
     select: { id: true },
   });
@@ -235,7 +306,9 @@ export async function listMyBookings(
   return prisma.bookingCall.findMany({
     where: {
       OR: [{ hostId: userId }, { guestId: userId }],
-      ...(opts.upcoming ? { startsAt: { gte: new Date() }, status: 'confirmed' } : {}),
+      ...(opts.upcoming
+        ? { startsAt: { gte: new Date() }, status: { in: ['pending', 'confirmed'] } }
+        : {}),
     },
     orderBy: { startsAt: 'asc' },
     take: 100,

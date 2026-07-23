@@ -33,7 +33,7 @@ export async function getAnalytics(userId: string) {
   const buckets = weekBuckets(12);
   const since = buckets[0]?.start ?? new Date(0);
 
-  const [leads, referrals, reviews] = await Promise.all([
+  const [leads, referrals, reviews, messages, bookings] = await Promise.all([
     prisma.consumerLead.findMany({
       where: { listing: { userId, deletedAt: null }, createdAt: { gte: since } },
       select: { createdAt: true, status: true },
@@ -45,6 +45,23 @@ export async function getAnalytics(userId: string) {
     prisma.review.findMany({
       where: { listing: { userId, deletedAt: null }, createdAt: { gte: since } },
       select: { createdAt: true, rating: true },
+    }),
+    // Networking activity: messages in the member's conversations.
+    prisma.message.findMany({
+      where: {
+        createdAt: { gte: since },
+        conversation: { participants: { some: { userId } } },
+      },
+      select: { createdAt: true },
+    }),
+    // Calls as host or guest (pending + confirmed).
+    prisma.bookingCall.findMany({
+      where: {
+        createdAt: { gte: since },
+        OR: [{ hostId: userId }, { guestId: userId }],
+        status: { in: ['pending', 'confirmed', 'completed'] },
+      },
+      select: { createdAt: true },
     }),
   ]);
 
@@ -70,6 +87,8 @@ export async function getAnalytics(userId: string) {
       referrals: bucketize(referrals),
       referralsConverted: bucketize(referrals, (r) => r.status === 'CONVERTED'),
       reviews: bucketize(reviews),
+      messages: bucketize(messages),
+      bookings: bucketize(bookings),
     },
     ratings: {
       avg:

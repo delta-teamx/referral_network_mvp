@@ -12,6 +12,7 @@ import {
   getAvailableSlots,
   listAvailability,
   listMyBookings,
+  respondToBooking,
   setAvailability,
 } from './bookings.service.js';
 
@@ -96,6 +97,19 @@ bookingsRouter.get(
     const upcoming = req.query.upcoming === 'true';
     const bookings = await listMyBookings(req.user.id, { upcoming });
     const body: ApiResponse<typeof bookings> = { success: true, data: bookings };
+    res.json(body);
+  }),
+);
+
+// Host accepts or declines a pending request
+const respondSchema = z.object({ action: z.enum(['accept', 'decline']) });
+bookingsRouter.post(
+  '/:id/respond',
+  validate(respondSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const booking = await respondToBooking(req.params.id ?? '', req.user.id, req.body.action);
+    const body: ApiResponse<typeof booking> = { success: true, data: booking };
     res.json(body);
   }),
 );

@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
 
 /**
  * B2B referrals — one business owner sending a client to another business.
@@ -52,6 +53,16 @@ export async function sendReferral(input: CreateReferralInput) {
     senderId: input.senderId,
     receiverId: listing.userId,
   });
+
+  // Alert the receiver in the notification bell (best-effort; email is sent
+  // by the referral.sent subscriber).
+  void createNotification({
+    userId: listing.userId,
+    type: 'referral',
+    title: 'New client referral 🎉',
+    body: `You received a referral${input.clientName ? ` for ${sanitizeText(input.clientName)}` : ''} — view it in your Referrals tab.`,
+    data: { referralId: referral.id },
+  }).catch(() => undefined);
 
   return referral;
 }

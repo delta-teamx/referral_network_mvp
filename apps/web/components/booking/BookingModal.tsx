@@ -272,24 +272,12 @@ export function BookingModal({ hostUserId, hostName, open, onClose }: Props) {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
               <Check size={28} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Booked!</h3>
+            <h3 className="text-lg font-bold text-gray-900">Request sent!</h3>
             <p className="text-sm text-gray-600">
-              Calendar invite sent. Your Zoom link is in your email and on your dashboard.
+              They&rsquo;ve been notified and will accept or decline your requested time. Once they
+              accept, the Zoom link and calendar invite arrive by email and appear in your
+              Bookings tab.
             </p>
-            {result.zoomUrl ? (
-              <a
-                href={result.zoomUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block text-sm font-semibold text-primary hover:underline"
-              >
-                Copy Zoom link →
-              </a>
-            ) : (
-              <p className="text-xs text-gray-500">
-                Zoom link is being generated - check your email shortly.
-              </p>
-            )}
             <Button onClick={onClose} className="w-full">
               Done
             </Button>

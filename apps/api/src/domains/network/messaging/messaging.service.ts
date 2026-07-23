@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
 
 /**
  * In-app messaging between two users.
@@ -97,6 +98,28 @@ export async function sendMessage(
     where: { id: conversationId },
     data: { updatedAt: new Date() },
   });
+
+  // Alert the recipient in the notification bell (best-effort).
+  void (async () => {
+    const [other, sender] = await Promise.all([
+      prisma.conversationParticipant.findFirst({
+        where: { conversationId, userId: { not: senderId } },
+        select: { userId: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: senderId },
+        select: { firstName: true, lastName: true },
+      }),
+    ]);
+    if (!other) return;
+    await createNotification({
+      userId: other.userId,
+      type: 'message',
+      title: `New message from ${sender ? `${sender.firstName} ${sender.lastName}` : 'a member'}`,
+      body: message.text.slice(0, 120),
+      data: { conversationId },
+    });
+  })().catch(() => undefined);
 
   return message;
 }

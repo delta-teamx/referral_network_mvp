@@ -16,6 +16,8 @@ interface Analytics {
     referrals: number[];
     referralsConverted: number[];
     reviews: number[];
+    messages?: number[];
+    bookings?: number[];
   };
   ratings: {
     avg: number;
@@ -104,11 +106,23 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-5 md:grid-cols-2">
             <ChartCard
+              title="Networking activity"
+              subtitle="Messages exchanged and calls booked, per week"
+              labels={data.labels}
+              series={[
+                { name: 'Messages', values: data.series.messages ?? [], color: '#0891b2' },
+                { name: 'Calls', values: data.series.bookings ?? [], color: '#db2777' },
+              ]}
+            />
+            <ChartCard
               title="Reviews received"
               subtitle="New reviews per week"
               labels={data.labels}
               series={[{ name: 'Reviews', values: data.series.reviews, color: '#7c3aed' }]}
             />
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
             <RatingCard ratings={data.ratings} />
           </div>
         </div>

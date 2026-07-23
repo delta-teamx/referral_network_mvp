@@ -74,6 +74,20 @@ export default function BookingsPage() {
     }
   }
 
+  async function respond(id: string, action: 'accept' | 'decline') {
+    if (!accessToken) return;
+    try {
+      await api.post(
+        `/api/v1/bookings/${id}/respond`,
+        { action },
+        { accessToken: accessToken ?? undefined },
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not respond');
+    }
+  }
+
   return (
     <UpgradeGate feature="Zoom Bookings" requiredTier="PRO">
     <div className="p-6 md:p-8">
@@ -201,6 +215,27 @@ export default function BookingsPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {b.status === 'pending' && isHost && (
+                    <>
+                      <button
+                        onClick={() => void respond(b.id, 'accept')}
+                        className="inline-flex items-center gap-1 rounded-full bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success/90"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => void respond(b.id, 'decline')}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:border-danger hover:text-danger"
+                      >
+                        Decline
+                      </button>
+                    </>
+                  )}
+                  {b.status === 'pending' && !isHost && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-800">
+                      Awaiting their confirmation…
+                    </span>
+                  )}
                   {b.zoomUrl && b.status === 'confirmed' && (
                     <a
                       href={b.zoomUrl}
@@ -211,7 +246,7 @@ export default function BookingsPage() {
                       <Video size={12} /> Join Zoom
                     </a>
                   )}
-                  {b.status === 'confirmed' && (
+                  {(b.status === 'confirmed' || (b.status === 'pending' && !isHost)) && (
                     <button
                       onClick={() => void cancel(b.id)}
                       className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:border-danger hover:text-danger"
