@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Paperclip, Send } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
@@ -54,7 +54,11 @@ function Linkified({ text, light }: { text: string; light: boolean }) {
             rel="noreferrer"
             className={`underline ${light ? 'text-white' : 'text-primary'}`}
           >
-            {part.includes('/dashboard/members/profile') ? 'Book a time with me →' : part}
+            {part.includes('/dashboard/members/profile')
+              ? 'Book a time with me →'
+              : part.includes('amazonaws.com/chat/')
+                ? 'Open attachment →'
+                : part}
           </a>
         ) : (
           <span key={i}>{part}</span>
@@ -81,6 +85,7 @@ function MessagesInner() {
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -204,6 +209,54 @@ function MessagesInner() {
     }
   }
 
+  // ---- Quick send + attachments -------------------------------------------
+
+  async function sendQuick(text: string) {
+    if (!accessToken || !activeId) return;
+    setSending(true);
+    try {
+      const msg = await api.post<Message>(
+        `/api/v1/messages/${activeId}/messages`,
+        { text },
+        { accessToken: accessToken ?? undefined },
+      );
+      setMessages((prev) => [...prev, msg]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Send failed');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function sendAttachment(file: File) {
+    if (!accessToken || !activeId) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const presign = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/api/v1/messages/${activeId}/attachments/presign`,
+        { filename: file.name, contentType: file.type || 'application/pdf', sizeBytes: file.size },
+        { accessToken: accessToken ?? undefined },
+      );
+      const put = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/pdf' },
+        body: file,
+      });
+      if (!put.ok) throw new ApiError(`Upload failed (${put.status})`, put.status);
+      const msg = await api.post<Message>(
+        `/api/v1/messages/${activeId}/messages`,
+        { text: `📎 ${file.name}: ${presign.publicUrl}` },
+        { accessToken: accessToken ?? undefined },
+      );
+      setMessages((prev) => [...prev, msg]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not upload the file');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   // ---- Booking invite ------------------------------------------------------
   // Drops a message with a link to MY profile so the other person can pick a
   // slot; their request then goes through the host-approval flow.
@@ -241,7 +294,7 @@ function MessagesInner() {
 
   return (
     <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-3rem)] overflow-hidden">
       {/* Left panel - conversation list */}
       <aside className="w-80 shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
         <div className="sticky top-0 border-b border-gray-100 bg-white p-4">
@@ -411,21 +464,49 @@ function MessagesInner() {
                 e.preventDefault();
                 void handleSend();
               }}
-              className="flex items-center gap-3 border-t border-gray-200 bg-white px-6 py-3"
+              className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
             >
+              {/* Attach document / contract */}
+              <label
+                className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-primary hover:text-primary ${uploading ? 'animate-pulse' : ''}`}
+                title="Attach a document or contract (PDF, Word, Excel, image)"
+              >
+                <Paperclip size={16} />
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,image/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) void sendAttachment(f);
+                  }}
+                />
+              </label>
+              {/* Thumbs up quick-send */}
+              <button
+                type="button"
+                onClick={() => void sendQuick('👍')}
+                disabled={sending}
+                title="Send a thumbs up"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-lg transition hover:border-primary disabled:opacity-50"
+              >
+                👍
+              </button>
               <input
                 type="text"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Type a message..."
-                className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
+                className="min-w-0 flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
               <button
                 type="submit"
                 disabled={sending || !draft.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-50"
               >
-                <Send size={16} />
+                Send <Send size={14} />
               </button>
             </form>
           </>

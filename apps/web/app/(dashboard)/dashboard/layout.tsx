@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
@@ -19,8 +19,21 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
+import { api } from '../../../lib/api';
 import { MobileNav } from '../../../components/layout/MobileNav';
+import { NotificationBell } from '../../../components/layout/NotificationBell';
 import { UpgradeBanner } from '../../../components/billing/UpgradeBanner';
+
+// Which sidebar tab lights up (red dot) for each unread notification type.
+const NOTIFICATION_TAB: Record<string, string> = {
+  message: '/dashboard/messages',
+  intro_accepted: '/dashboard/messages',
+  intro_request: '/dashboard/leads',
+  referral: '/dashboard/referrals',
+  booking_request: '/dashboard/bookings',
+  booking_confirmed: '/dashboard/bookings',
+  booking_declined: '/dashboard/bookings',
+};
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -44,10 +57,40 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const status = useAuthStore((s) => s.status);
   const hydrate = useAuthStore((s) => s.hydrate);
   const logout = useAuthStore((s) => s.logout);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [dotTabs, setDotTabs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
+
+  // Red dots: poll unread notifications and light up the matching tabs.
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const items = await api.get<Array<{ type: string; isRead: boolean }>>(
+          '/api/v1/notifications',
+          { accessToken: accessToken ?? undefined, query: { limit: 50 } },
+        );
+        if (cancelled) return;
+        const tabs = new Set<string>();
+        for (const n of items) {
+          if (!n.isRead && NOTIFICATION_TAB[n.type]) tabs.add(NOTIFICATION_TAB[n.type]!);
+        }
+        setDotTabs(tabs);
+      } catch {
+        /* silent */
+      }
+    }
+    void poll();
+    const timer = setInterval(() => void poll(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [accessToken, pathname]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login?next=/dashboard');
@@ -100,6 +143,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 <Icon size={16} />
                 {item.label}
+                {dotTabs.has(item.href) && (
+                  <span className="ml-auto h-2.5 w-2.5 rounded-full bg-danger" aria-label="unread" />
+                )}
               </Link>
             );
           })}
@@ -112,11 +158,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             Log out
           </button>
           <div className="px-3 text-[10px] text-gray-400">
-            Powered by <span className="font-semibold text-gray-500">Virtual Pros</span>
+            Powered by{' '}
+            <a
+              href="https://virtualpros.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-gray-500 hover:text-primary"
+            >
+              Virtual Pros
+            </a>
           </div>
         </div>
       </aside>
       <main className="min-w-0 flex-1">
+        {/* Slim top bar: notifications on every dashboard page */}
+        <div className="sticky top-0 z-40 flex h-12 items-center justify-end border-b border-gray-200 bg-white px-4">
+          <NotificationBell />
+        </div>
         {user.role === 'ADMIN' && (
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs text-amber-900">
             You&rsquo;re signed in as an admin.{' '}

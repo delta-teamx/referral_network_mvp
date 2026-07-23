@@ -10,6 +10,7 @@ import {
   listConversations,
   listMessages,
   markConversationRead,
+  presignChatAttachment,
   sendMessage,
 } from './messaging.service.js';
 
@@ -55,6 +56,31 @@ messagingRouter.post(
     const message = await sendMessage(req.params.id ?? '', req.user.id, req.body.text);
     const body: ApiResponse<typeof message> = { success: true, data: message };
     res.status(201).json(body);
+  }),
+);
+
+// ---- Attachment upload (document/contract/image) ---------------------------
+
+const attachmentPresignSchema = z.object({
+  filename: z.string().trim().min(1).max(200),
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+});
+
+messagingRouter.post(
+  '/:id/attachments/presign',
+  validate(attachmentPresignSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await presignChatAttachment(
+      req.params.id ?? '',
+      req.user.id,
+      req.body.filename,
+      req.body.contentType,
+      req.body.sizeBytes,
+    );
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
   }),
 );
 

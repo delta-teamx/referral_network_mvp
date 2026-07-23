@@ -1,5 +1,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
+import { env } from '../../../config/env.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 
@@ -184,6 +185,73 @@ export async function listConversations(userId: string) {
           : false,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Chat attachments (documents / contracts / images) via S3 presigned upload
+// ---------------------------------------------------------------------------
+
+const ATTACHMENT_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+]);
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15MB
+
+export async function presignChatAttachment(
+  conversationId: string,
+  userId: string,
+  filename: string,
+  contentType: string,
+  sizeBytes: number,
+): Promise<{ uploadUrl: string; publicUrl: string }> {
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId },
+    select: { id: true },
+  });
+  if (!participant) throw AppError.forbidden('You are not a participant of this conversation.');
+  if (!ATTACHMENT_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported file type. Use PDF, Word, Excel, image or text.');
+  }
+  if (sizeBytes > MAX_ATTACHMENT_BYTES) {
+    throw AppError.badRequest('File too large. Max 15MB.');
+  }
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
+    throw AppError.badRequest('File uploads are not configured yet.');
+  }
+
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+  const key = `chat/${conversationId}/${crypto.randomUUID()}-${safeName}`;
+
+  // @ts-expect-error — AWS SDK is optional at build time.
+  const s3Mod = await import('@aws-sdk/client-s3');
+  // @ts-expect-error — ditto.
+  const presignerMod = await import('@aws-sdk/s3-request-presigner');
+  const { S3Client, PutObjectCommand } = s3Mod;
+  const { getSignedUrl } = presignerMod;
+
+  const s3 = new S3Client({
+    region: env.AWS_REGION,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+  const cmd = new PutObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+    ContentType: contentType,
+    ContentLength: sizeBytes,
+  });
+  const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 * 5 });
+  const publicUrl = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+  return { uploadUrl, publicUrl };
 }
 
 /** Mark a conversation read for the given user (sets lastReadAt = now). */
