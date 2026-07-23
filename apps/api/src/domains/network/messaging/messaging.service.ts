@@ -186,6 +186,15 @@ export async function listConversations(userId: string) {
   });
 }
 
+/** Mark a conversation read for the given user (sets lastReadAt = now). */
+export async function markConversationRead(conversationId: string, userId: string) {
+  await prisma.conversationParticipant.updateMany({
+    where: { conversationId, userId },
+    data: { lastReadAt: new Date() },
+  });
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // listMessages
 // ---------------------------------------------------------------------------

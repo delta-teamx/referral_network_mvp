@@ -40,6 +40,30 @@ interface Message {
   createdAt: string;
 }
 
+/** Render message text with URLs as clickable links. */
+function Linkified({ text, light }: { text: string; light: boolean }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className={`underline ${light ? 'text-white' : 'text-primary'}`}
+          >
+            {part.includes('/dashboard/members/profile') ? 'Book a time with me →' : part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -104,6 +128,8 @@ function MessagesInner() {
   }, [loading, activeId, conversations, preselectId]);
 
   // ---- Load messages for active conversation ------------------------------
+  // Polls every 15s so replies appear without a manual refresh; marks the
+  // conversation read on open.
 
   useEffect(() => {
     if (!accessToken || !activeId) return;
@@ -119,8 +145,20 @@ function MessagesInner() {
       }
     }
     void load();
+    void api
+      .post(`/api/v1/messages/${activeId}/read`, {}, { accessToken: accessToken ?? undefined })
+      .then(() => {
+        if (!cancelled) {
+          setConversations((prev) =>
+            prev.map((c) => (c.id === activeId ? { ...c, unread: false } : c)),
+          );
+        }
+      })
+      .catch(() => undefined);
+    const poll = setInterval(() => void load(), 15_000);
     return () => {
       cancelled = true;
+      clearInterval(poll);
     };
   }, [accessToken, activeId]);
 
@@ -161,6 +199,29 @@ function MessagesInner() {
       );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Send failed');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // ---- Booking invite ------------------------------------------------------
+  // Drops a message with a link to MY profile so the other person can pick a
+  // slot; their request then goes through the host-approval flow.
+
+  async function sendBookingInvite() {
+    if (!accessToken || !activeId || !user) return;
+    setSending(true);
+    try {
+      const msg = await api.post<Message>(
+        `/api/v1/messages/${activeId}/messages`,
+        {
+          text: `📅 Let's get on a call! Pick a time that works for you on my profile and I'll confirm it: https://dashboard.referralnova.com/dashboard/members/profile?id=${user.id}`,
+        },
+        { accessToken: accessToken ?? undefined },
+      );
+      setMessages((prev) => [...prev, msg]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send the invite');
     } finally {
       setSending(false);
     }
@@ -262,18 +323,37 @@ function MessagesInner() {
         ) : (
           <>
             {/* Thread header */}
-            <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-6 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
-                {activeConversation?.otherUser
-                  ? (activeConversation.otherUser.firstName?.[0] ?? '') +
-                    (activeConversation.otherUser.lastName?.[0] ?? '')
-                  : '?'}
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-6 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
+                  {activeConversation?.otherUser
+                    ? (activeConversation.otherUser.firstName?.[0] ?? '') +
+                      (activeConversation.otherUser.lastName?.[0] ?? '')
+                    : '?'}
+                </div>
+                <p className="font-semibold text-gray-900">
+                  {activeConversation?.otherUser
+                    ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
+                    : 'Conversation'}
+                </p>
               </div>
-              <p className="font-semibold text-gray-900">
-                {activeConversation?.otherUser
-                  ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
-                  : 'Conversation'}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {activeConversation?.otherUser && (
+                  <a
+                    href={`/dashboard/members/profile?id=${activeConversation.otherUser.id}`}
+                    className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"
+                  >
+                    View profile
+                  </a>
+                )}
+                <button
+                  onClick={() => void sendBookingInvite()}
+                  disabled={sending}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+                >
+                  📅 Invite to book a call
+                </button>
+              </div>
             </header>
 
             {/* Messages */}
@@ -303,7 +383,9 @@ function MessagesInner() {
                               : 'bg-white text-gray-800 shadow-sm'
                           }`}
                         >
-                          <p>{m.text}</p>
+                          <p>
+                            <Linkified text={m.text} light={isMe} />
+                          </p>
                           <p
                             className={`mt-1 text-[10px] ${
                               isMe ? 'text-white/60' : 'text-gray-400'

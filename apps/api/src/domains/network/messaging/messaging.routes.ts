@@ -9,6 +9,7 @@ import {
   getOrCreateConversation,
   listConversations,
   listMessages,
+  markConversationRead,
   sendMessage,
 } from './messaging.service.js';
 
@@ -54,6 +55,18 @@ messagingRouter.post(
     const message = await sendMessage(req.params.id ?? '', req.user.id, req.body.text);
     const body: ApiResponse<typeof message> = { success: true, data: message };
     res.status(201).json(body);
+  }),
+);
+
+// ---- Mark a conversation as read ------------------------------------------
+
+messagingRouter.post(
+  '/:id/read',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const result = await markConversationRead(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
   }),
 );
 

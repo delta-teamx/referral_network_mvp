@@ -43,6 +43,14 @@ interface MessageLead {
   unread: boolean;
 }
 
+interface IntroLead {
+  id: string;
+  status: string;
+  reason: string;
+  sender: { id: string; firstName: string; lastName: string };
+  target: { id: string; firstName: string; lastName: string };
+}
+
 export default function LeadsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
@@ -51,16 +59,24 @@ export default function LeadsPage() {
   const [filter, setFilter] = useState<'all' | LeadStatus>('all');
   const [loading, setLoading] = useState(true);
 
-  // Every received message is a lead: surface member conversations here too.
+  const [introLeads, setIntroLeads] = useState<IntroLead[]>([]);
+
+  // Every received message and intro request is a lead: surface them here too.
   useEffect(() => {
     if (!accessToken) return;
     let cancelled = false;
     void (async () => {
       try {
-        const convos = await api.get<MessageLead[]>('/api/v1/messages', {
-          accessToken: accessToken ?? undefined,
-        });
-        if (!cancelled) setMessageLeads(convos.filter((c) => c.lastMessage));
+        const [convos, intros] = await Promise.all([
+          api.get<MessageLead[]>('/api/v1/messages', { accessToken: accessToken ?? undefined }),
+          api.get<IntroLead[]>('/api/v1/ai/suggestions', { accessToken: accessToken ?? undefined }),
+        ]);
+        if (!cancelled) {
+          setMessageLeads(convos.filter((c) => c.lastMessage));
+          setIntroLeads(
+            intros.filter((i) => i.status === 'requested' && i.target.id === user?.id),
+          );
+        }
       } catch {
         /* best-effort — consumer leads below still load */
       }
@@ -68,7 +84,19 @@ export default function LeadsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, [accessToken, user?.id]);
+
+  async function respondIntro(id: string, action: 'accept' | 'decline') {
+    if (!accessToken) return;
+    try {
+      await api.post(`/api/v1/ai/introductions/${id}/respond`, { action }, {
+        accessToken: accessToken ?? undefined,
+      });
+      setIntroLeads((prev) => prev.filter((i) => i.id !== id));
+    } catch {
+      /* surfaced elsewhere */
+    }
+  }
 
   useEffect(() => {
     if (!accessToken) return;
@@ -123,6 +151,47 @@ export default function LeadsPage() {
           your trust score healthy.
         </p>
       </header>
+
+      {/* ── Intro requests: someone wants to be introduced to you ───────── */}
+      {introLeads.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <UserCheck size={14} /> Intro requests ({introLeads.length})
+          </h2>
+          <ul className="space-y-3">
+            {introLeads.map((i) => (
+              <motion.li
+                key={i.id}
+                variants={fadeInUp}
+                initial="hidden"
+                animate="visible"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary-light/30 p-5 shadow-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900">
+                    {i.sender.firstName} {i.sender.lastName} wants an intro
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-600">{i.reason}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void respondIntro(i.id, 'accept')}
+                    className="rounded-full bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success/90"
+                  >
+                    Accept — start conversation
+                  </button>
+                  <button
+                    onClick={() => void respondIntro(i.id, 'decline')}
+                    className="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:border-danger hover:text-danger"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ── Message leads: every received message is a lead ─────────────── */}
       {messageLeads.length > 0 && (

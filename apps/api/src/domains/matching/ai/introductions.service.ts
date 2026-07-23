@@ -1,6 +1,8 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
+import { getOrCreateConversation, sendMessage } from '../../network/messaging/messaging.service.js';
 
 /**
  * Introduction lifecycle — manage AI-suggested introductions between members.
@@ -91,11 +93,22 @@ export async function requestIntro(introId: string, userId: string) {
   });
   if (!intro) throw AppError.notFound('Suggestion not found');
 
-  return prisma.introduction.update({
+  const updated = await prisma.introduction.update({
     where: { id: intro.id },
     data: { status: 'requested', requestedAt: new Date() },
     select: introSelect,
   });
+
+  // Alert the target in the bell (best-effort).
+  void createNotification({
+    userId: updated.target.id,
+    type: 'intro_request',
+    title: `${updated.sender.firstName} ${updated.sender.lastName} wants an intro`,
+    body: 'Review the request in your Leads inbox or on your dashboard and accept to start the conversation.',
+    data: { introId: updated.id },
+  }).catch(() => undefined);
+
+  return updated;
 }
 
 export async function respondToIntro(
@@ -124,6 +137,25 @@ export async function respondToIntro(
       initiatorId: intro.senderId,
       targetId: userId,
     });
+
+    // Accepting an intro STARTS the relationship: open the conversation with
+    // the match details as the first message, and tell the requester. All
+    // best-effort — the accept itself never fails on these.
+    void (async () => {
+      const conversation = await getOrCreateConversation(userId, intro.senderId);
+      await sendMessage(
+        conversation.id,
+        userId,
+        `Hi ${updated.sender.firstName} — I accepted your intro request. Why we matched: ${updated.reason} Let's find a time to talk — happy to jump on a call.`,
+      );
+      await createNotification({
+        userId: intro.senderId,
+        type: 'intro_accepted',
+        title: `${updated.target.firstName} ${updated.target.lastName} accepted your intro 🎉`,
+        body: 'A conversation has been started — continue in Messages and set up a call.',
+        data: { introId: updated.id, conversationId: conversation.id },
+      });
+    })().catch(() => undefined);
   }
 
   return updated;
