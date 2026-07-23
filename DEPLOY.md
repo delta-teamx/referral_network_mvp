@@ -12,12 +12,8 @@ supabase.co                          → Supabase (Postgres + Storage)
 resend.com                           → Resend (transactional email)
 ```
 
-> **Migration note:** the legacy `virtualprosnetwork.com` / `api.virtualprosnetwork.com`
-> hosts are still allow-listed in `apps/web/lib/domains.ts` and CORS so the
-> cutover is zero-downtime. `apps/web/lib/api.ts` routes requests from
-> `dashboard.referralnova.com` to `api.referralnova.com` at runtime, while every
-> other host keeps using `NEXT_PUBLIC_API_URL`. Retire the legacy hosts once DNS
-> has fully propagated.
+> The platform runs entirely on `referralnova.com` domains — every request uses
+> `NEXT_PUBLIC_API_URL` (`https://api.referralnova.com`) with no legacy host routing.
 
 ## 1. Database — Supabase (free)
 
@@ -115,11 +111,9 @@ Netlify reads `netlify.toml` (static export of `apps/web/out`).
 1. https://netlify.com → **Add new site → Import from Git** → pick `delta-teamx/referral_network_mvp`
 2. Netlify reads `netlify.toml` automatically. Confirm the build env:
    ```
-   NEXT_PUBLIC_API_URL   = https://api.virtualprosnetwork.com   # runtime routing sends dashboard.referralnova.com → api.referralnova.com
+   NEXT_PUBLIC_API_URL   = https://api.referralnova.com
    NEXT_PUBLIC_APP_NAME  = ReferralNova
    ```
-   > To flip the app straight onto the new API for all hosts, set
-   > `NEXT_PUBLIC_API_URL=https://api.referralnova.com` and redeploy.
 3. **Maintenance switch:** to put login/signup behind the "we'll be right back"
    screen, set `NEXT_PUBLIC_MAINTENANCE_MODE=1` and redeploy. Unset (or `0`) to go live.
 4. Deploy. Get the `*.netlify.app` URL.

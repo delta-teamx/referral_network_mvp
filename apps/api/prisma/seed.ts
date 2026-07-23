@@ -13,7 +13,9 @@ const prisma = new PrismaClient();
 // Accounts previously created by this seed (and by the removed seed-demo.sql).
 // Anything matching these emails, or the @vpn-demo.com pattern, is test data.
 const DEMO_EMAILS = [
-  'demo-owner@virtualprosnetwork.local',
+  'demo-owner@referralnova.local',
+  'demo-owner@virtualprosnetwork.local', // legacy-brand demo account, kept so cleanup still removes it
+
   'sarah@johnsonrealty.com',
   'daniel@tworiverscpa.com',
   'maya@stonegateweddings.com',
@@ -458,9 +460,9 @@ async function main() {
   if (process.env.SEED_DEMO === 'true') {
   console.log('[seed] ensuring demo business owner');
   const owner = await prisma.user.upsert({
-    where: { email: 'demo-owner@virtualprosnetwork.local' },
+    where: { email: 'demo-owner@referralnova.local' },
     create: {
-      email: 'demo-owner@virtualprosnetwork.local',
+      email: 'demo-owner@referralnova.local',
       firstName: 'Demo',
       lastName: 'Owner',
       role: 'BUSINESS_OWNER',

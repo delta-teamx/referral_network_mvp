@@ -12,10 +12,14 @@ import {
   Handshake,
   Network,
   Play,
+  RefreshCw,
+  Search,
   Sparkles,
   Star,
+  TrendingUp,
   Users,
   Video,
+  XCircle,
   Zap,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -79,8 +83,7 @@ export default function HomePage() {
                 {t('hero.titleA')}{' '}
                 <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {t('hero.titleHighlight')}
-                </span>{' '}
-                {t('hero.titleB')}
+                </span>
               </motion.h1>
 
               <motion.p
@@ -114,11 +117,11 @@ export default function HomePage() {
               <motion.div variants={fadeInUp} className="mt-10 flex flex-wrap gap-6 text-sm text-gray-400">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-primary" />
-                  Free to join
+                  First 200 members: Premium free
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-primary" />
-                  AI matches in seconds
+                  AI-matched referral partners
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-primary" />
@@ -157,51 +160,170 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ PROBLEM / SOLUTION ═══ */}
+      {/* ═══ THE DIFFERENCE ═══ */}
       <section className="bg-gray-50 py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-14 text-center">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">The problem</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">The difference</p>
             <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
-              Networking groups are stuck in the 1990s
+              Relationship intelligence vs. referral activation
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-              Manual referrals. Memory-based introductions. &ldquo;Who do I know?&rdquo; over
-              breakfast. The result: missed connections and lost revenue - every single week.
+              Relationship-intelligence platforms help you find who <em>could</em> introduce you.
+              Referral Nova builds you a system where introductions <strong>happen continuously</strong>.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Them */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Relationship intelligence</p>
+              <h3 className="mb-5 text-lg font-semibold text-gray-900">Mapping who you know</h3>
+              <ul className="space-y-3">
+                {[
+                  'Analyzes your existing contacts',
+                  'Shows you paths to a possible introduction',
+                  'You still have to ask, chase, and follow up',
+                  'One-off intros that stop when you stop pushing',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-gray-500">
+                    <XCircle size={16} className="mt-0.5 flex-shrink-0 text-gray-300" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Us */}
+            <div className="rounded-2xl border border-primary bg-primary/5 p-8 shadow-md ring-1 ring-primary/20">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Referral activation</p>
+              <h3 className="mb-5 text-lg font-semibold text-gray-900">A referral engine that runs itself</h3>
+              <ul className="space-y-3">
+                {[
+                  'AI matches you with partners who want to refer you',
+                  'Warm introductions delivered to you every week',
+                  'Built-in messaging, Zoom booking, and contracts',
+                  'Referrals flow both ways — and every outcome is tracked',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm font-medium text-gray-800">
+                    <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0 text-success" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ YOUR NETWORK IS YOUR GROWTH ENGINE ═══ */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Untapped revenue</p>
+              <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">
+                Your network is your growth engine
+              </h2>
+              <p className="mb-6 text-gray-600">
+                Every business already sits on a goldmine of referral relationships. The problem
+                isn&rsquo;t that you don&rsquo;t know enough people — it&rsquo;s that those
+                relationships aren&rsquo;t organized, activated, or working for you. Referral Nova
+                turns them into a predictable source of revenue.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Past customers',
+                  'Industry relationships',
+                  'Vendors & suppliers',
+                  'Business partners',
+                  'Friends & family',
+                  'Professional contacts',
+                  'Community connections',
+                ].map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-sm text-gray-700"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-3xl border border-gray-200 bg-gradient-to-br from-primary/5 via-white to-blue-50 p-10 shadow-xl">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Referrals convert better</p>
+                  <p className="text-xs text-gray-500">Why warm intros win</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: 'Trust starts high', value: 'Pre-sold by someone they know' },
+                  { label: 'Sales cycles shrink', value: 'Fewer calls to close' },
+                  { label: 'Acquisition cost', value: 'Near zero vs. paid ads' },
+                  { label: 'Retention', value: 'Referred clients stay longer' },
+                ].map((stat) => (
+                  <div key={stat.label} className="flex items-center justify-between gap-4 rounded-lg bg-white/80 px-4 py-3">
+                    <span className="text-sm text-gray-600">{stat.label}</span>
+                    <span className="text-right text-sm font-bold text-gray-900">{stat.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ THE MARKETPLACE ═══ */}
+      <section className="bg-gray-50 py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-14 text-center">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
+              The world&rsquo;s first AI-powered referral marketplace
+            </p>
+            <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
+              Give referrals. Receive referrals. Grow together.
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-gray-600">
+              Referral Nova is a two-way marketplace: every member both sends and receives
+              qualified referrals, so the more you give, the more your business grows.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                icon: Brain,
-                title: 'Memory-based referrals',
-                problem: 'Members forget who needs what. Great matches slip through the cracks.',
-                solution: 'AI remembers everyone\'s profile and matches automatically.',
+                icon: Search,
+                title: 'Discover trusted partners',
+                desc: 'AI surfaces businesses that serve your customers before and after you do — your natural referral allies.',
               },
               {
-                icon: Users,
-                title: 'Manual introductions',
-                problem: 'Leaders spend hours coordinating who should meet whom.',
-                solution: 'AI generates introduction suggestions with a reason for every match.',
+                icon: Handshake,
+                title: 'Exchange qualified referrals',
+                desc: 'Send real clients to partners and receive warm, ready-to-buy leads back — all tracked in one place.',
+              },
+              {
+                icon: RefreshCw,
+                title: 'Build referral relationships',
+                desc: 'Message, meet on Zoom, and formalize partnerships with built-in contracts — not one-off favors.',
               },
               {
                 icon: BarChart3,
-                title: 'No tracking or learning',
-                problem: 'Nobody knows which introductions led to deals.',
-                solution: 'Every outcome is tracked. The AI gets smarter with every closed deal.',
+                title: 'Track your referral impact',
+                desc: 'See every referral from sent to converted, and watch which partnerships actually drive revenue.',
               },
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-                  <Icon size={28} className="mb-4 text-primary" />
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">{item.title}</h3>
-                  <p className="mb-4 text-sm text-gray-500 line-through decoration-danger/50">{item.problem}</p>
-                  <p className="flex items-start gap-2 text-sm font-medium text-gray-900">
-                    <Sparkles size={14} className="mt-0.5 flex-shrink-0 text-primary" />
-                    {item.solution}
-                  </p>
+                <div key={item.title} className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+                    <Icon size={22} className="text-primary" />
+                  </div>
+                  <h3 className="mb-2 font-semibold text-gray-900">{item.title}</h3>
+                  <p className="text-sm text-gray-600">{item.desc}</p>
                 </div>
               );
             })}
@@ -215,7 +337,7 @@ export default function HomePage() {
           <div className="mb-14 text-center">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">How it works</p>
             <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
-              From sign-up to your first deal in 4 steps
+              From sign-up to your first referral in 4 steps
             </h2>
           </div>
 
@@ -236,14 +358,14 @@ export default function HomePage() {
               {
                 step: '03',
                 icon: Sparkles,
-                title: 'AI finds your matches',
-                desc: 'Our engine scans every member and surfaces the people you should meet - with a reason why.',
+                title: 'AI finds your partners',
+                desc: 'Our engine scans every member and surfaces the people you should meet — with a reason why.',
               },
               {
                 step: '04',
                 icon: Calendar,
-                title: 'Book & close deals',
-                desc: 'Request an intro, book a Zoom call directly from the platform, and track every outcome.',
+                title: 'Meet & exchange referrals',
+                desc: 'Request an intro, book a Zoom call from the platform, and track every referral to revenue.',
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -262,13 +384,161 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ FEATURES GRID ═══ */}
+      {/* ═══ WHY REFERRAL NOVA IS DIFFERENT ═══ */}
+      <section className="bg-gray-950 py-20 text-white">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-14 text-center">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Why Referral Nova is different</p>
+            <h2 className="text-3xl font-bold md:text-4xl">
+              Other tools show you your network.
+              <br className="hidden md:block" />
+              <span className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                Referral Nova activates it.
+              </span>
+            </h2>
+          </div>
+
+          <div className="mb-10 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                title: 'LinkedIn',
+                does: 'Shows you who you know',
+                gap: 'No one is matched, introduced, or accountable for sending you business.',
+              },
+              {
+                title: 'CRMs',
+                does: 'Store your contacts',
+                gap: 'A database of names does nothing until someone actually makes an introduction.',
+              },
+              {
+                title: 'Referral software',
+                does: 'Manages referral campaigns',
+                gap: 'It tracks links and payouts — it can’t find you new partners who want to refer you.',
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
+                <h3 className="mb-1 font-semibold text-white">{item.title}</h3>
+                <p className="mb-3 text-sm text-gray-400">{item.does}</p>
+                <p className="flex items-start gap-2 text-sm text-gray-300">
+                  <XCircle size={15} className="mt-0.5 flex-shrink-0 text-gray-500" />
+                  {item.gap}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-8 text-center">
+            <Sparkles size={24} className="mx-auto mb-3 text-primary" />
+            <p className="mx-auto max-w-2xl text-lg font-semibold text-white">
+              Referral Nova matches you with the right partners, gets you introduced, books the
+              meeting, and tracks every referral to revenue — continuously, not once.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ THE REFERRAL NOVA ADVANTAGE ═══ */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-14 text-center">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">The Referral Nova advantage</p>
+            <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
+              Built to make referrals predictable
+            </h2>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              {
+                icon: Brain,
+                title: 'AI-powered matching',
+                desc: 'Matched on what actually creates referrals:',
+                points: [
+                  'Industry & services',
+                  'Customer needs & ICP overlap',
+                  'Location & market',
+                  'Existing business relationships',
+                  'Growth goals',
+                ],
+              },
+              {
+                icon: Zap,
+                title: 'Referral intelligence',
+                desc: 'The engine learns what converts:',
+                points: [
+                  'Every intro outcome is recorded',
+                  'Trust scores updated daily',
+                  'Best-performing partnerships surface first',
+                  'Suggestions get sharper with every deal',
+                ],
+              },
+              {
+                icon: Network,
+                title: 'Network-effect growth',
+                desc: 'The marketplace compounds:',
+                points: [
+                  'Every new member is a potential partner',
+                  'Givers get priority — generosity is rewarded',
+                  'Groups & communities plug in white-label',
+                  'Your reach grows without more outreach',
+                ],
+              },
+            ].map((col) => {
+              const Icon = col.icon;
+              return (
+                <div key={col.title} className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <Icon size={24} className="text-primary" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-900">{col.title}</h3>
+                  <p className="mb-4 text-sm text-gray-600">{col.desc}</p>
+                  <ul className="space-y-2">
+                    {col.points.map((p) => (
+                      <li key={p} className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle2 size={15} className="mt-0.5 flex-shrink-0 text-success" />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Audience strip */}
+          <div className="mt-14 rounded-2xl border border-gray-200 bg-gray-50 p-8 text-center">
+            <h3 className="mb-2 text-xl font-bold text-gray-900">
+              Built for businesses that grow through trust
+            </h3>
+            <p className="mx-auto mb-5 max-w-2xl text-sm text-gray-600">
+              If your best clients have ever come from word of mouth, Referral Nova was built for you.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                'Agencies & consultants',
+                'Real estate & mortgage',
+                'Legal & accounting',
+                'Home & local services',
+                'Health & wellness',
+                'B2B services',
+                'Coaches & creators',
+              ].map((chip) => (
+                <span key={chip} className="rounded-full bg-white px-4 py-1.5 text-sm text-gray-700 shadow-sm">
+                  {chip}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PLATFORM FEATURES ═══ */}
       <section className="bg-gray-950 py-20 text-white">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-14 text-center">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Platform features</p>
             <h2 className="text-3xl font-bold md:text-4xl">
-              Everything your network needs to thrive
+              Everything your referral engine needs
             </h2>
           </div>
 
@@ -281,11 +551,11 @@ export default function HomePage() {
           >
             {[
               { icon: Brain, title: 'AI Matching Engine', desc: '7-factor scoring: industry, ICP alignment, referral compatibility, keywords, location, barter, and more.' },
-              { icon: Video, title: 'Video Profiles', desc: '60-second intro videos auto-transcribed by Whisper AI and indexed for smarter matching.' },
+              { icon: Video, title: 'Video Profiles', desc: '60-second intro videos auto-transcribed by AI and indexed for smarter matching.' },
               { icon: Calendar, title: 'Direct Booking', desc: 'Set availability, pick a reason, book 30-min Zoom calls directly from any profile.' },
               { icon: Zap, title: 'Smart Introductions', desc: '"You should meet Sarah (Real Estate) - she can refer you clients." Request intros in one click.' },
               { icon: Network, title: 'Live Zoom Events', desc: 'Weekly referral rooms, expert panels, industry meetups. Register and join from the platform.' },
-              { icon: Handshake, title: 'Barter Exchange', desc: 'Trade services with other members. "I\'ll do your taxes if you design my website."' },
+              { icon: Handshake, title: 'Referral Contracts', desc: 'Formalize partnerships with built-in contracts, signed on-platform and visible to admins.' },
               { icon: Globe, title: 'White-Label for Groups', desc: 'BNI chapters, Chambers, Masterminds can each run their own branded instance.' },
               { icon: BarChart3, title: 'Deal Tracking & Analytics', desc: 'Track every intro outcome: met, referred, deal closed. See 12-week trend charts.' },
               { icon: Star, title: 'Trust Scores', desc: 'AI-computed reputation: ratings + conversions + network strength + activity. Updated daily.' },
@@ -429,9 +699,10 @@ export default function HomePage() {
           <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">
             Start free. Upgrade when deals close.
           </h2>
-          <p className="mx-auto mb-10 max-w-xl text-gray-600">
+          <p className="mx-auto mb-8 max-w-xl text-gray-600">
             No credit card required. Every plan includes AI matching, video profiles, and booking.
           </p>
+          <FoundingOffer variant="card" />
           <div className="grid gap-6 md:grid-cols-3">
             {[
               { name: 'Free', price: '$0', desc: '3 AI intros/month, 1 listing, 2 groups', cta: 'Start free', href: '/signup' },
@@ -473,18 +744,18 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl px-6">
           <Sparkles size={32} className="mx-auto mb-4 text-primary" />
           <h2 className="mb-4 text-3xl font-bold md:text-5xl">
-            Your next referral partner is waiting on Referral Nova
+            Join the referral revolution
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
-            Built by Referral Nova, powered by AI. Sign up, complete your profile, and get your first
-            introduction in under 5 minutes - whether you serve clients locally or worldwide.
+            Stop waiting for referrals to happen. Build the engine that makes them happen — and
+            claim one of the first 200 founding spots with every Premium feature free.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="https://dashboard.referralnova.com/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
-              Get started free <ArrowRight size={16} />
+              Claim your founding spot <ArrowRight size={16} />
             </Link>
             <Link
               href="/events"
@@ -493,6 +764,9 @@ export default function HomePage() {
               <Video size={16} /> Join a live networking event
             </Link>
           </div>
+          <p className="mt-6 text-xs text-gray-500">
+            Free to join · No credit card · Your first AI matches in minutes
+          </p>
         </div>
       </section>
     </>
