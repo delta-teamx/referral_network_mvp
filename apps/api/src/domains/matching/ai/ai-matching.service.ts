@@ -128,7 +128,9 @@ function discoveryReason(me: ProfileData, them: ProfileData): string {
     ? `${them.businessName}${them.industry ? ` (${them.industry})` : ''}`
     : 'A member of your network';
   const context = signals.length ? ` — ${signals.join(', ')}` : '';
-  return `You might be interested: ${who}${context}. Not an obvious match on paper, but new referral partners often come from outside your usual circle — worth a look.`;
+  // The feed already badges this card "You might be interested" — don't repeat
+  // the phrase in the reason text.
+  return `${who}${context}. Not an obvious match on paper, but new referral partners often come from outside your usual circle.`;
 }
 
 /**

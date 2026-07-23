@@ -35,11 +35,40 @@ const FILTERS: Array<{ key: 'all' | LeadStatus; label: string; tone: string }> =
   { key: 'EXPIRED', label: 'Expired', tone: 'bg-gray-100 text-gray-500' },
 ];
 
+interface MessageLead {
+  id: string;
+  updatedAt: string;
+  otherUser: { id: string; firstName: string; lastName: string; avatarUrl: string | null } | null;
+  lastMessage: { id: string; senderId: string; text: string; createdAt: string } | null;
+  unread: boolean;
+}
+
 export default function LeadsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [messageLeads, setMessageLeads] = useState<MessageLead[]>([]);
   const [filter, setFilter] = useState<'all' | LeadStatus>('all');
   const [loading, setLoading] = useState(true);
+
+  // Every received message is a lead: surface member conversations here too.
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const convos = await api.get<MessageLead[]>('/api/v1/messages', {
+          accessToken: accessToken ?? undefined,
+        });
+        if (!cancelled) setMessageLeads(convos.filter((c) => c.lastMessage));
+      } catch {
+        /* best-effort — consumer leads below still load */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -88,12 +117,69 @@ export default function LeadsPage() {
     <div className="p-6 md:p-8">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Inbox</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">Leads from consumers</h1>
+        <h1 className="mt-1 text-2xl font-bold text-gray-900">Your leads</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Every lead is a consumer who clicked &ldquo;Connect&rdquo; on one of your listings.
-          Respond within 24 hours to keep your trust score healthy.
+          Member messages and consumer requests, in one inbox. Respond within 24 hours to keep
+          your trust score healthy.
         </p>
       </header>
+
+      {/* ── Message leads: every received message is a lead ─────────────── */}
+      {messageLeads.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <MessageCircle size={14} /> Message leads ({messageLeads.length})
+          </h2>
+          <ul className="space-y-3">
+            {messageLeads.map((c) => {
+              const other = c.otherUser;
+              const fromThem = c.lastMessage && c.lastMessage.senderId !== user?.id;
+              return (
+                <motion.li
+                  key={c.id}
+                  variants={fadeInUp}
+                  initial="hidden"
+                  animate="visible"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
+                      {other ? (other.firstName?.[0] ?? '') + (other.lastName?.[0] ?? '') : '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900">
+                          {other ? `${other.firstName} ${other.lastName}` : 'Member'}
+                        </p>
+                        {c.unread && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      {c.lastMessage && (
+                        <p className="truncate text-sm text-gray-600">
+                          {fromThem ? '' : 'You: '}
+                          {c.lastMessage.text.slice(0, 90)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    href={`/dashboard/messages?c=${c.id}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+                  >
+                    <MessageCircle size={12} /> Open conversation
+                  </Link>
+                </motion.li>
+              );
+            })}
+          </ul>
+          <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <UserCheck size={14} /> Consumer leads
+          </h2>
+        </section>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (

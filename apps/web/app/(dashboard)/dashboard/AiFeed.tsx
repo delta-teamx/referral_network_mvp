@@ -194,10 +194,10 @@ export function AiFeed() {
         </div>
         <div className="flex gap-2">
           <Link
-            href="/onboarding"
+            href={`/dashboard/members/profile?id=${user?.id ?? ''}`}
             className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-primary"
           >
-            Edit my profile
+            My profile
           </Link>
           <Link
             href="/dashboard/members"
@@ -351,7 +351,9 @@ export function AiFeed() {
                 <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
                   <p className="flex items-start gap-2 text-sm text-blue-900">
                     <Sparkles size={14} className="mt-0.5 flex-shrink-0 text-blue-500" />
-                    {intro.reason}
+                    {/* The badge already says "You might be interested" — strip the
+                        legacy prefix from older stored suggestions. */}
+                    {intro.reason.replace(/^You might be interested:\s*/i, '')}
                   </p>
                 </div>
 
