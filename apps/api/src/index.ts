@@ -20,6 +20,7 @@ import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
 import { referralsRouter } from './domains/network/referrals/referrals.routes.js';
 import { connectionsRouter } from './domains/network/connections/connections.routes.js';
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
+import { contractsRouter } from './domains/network/contracts/contracts.routes.js';
 import { groupsRouter } from './domains/network/groups/groups.routes.js';
 import { profilesRouter } from './domains/network/profiles/profiles.routes.js';
 import { aiRouter } from './domains/matching/ai/ai.routes.js';
@@ -138,6 +139,7 @@ app.use('/api/v1/reviews', verifiedWriteGate, reviewsRouter);
 app.use('/api/v1/referrals', verifiedWriteGate, referralsRouter);
 app.use('/api/v1/connections', verifiedWriteGate, connectionsRouter);
 app.use('/api/v1/invitations', verifiedWriteGate, invitationsRouter);
+app.use('/api/v1/contracts', verifiedWriteGate, contractsRouter);
 app.use('/api/v1/groups', verifiedWriteGate, groupsRouter);
 app.use('/api/v1/profiles', profilesRouter);
 app.use('/api/v1/ai', aiRouter);
@@ -203,6 +205,26 @@ async function ensureRuntimeSchema(): Promise<void> {
       `DO $$ BEGIN UPDATE "NetworkingEvent" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       // Member-to-member referrals have no directory listing.
       `ALTER TABLE "Referral" ALTER COLUMN "listingId" DROP NOT NULL;`,
+      // In-platform contracts (created here — no migration needed).
+      `CREATE TABLE IF NOT EXISTS "Contract" (
+         "id" TEXT NOT NULL,
+         "title" TEXT NOT NULL,
+         "body" TEXT NOT NULL,
+         "senderId" TEXT NOT NULL,
+         "receiverId" TEXT NOT NULL,
+         "status" TEXT NOT NULL DEFAULT 'sent',
+         "senderSignature" TEXT NOT NULL,
+         "receiverSignature" TEXT,
+         "senderSignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "receiverSignedAt" TIMESTAMP(3),
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "Contract_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "Contract_senderId_idx" ON "Contract" ("senderId");`,
+      `CREATE INDEX IF NOT EXISTS "Contract_receiverId_idx" ON "Contract" ("receiverId");`,
+      `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+      `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
       // Legacy BookingCall columns the code doesn't write must not block
       // inserts ("A required value is missing" on booking requests).
       `DO $$ BEGIN ALTER TABLE "BookingCall" ALTER COLUMN "durationMin" SET DEFAULT 30; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,

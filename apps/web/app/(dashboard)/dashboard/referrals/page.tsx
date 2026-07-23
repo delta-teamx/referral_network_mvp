@@ -8,6 +8,7 @@ import { fadeInUp } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
+import { InvitationsAndContracts } from '../../../../components/network/InvitationsAndContracts';
 
 type Status = 'SENT' | 'ACCEPTED' | 'CONVERTED' | 'DECLINED';
 
@@ -27,6 +28,7 @@ interface Referral {
 
 export default function ReferralsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const me = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<'received' | 'sent'>('received');
   const [loading, setLoading] = useState(true);
   const [received, setReceived] = useState<Referral[]>([]);
@@ -78,10 +80,10 @@ export default function ReferralsPage() {
     <div className="p-6 md:p-8">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Network</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">Referrals</h1>
+        <h1 className="mt-1 text-2xl font-bold text-gray-900">Referrals &amp; Invitations</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Clients that other network members referred to you, and clients you referred to them.
-          Conversion counts toward everyone&rsquo;s trust score.
+          Client referrals between members, network invitations, and signed collaboration
+          contracts — all in one place. Conversions count toward everyone&rsquo;s trust score.
         </p>
       </header>
 
@@ -235,6 +237,8 @@ export default function ReferralsPage() {
           ))}
         </ul>
       )}
+
+      <InvitationsAndContracts accessToken={accessToken} meId={me?.id ?? null} />
     </div>
     </UpgradeGate>
   );

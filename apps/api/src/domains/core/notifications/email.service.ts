@@ -18,6 +18,8 @@ export type EmailTemplate =
   | 'welcome'
   | 'new_signup_admin'
   | 'invitation'
+  | 'contract_sent'
+  | 'contract_signed'
   | 'lead_received'
   | 'referral_received'
   | 'booking_confirmed'
@@ -111,6 +113,30 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: basicLayout(
           `You\u2019ve been invited to ${appName}`,
           `<p><strong>${d.senderName ?? 'A peer'}</strong> invited you to join their referral network.</p>${d.message ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.message))}</blockquote>` : ''}${cta('Accept invitation', String(d.inviteUrl))}`,
+        ),
+      };
+    case 'contract_sent':
+      return {
+        subject: `Contract to review & sign: ${d.title}`,
+        text: `${d.senderName} sent you a contract ("${d.title}") on ${appName}. Review and sign it in your Referrals & Invitations tab: ${d.contractUrl}`,
+        html: basicLayout(
+          'A contract is waiting for your signature',
+          `<p><strong>${escapeHtml(String(d.senderName ?? ''))}</strong> sent you a contract on ${appName}:</p>
+           <p><strong>${escapeHtml(String(d.title ?? ''))}</strong></p>
+           <p>Review the terms and sign it to move the collaboration forward.</p>
+           ${cta('Review & sign', String(d.contractUrl ?? '#'))}`,
+        ),
+      };
+    case 'contract_signed':
+      return {
+        subject: `Contract signed ✅ ${d.title}`,
+        text: `The contract "${d.title}" between ${d.senderName} and ${d.receiverName} has been signed by both parties on ${appName}.`,
+        html: basicLayout(
+          'Contract fully signed',
+          `<p>The contract <strong>${escapeHtml(String(d.title ?? ''))}</strong> between
+           <strong>${escapeHtml(String(d.senderName ?? ''))}</strong> and
+           <strong>${escapeHtml(String(d.receiverName ?? ''))}</strong> is now signed by both parties.</p>
+           ${cta('View contract', String(d.contractUrl ?? '#'))}`,
         ),
       };
     case 'lead_received':

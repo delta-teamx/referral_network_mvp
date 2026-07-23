@@ -115,6 +115,8 @@ model User {
   targetedConnections    BusinessConnection[] @relation("BusinessConnectionTarget")
   sentInvitations        BusinessInvitation[] @relation("InvitationSender")
   receivedInvitations    BusinessInvitation[] @relation("InvitationRecipient")
+  contractsSent          Contract[] @relation("ContractSender")
+  contractsReceived      Contract[] @relation("ContractReceiver")
   onboardingProgress     OnboardingProgress?
   memberProfile          MemberProfile?
   conversations          ConversationParticipant[]
@@ -481,6 +483,31 @@ model Group {
 
   @@index([slug])
   @@index([city, state])
+}
+
+// Platform contracts: two members formalise a collaboration by signing the
+// platform's standard contract in-app. Admins see every contract and are
+// CC'd on contract emails.
+model Contract {
+  id                String    @id @default(uuid())
+  title             String
+  body              String
+  senderId          String
+  receiverId        String
+  status            String    @default("sent") // sent, signed, declined
+  senderSignature   String
+  receiverSignature String?
+  senderSignedAt    DateTime  @default(now())
+  receiverSignedAt  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sender   User @relation("ContractSender", fields: [senderId], references: [id])
+  receiver User @relation("ContractReceiver", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
 }
 
 model GroupMessage {

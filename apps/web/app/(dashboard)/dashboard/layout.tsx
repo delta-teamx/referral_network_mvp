@@ -30,6 +30,7 @@ const NOTIFICATION_TAB: Record<string, string> = {
   intro_accepted: '/dashboard/messages',
   intro_request: '/dashboard/leads',
   referral: '/dashboard/referrals',
+  contract: '/dashboard/referrals',
   booking_request: '/dashboard/bookings',
   booking_confirmed: '/dashboard/bookings',
   booking_declined: '/dashboard/bookings',

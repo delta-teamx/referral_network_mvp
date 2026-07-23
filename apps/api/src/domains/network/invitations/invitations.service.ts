@@ -237,6 +237,22 @@ export async function listSentInvitations(senderId: string): Promise<InvitationV
   return rows.map((r) => ({ ...r, status: normaliseStatus(r) }));
 }
 
+/** Invitations addressed to me (by account or by my email address). */
+export async function listReceivedInvitations(
+  userId: string,
+  email: string,
+): Promise<InvitationView[]> {
+  const rows = await prisma.businessInvitation.findMany({
+    where: {
+      OR: [{ recipientUserId: userId }, { recipientEmail: email.toLowerCase().trim() }],
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    select: invitationSelect,
+  });
+  return rows.map((r) => ({ ...r, status: normaliseStatus(r) }));
+}
+
 export async function revokeInvitation(id: string, senderId: string): Promise<InvitationView> {
   const row = await prisma.businessInvitation.findFirst({
     where: { id, senderId, status: 'pending' },

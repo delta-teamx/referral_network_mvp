@@ -8,6 +8,7 @@ import { AppError } from '../../../utils/AppError.js';
 import {
   acceptInvitation,
   getInvitationByToken,
+  listReceivedInvitations,
   listSentInvitations,
   revokeInvitation,
   sendInvitation,
@@ -52,6 +53,16 @@ invitationsRouter.get(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const invs = await listSentInvitations(req.user.id);
+    const body: ApiResponse<typeof invs> = { success: true, data: invs };
+    res.json(body);
+  }),
+);
+
+invitationsRouter.get(
+  '/received',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const invs = await listReceivedInvitations(req.user.id, req.user.email);
     const body: ApiResponse<typeof invs> = { success: true, data: invs };
     res.json(body);
   }),
