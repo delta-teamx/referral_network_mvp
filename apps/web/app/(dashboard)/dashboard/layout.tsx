@@ -65,6 +65,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
+  // Opening a tab clears its red dot — the dot means "unseen", so seeing the
+  // tab marks its notification types read (server + local + bell count).
+  useEffect(() => {
+    if (!accessToken) return;
+    const types = Object.entries(NOTIFICATION_TAB)
+      .filter(([, href]) => href === pathname)
+      .map(([type]) => type);
+    if (types.length === 0) return;
+    setDotTabs((prev) => {
+      if (!prev.has(pathname)) return prev;
+      const next = new Set(prev);
+      next.delete(pathname);
+      return next;
+    });
+    void api
+      .post('/api/v1/notifications/read-by-types', { types }, { accessToken: accessToken ?? undefined })
+      .catch(() => undefined);
+  }, [accessToken, pathname]);
+
   // Red dots: poll unread notifications and light up the matching tabs.
   useEffect(() => {
     if (!accessToken) return;

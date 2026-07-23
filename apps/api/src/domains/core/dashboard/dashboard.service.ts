@@ -105,7 +105,7 @@ export async function getAnalytics(userId: string) {
 }
 
 export async function getOwnerMetrics(userId: string) {
-  const [listings, leadCounts, referralCounts, viewCount, avgListing] = await Promise.all([
+  const [listings, leadCounts, referralCounts, viewCount, avgListing, introRequests, callsBooked, messagesCount] = await Promise.all([
     prisma.listing.findMany({
       where: { userId, deletedAt: null },
       select: {
@@ -138,6 +138,18 @@ export async function getOwnerMetrics(userId: string) {
       where: { userId, deletedAt: null },
       _avg: { avgRating: true, trustScore: true },
     }),
+    prisma.introduction.count({
+      where: { targetId: userId, status: { in: ['requested', 'accepted'] } },
+    }),
+    prisma.bookingCall.count({
+      where: {
+        OR: [{ hostId: userId }, { guestId: userId }],
+        status: { in: ['pending', 'confirmed', 'completed'] },
+      },
+    }),
+    prisma.message.count({
+      where: { conversation: { participants: { some: { userId } } } },
+    }),
   ]);
 
   const leadsByStatus = Object.fromEntries(
@@ -158,6 +170,9 @@ export async function getOwnerMetrics(userId: string) {
       leadsConverted: leadsByStatus.CONVERTED ?? 0,
       referralsReceived: Object.values(referralsByStatus).reduce((a, b) => a + b, 0),
       referralsConverted: referralsByStatus.CONVERTED ?? 0,
+      introRequests,
+      callsBooked,
+      messages: messagesCount,
       avgRating: Number(avgListing._avg.avgRating ?? 0),
       avgTrustScore: Number(avgListing._avg.trustScore ?? 0),
     },

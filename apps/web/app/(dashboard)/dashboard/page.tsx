@@ -41,6 +41,9 @@ interface Metrics {
     leadsConverted: number;
     referralsReceived: number;
     referralsConverted: number;
+    introRequests?: number;
+    callsBooked?: number;
+    messages?: number;
     avgRating: number;
     avgTrustScore: number;
   };
@@ -150,14 +153,14 @@ function MetricsPanel() {
   }
 
   const stats = [
-    { label: 'Total views', value: metrics.totals.views, icon: Eye, color: 'text-blue-600' },
+    { label: 'Intro requests', value: metrics.totals.introRequests ?? 0, icon: Sparkles, color: 'text-primary' },
+    { label: 'Calls booked', value: metrics.totals.callsBooked ?? 0, icon: UserCheck, color: 'text-blue-600' },
+    { label: 'Messages', value: metrics.totals.messages ?? 0, icon: Inbox, color: 'text-cyan-600' },
     { label: 'Leads received', value: metrics.totals.leadsTotal, icon: Inbox, color: 'text-emerald-600' },
-    { label: 'Leads converted', value: metrics.totals.leadsConverted, icon: UserCheck, color: 'text-green-600' },
     { label: 'Referrals received', value: metrics.totals.referralsReceived, icon: Activity, color: 'text-orange-600' },
     { label: 'Referrals converted', value: metrics.totals.referralsConverted, icon: ArrowUpRight, color: 'text-amber-600' },
     { label: 'Avg rating', value: metrics.totals.avgRating.toFixed(1), icon: Star, color: 'text-yellow-500' },
     { label: 'Trust score', value: metrics.totals.avgTrustScore.toFixed(1), icon: TrendingUp, color: 'text-primary' },
-    { label: 'Active listings', value: metrics.totals.listings, icon: Activity, color: 'text-purple-600' },
   ];
 
   return (

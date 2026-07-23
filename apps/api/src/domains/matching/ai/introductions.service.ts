@@ -131,7 +131,47 @@ export async function respondToIntro(
     select: introSelect,
   });
 
+  // The matcher creates a suggestion in each direction — resolve the mirror
+  // row too, so the same pair can't keep resurfacing as a fresh request.
+  await prisma.introduction.updateMany({
+    where: {
+      senderId: userId,
+      targetId: intro.senderId,
+      status: { in: ['suggested', 'requested'] },
+    },
+    data: {
+      status: action === 'accept' ? 'accepted' : 'declined',
+      acceptedAt: action === 'accept' ? new Date() : null,
+    },
+  });
+
   if (action === 'accept') {
+    // An accepted intro is a real relationship: put it in both members'
+    // networks as an accepted connection (idempotent).
+    const existingConn = await prisma.businessConnection.findFirst({
+      where: {
+        OR: [
+          { initiatorId: intro.senderId, targetId: userId },
+          { initiatorId: userId, targetId: intro.senderId },
+        ],
+      },
+      select: { id: true, status: true },
+    });
+    if (!existingConn) {
+      await prisma.businessConnection.create({
+        data: {
+          initiatorId: intro.senderId,
+          targetId: userId,
+          status: 'accepted',
+          acceptedAt: new Date(),
+        },
+      });
+    } else if (existingConn.status === 'pending') {
+      await prisma.businessConnection.update({
+        where: { id: existingConn.id },
+        data: { status: 'accepted', acceptedAt: new Date() },
+      });
+    }
     await eventBus.publish('business_connection.requested', {
       connectionId: intro.id,
       initiatorId: intro.senderId,

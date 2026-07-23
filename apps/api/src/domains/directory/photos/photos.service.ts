@@ -67,9 +67,7 @@ export async function presignPhotoUpload(
     return { uploadUrl: 'demo://skip-upload', publicUrl: placeholder, key, demo: true };
   }
 
-  // @ts-expect-error — AWS SDK is optional at build time.
   const s3Mod = await import('@aws-sdk/client-s3');
-  // @ts-expect-error — ditto.
   const presignerMod = await import('@aws-sdk/s3-request-presigner');
   const { S3Client, PutObjectCommand } = s3Mod;
   const { getSignedUrl } = presignerMod;

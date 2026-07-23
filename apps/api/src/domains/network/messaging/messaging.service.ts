@@ -229,9 +229,7 @@ export async function presignChatAttachment(
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
   const key = `chat/${conversationId}/${crypto.randomUUID()}-${safeName}`;
 
-  // @ts-expect-error — AWS SDK is optional at build time.
   const s3Mod = await import('@aws-sdk/client-s3');
-  // @ts-expect-error — ditto.
   const presignerMod = await import('@aws-sdk/s3-request-presigner');
   const { S3Client, PutObjectCommand } = s3Mod;
   const { getSignedUrl } = presignerMod;

@@ -1,12 +1,15 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
   listNotifications,
   markAllRead,
   markRead,
+  markReadByTypes,
   unreadCount,
 } from './notifications.service.js';
 
@@ -38,6 +41,18 @@ notificationsRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     await markRead(req.user.id, req.params.id ?? '');
+    const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
+    res.json(body);
+  }),
+);
+
+const readByTypesSchema = z.object({ types: z.array(z.string().min(1)).min(1).max(20) });
+notificationsRouter.post(
+  '/read-by-types',
+  validate(readByTypesSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    await markReadByTypes(req.user.id, req.body.types);
     const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
     res.json(body);
   }),
