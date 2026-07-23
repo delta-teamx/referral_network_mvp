@@ -60,6 +60,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const logout = useAuthStore((s) => s.logout);
   const accessToken = useAuthStore((s) => s.accessToken);
   const [dotTabs, setDotTabs] = useState<Set<string>>(new Set());
+  // Netlify serves pretty URLs with a trailing slash (/dashboard/messages/) —
+  // normalize so tab matching (active state, dot clearing) actually matches.
+  const currentPath = pathname.replace(/\/+$/, '') || '/';
 
   useEffect(() => {
     if (status === 'idle') void hydrate();
@@ -70,19 +73,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!accessToken) return;
     const types = Object.entries(NOTIFICATION_TAB)
-      .filter(([, href]) => href === pathname)
+      .filter(([, href]) => href === currentPath)
       .map(([type]) => type);
     if (types.length === 0) return;
     setDotTabs((prev) => {
-      if (!prev.has(pathname)) return prev;
+      if (!prev.has(currentPath)) return prev;
       const next = new Set(prev);
-      next.delete(pathname);
+      next.delete(currentPath);
       return next;
     });
     void api
       .post('/api/v1/notifications/read-by-types', { types }, { accessToken: accessToken ?? undefined })
+      .then(() => {
+        // Tell the bell to refresh its badge right away.
+        window.dispatchEvent(new Event('rn:notifications-changed'));
+      })
       .catch(() => undefined);
-  }, [accessToken, pathname]);
+  }, [accessToken, currentPath]);
 
   // Red dots: poll unread notifications and light up the matching tabs.
   useEffect(() => {
@@ -149,7 +156,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="px-3">
           {NAV.map((item) => {
-            const active = pathname === item.href;
+            const active = currentPath === item.href;
             const Icon = item.icon;
             return (
               <Link

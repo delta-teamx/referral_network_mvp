@@ -37,9 +37,13 @@ export function NotificationBell() {
     }
     void poll();
     const timer = setInterval(() => void poll(), 30_000);
+    // Instant refresh when the app marks notifications read (tab opened).
+    const onChanged = () => void poll();
+    window.addEventListener('rn:notifications-changed', onChanged);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      window.removeEventListener('rn:notifications-changed', onChanged);
     };
   }, [accessToken, user]);
 
