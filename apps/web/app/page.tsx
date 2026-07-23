@@ -349,7 +349,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">STL Referral Nova</p>
-                  <p className="text-xs text-gray-500">Powered by Referral Nova</p>
+                  <p className="text-xs text-gray-500">Powered by Virtual Pros</p>
                 </div>
               </div>
               <div className="space-y-3">

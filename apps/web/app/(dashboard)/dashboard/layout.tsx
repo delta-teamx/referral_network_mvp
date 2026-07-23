@@ -112,7 +112,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             Log out
           </button>
           <div className="px-3 text-[10px] text-gray-400">
-            Powered by <span className="font-semibold text-gray-500">Referral Nova</span>
+            Powered by <span className="font-semibold text-gray-500">Virtual Pros</span>
           </div>
         </div>
       </aside>

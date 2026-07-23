@@ -203,6 +203,11 @@ async function ensureRuntimeSchema(): Promise<void> {
       `DO $$ BEGIN UPDATE "NetworkingEvent" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       // Member-to-member referrals have no directory listing.
       `ALTER TABLE "Referral" ALTER COLUMN "listingId" DROP NOT NULL;`,
+      // Legacy BookingCall columns the code doesn't write must not block
+      // inserts ("A required value is missing" on booking requests).
+      `DO $$ BEGIN ALTER TABLE "BookingCall" ALTER COLUMN "durationMin" SET DEFAULT 30; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
+      `DO $$ BEGIN ALTER TABLE "BookingCall" ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
+      `DO $$ BEGIN ALTER TABLE "BookingCall" ALTER COLUMN "zoomJoinUrl" DROP NOT NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "conversationId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "senderId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "text" TEXT;`,
