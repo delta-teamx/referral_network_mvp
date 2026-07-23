@@ -7,16 +7,14 @@ import type { ReactNode } from 'react';
 import {
   BarChart3,
   Calendar,
-  Clock,
-  Inbox,
+  FileSignature,
+  KanbanSquare,
   LayoutDashboard,
   MessageSquare,
   Network,
   Search,
   UsersRound,
   Settings,
-  Store,
-  Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 import { api } from '../../../lib/api';
@@ -34,20 +32,19 @@ const NOTIFICATION_TAB: Record<string, string> = {
   booking_request: '/dashboard/bookings',
   booking_confirmed: '/dashboard/bookings',
   booking_declined: '/dashboard/bookings',
+  booking_reminder: '/dashboard/bookings',
 };
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/members', label: 'Members', icon: Search },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/leads', label: 'Leads', icon: Inbox },
-  { href: '/dashboard/referrals', label: 'Referrals', icon: Users },
-  { href: '/dashboard/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
   { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/groups', label: 'Groups', icon: UsersRound },
-  { href: '/dashboard/availability', label: 'Availability', icon: Clock },
-  { href: '/dashboard/listing', label: 'My listing', icon: Store },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 

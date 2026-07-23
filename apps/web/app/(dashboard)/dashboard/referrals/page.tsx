@@ -79,13 +79,29 @@ export default function ReferralsPage() {
     <UpgradeGate feature="Referral Management" requiredTier="PRO">
     <div className="p-6 md:p-8">
       <header className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Network</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">Referrals &amp; Invitations</h1>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Legal</p>
+        <h1 className="mt-1 text-2xl font-bold text-gray-900">Contracts &amp; Legal</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Client referrals between members, network invitations, and signed collaboration
-          contracts — all in one place. Conversions count toward everyone&rsquo;s trust score.
+          Draft collaboration contracts, share them in chat with your leads, sign the ones you
+          receive, and keep every referral record — all in one place. Working a deal? Track its
+          stages on the{' '}
+          <Link href="/dashboard/leads" className="font-semibold text-primary hover:underline">
+            Pipeline
+          </Link>
+          .
         </p>
       </header>
+
+      {/* Contracts + invitations are the heart of this tab */}
+      <InvitationsAndContracts accessToken={accessToken} meId={me?.id ?? null} />
+
+      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-wider text-gray-500">
+        Referral records
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        Client referrals exchanged with partners. Each one also appears as a card on your
+        Pipeline — mark it converted here (or move it to Won there) and analytics update.
+      </p>
 
       <div className="mb-5 flex gap-2">
         <TabButton
@@ -237,8 +253,6 @@ export default function ReferralsPage() {
           ))}
         </ul>
       )}
-
-      <InvitationsAndContracts accessToken={accessToken} meId={me?.id ?? null} />
     </div>
     </UpgradeGate>
   );

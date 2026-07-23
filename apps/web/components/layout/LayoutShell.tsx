@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { DemoBanner } from './DemoBanner';
 import { Footer } from './Footer';
 import { TopNav } from './TopNav';
+import { SupportChatWidget } from '../support/SupportChatWidget';
 import { isAppHost } from '../../lib/domains';
 
 const ALWAYS_HIDE = ['/dashboard', '/admin', '/onboarding', '/verify-otp'];
@@ -21,9 +22,17 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   }, []);
 
   const hideShell = onAppHost || ALWAYS_HIDE.some((p) => pathname.startsWith(p));
+  // Support chat floats on the marketing site and the member dashboard —
+  // everywhere except the admin console (agents answer from there).
+  const showSupport = !pathname.startsWith('/admin');
 
   if (hideShell) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        {showSupport && <SupportChatWidget />}
+      </>
+    );
   }
 
   return (
@@ -32,6 +41,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <TopNav />
       <div className="flex flex-1 flex-col">{children}</div>
       <Footer />
+      {showSupport && <SupportChatWidget />}
     </div>
   );
 }

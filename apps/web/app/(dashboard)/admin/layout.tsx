@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { AlertTriangle, Calendar, FileSignature, LayoutDashboard, Shield, Sparkles, Store, Users, UsersRound, Video } from 'lucide-react';
+import { AlertTriangle, Calendar, FileSignature, Headset, LayoutDashboard, Shield, Sparkles, Store, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV = [
@@ -17,6 +17,7 @@ const NAV = [
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
+  { href: '/admin/support', label: 'Support tickets', icon: Headset },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

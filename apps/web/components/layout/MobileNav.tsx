@@ -2,19 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, LayoutDashboard, MessageSquare, Search, Users } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  KanbanSquare,
+  LayoutDashboard,
+  MessageSquare,
+} from 'lucide-react';
 
 /**
  * Mobile bottom navigation. Shown only on <md screens where the sidebar is
- * hidden. 5 most-used dashboard pages. iOS-style tab bar.
+ * hidden. On mobile the product is focused: Messages, Pipeline, Calendar and
+ * Analytics (plus Home). Everything else is desktop/tablet.
  */
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/dashboard/members', label: 'Members', icon: Search },
-  { href: '/dashboard/messages', label: 'Chat', icon: MessageSquare },
-  { href: '/dashboard/bookings', label: 'Calls', icon: Calendar },
-  { href: '/dashboard/network', label: 'Network', icon: Users },
+  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
+  { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 export function MobileNav() {

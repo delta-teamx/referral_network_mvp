@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MessageSquare, Paperclip, Send } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Paperclip, Send } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
@@ -123,13 +123,22 @@ function MessagesInner() {
   // ---- Auto-open a conversation -------------------------------------------
   // Prefer the one passed via ?c= (from a profile's Message button);
   // otherwise open the most recent so the page is never an empty pane.
+  // On phones the list IS the first screen, so only ?c= auto-opens there —
+  // and pressing Back must not immediately re-open the thread.
+  const autoOpened = useRef(false);
   useEffect(() => {
-    if (loading || activeId || conversations.length === 0) return;
+    if (loading || activeId || conversations.length === 0 || autoOpened.current) return;
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
     const target =
       preselectId && conversations.some((c) => c.id === preselectId)
         ? preselectId
-        : conversations[0]!.id;
-    setActiveId(target);
+        : isDesktop
+          ? conversations[0]!.id
+          : null;
+    if (target) {
+      autoOpened.current = true;
+      setActiveId(target);
+    }
   }, [loading, activeId, conversations, preselectId]);
 
   // ---- Load messages for active conversation ------------------------------
@@ -303,12 +312,19 @@ function MessagesInner() {
   return (
     <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
     <div className="flex h-[calc(100vh-3rem)] overflow-hidden">
-      {/* Left panel - conversation list */}
-      <aside className="w-80 shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
-        <div className="sticky top-0 border-b border-gray-100 bg-white p-4">
+      {/* Left panel - conversation list (on phones: hidden while a thread is open) */}
+      <aside
+        className={`w-full shrink-0 overflow-y-auto border-r border-gray-200 bg-white md:block md:w-80 ${
+          activeId ? 'hidden' : 'block'
+        }`}
+      >
+        <div className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 p-4 backdrop-blur">
           <h1 className="flex items-center gap-2 text-lg font-bold text-gray-900">
             <MessageSquare size={18} className="text-primary" /> Messages
           </h1>
+          <p className="mt-0.5 text-[11px] text-gray-400">
+            Every conversation is a lead — find it on your Pipeline too.
+          </p>
         </div>
 
         {loading ? (
@@ -342,12 +358,12 @@ function MessagesInner() {
                 <li key={c.id}>
                   <button
                     onClick={() => selectConversation(c.id)}
-                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-gray-50 ${
-                      isActive ? 'bg-primary-light/40' : ''
+                    className={`mx-2 my-0.5 flex w-[calc(100%-1rem)] items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-gray-50 ${
+                      isActive ? 'bg-primary-light/50' : ''
                     }`}
                   >
                     {/* Avatar initials */}
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-500 text-xs font-bold uppercase text-white shadow-sm">
                       {other
                         ? (other.firstName?.[0] ?? '') + (other.lastName?.[0] ?? '')
                         : '?'}
@@ -375,8 +391,8 @@ function MessagesInner() {
         )}
       </aside>
 
-      {/* Right panel - message thread */}
-      <section className="flex flex-1 flex-col bg-gray-50">
+      {/* Right panel - message thread (on phones: full screen with a Back button) */}
+      <section className={`flex-1 flex-col bg-gray-50 md:flex ${activeId ? 'flex' : 'hidden'}`}>
         {!activeId ? (
           <div className="flex flex-1 items-center justify-center text-sm text-gray-400">
             Select a conversation to start messaging
@@ -384,15 +400,22 @@ function MessagesInner() {
         ) : (
           <>
             {/* Thread header */}
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-6 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 md:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  onClick={() => setActiveId(null)}
+                  className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 md:hidden"
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-500 text-xs font-bold uppercase text-white shadow-sm">
                   {activeConversation?.otherUser
                     ? (activeConversation.otherUser.firstName?.[0] ?? '') +
                       (activeConversation.otherUser.lastName?.[0] ?? '')
                     : '?'}
                 </div>
-                <p className="font-semibold text-gray-900">
+                <p className="truncate font-semibold text-gray-900">
                   {activeConversation?.otherUser
                     ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
                     : 'Conversation'}
@@ -438,10 +461,10 @@ function MessagesInner() {
                         className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${
+                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm md:max-w-[70%] ${
                             isMe
-                              ? 'bg-primary text-white'
-                              : 'bg-white text-gray-800 shadow-sm'
+                              ? 'rounded-br-md bg-gradient-to-br from-primary to-blue-600 text-white shadow-sm'
+                              : 'rounded-bl-md border border-gray-100 bg-white text-gray-800 shadow-sm'
                           }`}
                         >
                           <p>

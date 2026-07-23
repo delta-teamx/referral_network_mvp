@@ -1,4 +1,5 @@
 import { prisma } from '../../../config/prisma.js';
+import { pipelineStats, syncPipeline } from '../../network/pipeline/pipeline.service.js';
 
 /**
  * Dashboard — aggregate read-only queries for a business owner's home page.
@@ -33,7 +34,10 @@ export async function getAnalytics(userId: string) {
   const buckets = weekBuckets(12);
   const since = buckets[0]?.start ?? new Date(0);
 
-  const [leads, referrals, reviews, messages, bookings] = await Promise.all([
+  // Pull real activity into the pipeline first so its stage counts are fresh.
+  await syncPipeline(userId).catch(() => undefined);
+
+  const [leads, referrals, reviews, messages, bookings, intros, pipeline, wonCards] = await Promise.all([
     prisma.consumerLead.findMany({
       where: { listing: { userId, deletedAt: null }, createdAt: { gte: since } },
       select: { createdAt: true, status: true },
@@ -63,6 +67,21 @@ export async function getAnalytics(userId: string) {
       },
       select: { createdAt: true },
     }),
+    // Intro requests involving me (sent or received).
+    prisma.introduction.findMany({
+      where: {
+        createdAt: { gte: since },
+        status: { in: ['requested', 'accepted'] },
+        OR: [{ senderId: userId }, { targetId: userId }],
+      },
+      select: { createdAt: true },
+    }),
+    pipelineStats(userId).catch(() => null),
+    // Deals won per week (by the time the card was moved to won).
+    prisma.pipelineCard.findMany({
+      where: { ownerId: userId, stage: 'won', stageUpdatedAt: { gte: since } },
+      select: { stageUpdatedAt: true },
+    }).catch(() => [] as Array<{ stageUpdatedAt: Date }>),
   ]);
 
   function bucketize<T extends { createdAt: Date }>(rows: T[], filter?: (r: T) => boolean) {
@@ -89,7 +108,12 @@ export async function getAnalytics(userId: string) {
       reviews: bucketize(reviews),
       messages: bucketize(messages),
       bookings: bucketize(bookings),
+      intros: bucketize(intros),
+      won: bucketize(
+        wonCards.map((w) => ({ createdAt: w.stageUpdatedAt })),
+      ),
     },
+    pipeline,
     ratings: {
       avg:
         reviews.length === 0

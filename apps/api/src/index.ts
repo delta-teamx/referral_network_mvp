@@ -42,6 +42,8 @@ import { startMatchmakingScheduler } from './domains/matching/pods/pods.schedule
 import { referralTrackingRouter } from './domains/network/referral-tracking/referral-tracking.routes.js';
 import { registerReferralTrackingSubscribers } from './domains/network/referral-tracking/referral-tracking.subscribers.js';
 import { registerGroupSubscribers } from './domains/network/groups/groups.subscribers.js';
+import { pipelineRouter } from './domains/network/pipeline/pipeline.routes.js';
+import { supportRouter } from './domains/core/support/support.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -151,6 +153,8 @@ app.use('/api/v1/bookings', verifiedWriteGate, bookingsRouter);
 app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/pods', podsRouter);
 app.use('/api/v1/referral-tracking', referralTrackingRouter);
+app.use('/api/v1/pipeline', pipelineRouter);
+app.use('/api/v1/support', rateLimit({ windowMs: 60_000, max: 30, key: 'support' }), supportRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -261,6 +265,50 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "senderId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "text" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+      // Pipeline board (created here — no migration needed).
+      `CREATE TABLE IF NOT EXISTS "PipelineCard" (
+         "id" TEXT NOT NULL,
+         "ownerId" TEXT NOT NULL,
+         "contactUserId" TEXT,
+         "consumerLeadId" TEXT,
+         "name" TEXT NOT NULL,
+         "email" TEXT,
+         "source" TEXT NOT NULL DEFAULT 'manual',
+         "stage" TEXT NOT NULL DEFAULT 'new',
+         "notes" TEXT,
+         "stageUpdatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "PipelineCard_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "PipelineCard_ownerId_stage_idx" ON "PipelineCard" ("ownerId", "stage");`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "PipelineCard_ownerId_contactUserId_key" ON "PipelineCard" ("ownerId", "contactUserId");`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "PipelineCard_ownerId_consumerLeadId_key" ON "PipelineCard" ("ownerId", "consumerLeadId");`,
+      `DO $$ BEGIN ALTER TABLE "PipelineCard" ADD CONSTRAINT "PipelineCard_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+      `DO $$ BEGIN ALTER TABLE "PipelineCard" ADD CONSTRAINT "PipelineCard_contactUserId_fkey" FOREIGN KEY ("contactUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+      // Support chat (widget + admin queue).
+      `CREATE TABLE IF NOT EXISTS "SupportTicket" (
+         "id" TEXT NOT NULL,
+         "userId" TEXT,
+         "name" TEXT NOT NULL,
+         "email" TEXT NOT NULL,
+         "topic" TEXT NOT NULL,
+         "status" TEXT NOT NULL DEFAULT 'open',
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "SupportTicket_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "SupportTicket_status_updatedAt_idx" ON "SupportTicket" ("status", "updatedAt" DESC);`,
+      `CREATE TABLE IF NOT EXISTS "SupportMessage" (
+         "id" TEXT NOT NULL,
+         "ticketId" TEXT NOT NULL,
+         "senderType" TEXT NOT NULL,
+         "body" TEXT NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "SupportMessage_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "SupportMessage_ticketId_createdAt_idx" ON "SupportMessage" ("ticketId", "createdAt");`,
+      `DO $$ BEGIN ALTER TABLE "SupportMessage" ADD CONSTRAINT "SupportMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

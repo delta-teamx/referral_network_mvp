@@ -6,6 +6,7 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
+  ensureBookingReminders,
   listNotifications,
   markAllRead,
   markRead,
@@ -30,6 +31,8 @@ notificationsRouter.get(
   '/unread-count',
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
+    // Piggyback on the bell's 30s poll to surface upcoming-call reminders.
+    await ensureBookingReminders(req.user.id).catch(() => undefined);
     const count = await unreadCount(req.user.id);
     const body: ApiResponse<{ count: number }> = { success: true, data: { count } };
     res.json(body);

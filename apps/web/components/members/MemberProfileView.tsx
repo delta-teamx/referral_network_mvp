@@ -236,36 +236,50 @@ export function MemberProfileView({ id }: { id: string }) {
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl"
+      className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl"
     >
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-blue-600 p-8 text-white">
-        <div className="flex items-center gap-4">
+      <div className="relative overflow-hidden bg-gradient-to-br from-gray-950 via-primary/90 to-blue-600 p-8 text-white">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-cyan-400/10 blur-2xl" />
+        <div className="relative flex flex-wrap items-center gap-5">
           {profile.photoUrl || profile.user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.photoUrl ?? profile.user.avatarUrl ?? ''}
               alt={initials}
-              className="h-16 w-16 rounded-full border-2 border-white/50 object-cover"
+              className="h-20 w-20 rounded-2xl border-2 border-white/40 object-cover shadow-lg"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/50 bg-white/20 text-xl font-bold uppercase">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-white/40 bg-white/15 text-2xl font-bold uppercase shadow-lg">
               {initials}
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-bold">{profile.businessName}</h1>
-            <p className="text-sm text-white/80">{profile.industry}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold md:text-3xl">{profile.businessName}</h1>
+            <p className="text-sm text-white/85">
+              {profile.user.firstName} {profile.user.lastName}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full bg-white/15 px-2.5 py-1 font-semibold backdrop-blur">
+                {profile.industry}
+              </span>
+              {profile.yearsInBusiness !== null && profile.yearsInBusiness > 0 && (
+                <span className="rounded-full bg-white/15 px-2.5 py-1 font-semibold backdrop-blur">
+                  {profile.yearsInBusiness}+ yrs in business
+                </span>
+              )}
+              {(profile.city || profile.state) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-semibold backdrop-blur">
+                  <MapPin size={11} />
+                  {[profile.city, profile.state].filter(Boolean).join(', ')}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         {profile.headline && (
-          <p className="mt-3 text-white/90">{profile.headline}</p>
-        )}
-        {(profile.city || profile.state) && (
-          <p className="mt-2 flex items-center gap-1 text-sm text-white/70">
-            <MapPin size={14} />
-            {[profile.city, profile.state].filter(Boolean).join(', ')}
-          </p>
+          <p className="relative mt-4 max-w-xl text-white/90">{profile.headline}</p>
         )}
         {error && (
           <p className="mt-3 rounded-md bg-white/15 px-3 py-2 text-sm text-white">{error}</p>
@@ -325,19 +339,19 @@ export function MemberProfileView({ id }: { id: string }) {
       />
 
       {/* Body */}
-      <div className="space-y-6 p-8">
+      <div className="space-y-5 p-6 md:p-8">
         {profile.bio && (
-          <section>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               About
             </h2>
-            <p className="whitespace-pre-line text-sm text-gray-700">{profile.bio}</p>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{profile.bio}</p>
           </section>
         )}
 
         {profile.videoUrl && (
-          <section>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+            <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <Film size={14} /> Video Introduction
             </h2>
             <video
@@ -349,40 +363,42 @@ export function MemberProfileView({ id }: { id: string }) {
           </section>
         )}
 
-        {(profile.icpIndustries.length > 0 || profile.icpRoles.length > 0) && (
-          <section>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              <Target size={14} /> Who they want to meet
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {[...profile.icpIndustries, ...profile.icpRoles].map((s) => (
-                <span key={s} className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
-                  {s}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
+        <div className="grid gap-5 md:grid-cols-2">
+          {(profile.icpIndustries.length > 0 || profile.icpRoles.length > 0) && (
+            <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+              <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <Target size={14} className="text-primary" /> Who they want to meet
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {[...profile.icpIndustries, ...profile.icpRoles].map((s) => (
+                  <span key={s} className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
 
-        {profile.canReferIndustries.length > 0 && (
-          <section>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              <HandCoins size={14} /> Refers clients to
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {profile.canReferIndustries.map((s) => (
-                <span key={s} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                  {s}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
+          {profile.canReferIndustries.length > 0 && (
+            <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+              <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <HandCoins size={14} className="text-emerald-500" /> Refers clients to
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {profile.canReferIndustries.map((s) => (
+                  <span key={s} className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
 
         {profile.servicesOffered.length > 0 && (
-          <section>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              <Briefcase size={14} /> Services Offered
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <Briefcase size={14} className="text-primary" /> Services Offered
             </h2>
             <div className="flex flex-wrap gap-2">
               {profile.servicesOffered.map((s) => (
@@ -398,9 +414,9 @@ export function MemberProfileView({ id }: { id: string }) {
         )}
 
         {profile.openToBarter && (
-          <section>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              <HandCoins size={14} /> Open to Barter
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <HandCoins size={14} className="text-amber-500" /> Open to Barter
             </h2>
             {profile.barterOfferings.length > 0 && (
               <div className="mb-2">

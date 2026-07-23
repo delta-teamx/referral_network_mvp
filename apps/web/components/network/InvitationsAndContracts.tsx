@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { FileSignature, Mail, PenLine } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileSignature, Mail, MessageCircle, PenLine } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
 
 interface Invitation {
@@ -82,6 +83,35 @@ export function InvitationsAndContracts({
   const [notice, setNotice] = useState<string | null>(null);
   const [signingId, setSigningId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sharingId, setSharingId] = useState<string | null>(null);
+  const router = useRouter();
+
+  /** Share a contract into the chat with the other party and jump there. */
+  async function shareInChat(contract: Contract) {
+    if (!accessToken || !meId) return;
+    const peer = contract.receiver.id === meId ? contract.sender : contract.receiver;
+    setSharingId(contract.id);
+    setError(null);
+    try {
+      const convo = await api.post<{ id: string }>(
+        '/api/v1/messages/start',
+        { targetUserId: peer.id },
+        { accessToken: accessToken ?? undefined },
+      );
+      await api.post(
+        `/api/v1/messages/${convo.id}/messages`,
+        {
+          text: `📄 Contract: "${contract.title}" (${contract.status}). Review and sign it in your Contracts tab: https://dashboard.referralnova.com/dashboard/referrals`,
+        },
+        { accessToken: accessToken ?? undefined },
+      );
+      router.push(`/dashboard/messages?c=${convo.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not share the contract in chat');
+    } finally {
+      setSharingId(null);
+    }
+  }
 
   async function loadAll() {
     if (!accessToken) return;
@@ -193,7 +223,7 @@ export function InvitationsAndContracts({
   }
 
   return (
-    <div className="mt-10 space-y-10">
+    <div className="space-y-10">
       {(error || notice) && (
         <p
           className={`rounded-md border px-3 py-2 text-sm ${
@@ -314,6 +344,14 @@ export function InvitationsAndContracts({
                         className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-primary"
                       >
                         {expandedId === c.id ? 'Hide terms' : 'View terms'}
+                      </button>
+                      <button
+                        onClick={() => void shareInChat(c)}
+                        disabled={sharingId === c.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary disabled:opacity-60"
+                      >
+                        <MessageCircle size={11} />
+                        {sharingId === c.id ? 'Sharing…' : 'Share in chat'}
                       </button>
                       {iAmReceiver && c.status === 'sent' && (
                         <>

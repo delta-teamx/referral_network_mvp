@@ -131,6 +131,9 @@ model User {
   podFeedback            PodFeedback[]       @relation("PodFeedbackUser")
   referralsMade          ReferralTracking[]  @relation("ReferralsMade")
   referralsReceived      ReferralTracking[]  @relation("ReferralsReceived")
+  pipelineCards          PipelineCard[]      @relation("PipelineOwner")
+  pipelineAsContact      PipelineCard[]      @relation("PipelineContact")
+  supportTickets         SupportTicket[]     @relation("SupportTicketUser")
 
   @@index([email])
   @@index([role])
@@ -508,6 +511,60 @@ model Contract {
   @@index([senderId])
   @@index([receiverId])
   @@index([status])
+}
+
+/// GHL-style sales pipeline — one card per prospect, moved across stages.
+/// Cards are auto-synced from conversations, intros, bookings, consumer leads,
+/// referrals and contracts, then managed by hand on the Pipeline board.
+model PipelineCard {
+  id             String   @id @default(uuid())
+  ownerId        String
+  contactUserId  String? // a member prospect (from messages/intros/bookings)
+  consumerLeadId String? // a consumer lead from the public connector
+  name           String
+  email          String?
+  source         String   @default("manual") // message | intro | consumer | referral | booking | contract | manual
+  stage          String   @default("new") // new, in_process, zoom_booked, follow_up, signing_contract, contract_signed, won, lost, dead
+  notes          String?
+  stageUpdatedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owner   User  @relation("PipelineOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  contact User? @relation("PipelineContact", fields: [contactUserId], references: [id])
+
+  @@unique([ownerId, contactUserId])
+  @@unique([ownerId, consumerLeadId])
+  @@index([ownerId, stage])
+}
+
+/// Support-chat conversation started from the floating widget (site + app).
+model SupportTicket {
+  id        String   @id @default(uuid())
+  userId    String? // set when the visitor was signed in
+  name      String
+  email     String
+  topic     String
+  status    String   @default("open") // open, pending (agent replied), closed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?            @relation("SupportTicketUser", fields: [userId], references: [id])
+  messages SupportMessage[]
+
+  @@index([status, updatedAt(sort: Desc)])
+}
+
+model SupportMessage {
+  id         String   @id @default(uuid())
+  ticketId   String
+  senderType String // user | agent | system
+  body       String
+  createdAt  DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
 }
 
 model GroupMessage {

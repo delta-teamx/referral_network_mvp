@@ -75,7 +75,7 @@ export async function createContract(input: {
     userId: receiver.id,
     type: 'contract',
     title: `${senderName} sent you a contract to sign`,
-    body: `"${contract.title}" — review and sign it in Referrals & Invitations.`,
+    body: `"${contract.title}" — review and sign it in Contracts & Legal.`,
     data: { contractId: contract.id },
   }).catch(() => undefined);
 
