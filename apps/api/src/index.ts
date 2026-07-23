@@ -195,6 +195,12 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
       `ALTER TABLE "ConversationParticipant" ADD COLUMN IF NOT EXISTS "lastReadAt" TIMESTAMP(3);`,
+      // Bookings/events: prod named the meeting-link column "zoomJoinUrl" but
+      // the code reads "zoomUrl" — add the expected column and copy links over.
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "zoomUrl" TEXT;`,
+      `DO $$ BEGIN UPDATE "BookingCall" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
+      `ALTER TABLE "NetworkingEvent" ADD COLUMN IF NOT EXISTS "zoomUrl" TEXT;`,
+      `DO $$ BEGIN UPDATE "NetworkingEvent" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "conversationId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "senderId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "text" TEXT;`,
