@@ -416,7 +416,8 @@ model Referral {
   id          String         @id @default(uuid())
   senderId    String
   receiverId  String
-  listingId   String
+  // Optional: member-to-member referrals have no directory listing.
+  listingId   String?
   status      ReferralStatus @default(SENT)
   notes       String?
   clientName  String?
@@ -426,9 +427,9 @@ model Referral {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  sender   User    @relation("ReferralSender", fields: [senderId], references: [id])
-  receiver User    @relation("ReferralReceiver", fields: [receiverId], references: [id])
-  listing  Listing @relation(fields: [listingId], references: [id])
+  sender   User     @relation("ReferralSender", fields: [senderId], references: [id])
+  receiver User     @relation("ReferralReceiver", fields: [receiverId], references: [id])
+  listing  Listing? @relation(fields: [listingId], references: [id])
 
   @@index([senderId])
   @@index([receiverId])

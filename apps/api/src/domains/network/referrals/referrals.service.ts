@@ -18,7 +18,10 @@ export type ReferralStatus = 'SENT' | 'ACCEPTED' | 'CONVERTED' | 'DECLINED';
 
 export interface CreateReferralInput {
   senderId: string;
-  listingSlug: string; // the receiving business
+  /** Refer to a directory listing… */
+  listingSlug?: string;
+  /** …or directly to a member (member-to-member referral). */
+  receiverUserId?: string;
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
@@ -26,20 +29,37 @@ export interface CreateReferralInput {
 }
 
 export async function sendReferral(input: CreateReferralInput) {
-  const listing = await prisma.listing.findFirst({
-    where: { slug: input.listingSlug, status: 'ACTIVE', deletedAt: null },
-    select: { id: true, userId: true, name: true },
-  });
-  if (!listing) throw AppError.notFound('Listing not found');
-  if (listing.userId === input.senderId) {
+  let receiverId: string;
+  let listingId: string | null = null;
+
+  if (input.listingSlug) {
+    const listing = await prisma.listing.findFirst({
+      where: { slug: input.listingSlug, status: 'ACTIVE', deletedAt: null },
+      select: { id: true, userId: true },
+    });
+    if (!listing) throw AppError.notFound('Listing not found');
+    receiverId = listing.userId;
+    listingId = listing.id;
+  } else if (input.receiverUserId) {
+    const receiver = await prisma.user.findFirst({
+      where: { id: input.receiverUserId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!receiver) throw AppError.notFound('Member not found');
+    receiverId = receiver.id;
+  } else {
+    throw AppError.badRequest('Provide a member or a listing to refer to.');
+  }
+
+  if (receiverId === input.senderId) {
     throw AppError.badRequest("You can't refer a client to yourself.");
   }
 
   const referral = await prisma.referral.create({
     data: {
       senderId: input.senderId,
-      receiverId: listing.userId,
-      listingId: listing.id,
+      receiverId,
+      listingId,
       clientName: input.clientName ? sanitizeText(input.clientName) || null : null,
       clientPhone: input.clientPhone?.trim() || null,
       clientEmail: input.clientEmail?.trim().toLowerCase() || null,
@@ -51,13 +71,13 @@ export async function sendReferral(input: CreateReferralInput) {
   await eventBus.publish('referral.sent', {
     referralId: referral.id,
     senderId: input.senderId,
-    receiverId: listing.userId,
+    receiverId,
   });
 
   // Alert the receiver in the notification bell (best-effort; email is sent
   // by the referral.sent subscriber).
   void createNotification({
-    userId: listing.userId,
+    userId: receiverId,
     type: 'referral',
     title: 'New client referral 🎉',
     body: `You received a referral${input.clientName ? ` for ${sanitizeText(input.clientName)}` : ''} — view it in your Referrals tab.`,

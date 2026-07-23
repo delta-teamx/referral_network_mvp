@@ -16,13 +16,18 @@ import {
 export const referralsRouter: Router = Router();
 referralsRouter.use(authenticate);
 
-const createReferralSchema = z.object({
-  listingSlug: z.string().trim().min(1),
-  clientName: z.string().trim().max(120).optional(),
-  clientPhone: z.string().trim().max(40).optional(),
-  clientEmail: z.string().trim().email().optional(),
-  notes: z.string().trim().max(1000).optional(),
-});
+const createReferralSchema = z
+  .object({
+    listingSlug: z.string().trim().min(1).optional(),
+    receiverUserId: z.string().uuid().optional(),
+    clientName: z.string().trim().max(120).optional(),
+    clientPhone: z.string().trim().max(40).optional(),
+    clientEmail: z.string().trim().email().optional(),
+    notes: z.string().trim().max(1000).optional(),
+  })
+  .refine((v) => v.listingSlug || v.receiverUserId, {
+    message: 'Provide a member or a listing to refer to.',
+  });
 
 referralsRouter.post(
   '/',

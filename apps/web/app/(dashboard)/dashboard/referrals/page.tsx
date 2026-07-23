@@ -22,7 +22,7 @@ interface Referral {
   createdAt: string;
   sender: { id: string; firstName: string; lastName: string; email: string };
   receiver: { id: string; firstName: string; lastName: string; email: string };
-  listing: { id: string; slug: string; name: string; city: string; state: string };
+  listing: { id: string; slug: string; name: string; city: string; state: string } | null;
 }
 
 export default function ReferralsPage() {
@@ -152,15 +152,17 @@ export default function ReferralsPage() {
                       : `to ${r.receiver.firstName} ${r.receiver.lastName}`}{' '}
                     · {new Date(r.createdAt).toLocaleString()}
                   </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    on{' '}
-                    <Link
-                      href={`/listing/${r.listing.slug}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {r.listing.name}
-                    </Link>
-                  </p>
+                  {r.listing && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      on{' '}
+                      <Link
+                        href={`/listing/${r.listing.slug}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {r.listing.name}
+                      </Link>
+                    </p>
+                  )}
                 </div>
                 {(r.clientEmail || r.clientPhone) && (
                   <div className="flex flex-col gap-1 text-sm md:items-end">

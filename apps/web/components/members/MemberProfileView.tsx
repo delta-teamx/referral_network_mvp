@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Briefcase, Calendar, Film, HandCoins, MapPin, MessageSquare, Target } from 'lucide-react';
+import { Briefcase, Calendar, Film, HandCoins, MapPin, MessageSquare, Send, Target } from 'lucide-react';
 import { fadeInUp } from '../../lib/animations';
 import { api, ApiError } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
@@ -36,10 +37,107 @@ interface PublicProfile {
   };
 }
 
+/** Inline form: send this member a client referral. */
+function ReferClientForm({
+  targetUserId,
+  targetName,
+  accessToken,
+  done,
+  sending,
+  setSending,
+  setDone,
+  onError,
+}: {
+  targetUserId: string;
+  targetName: string;
+  accessToken: string | null;
+  done: boolean;
+  sending: boolean;
+  setSending: (v: boolean) => void;
+  setDone: (v: boolean) => void;
+  onError: (m: string) => void;
+}) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!accessToken) return;
+    const form = new FormData(e.currentTarget);
+    setSending(true);
+    try {
+      await api.post(
+        '/api/v1/referrals',
+        {
+          receiverUserId: targetUserId,
+          clientName: String(form.get('clientName') ?? '').trim() || undefined,
+          clientEmail: String(form.get('clientEmail') ?? '').trim() || undefined,
+          clientPhone: String(form.get('clientPhone') ?? '').trim() || undefined,
+          notes: String(form.get('notes') ?? '').trim() || undefined,
+        },
+        { accessToken: accessToken ?? undefined },
+      );
+      setDone(true);
+    } catch (err) {
+      onError(
+        err instanceof ApiError
+          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
+          : 'Could not send referral',
+      );
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <p className="mt-4 rounded-xl bg-white/15 px-4 py-3 text-sm text-white">
+        ✅ Referral sent — {targetName} has been notified and it&rsquo;s in both of your
+        Referrals tabs.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mt-4 space-y-2 rounded-xl bg-white/10 p-4">
+      <p className="text-sm font-semibold text-white">Refer a client to {targetName}</p>
+      <input
+        name="clientName"
+        placeholder="Client name"
+        required
+        className="w-full rounded-md border-0 px-3 py-2 text-sm text-gray-900"
+      />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          name="clientEmail"
+          type="email"
+          placeholder="Client email (optional)"
+          className="w-full rounded-md border-0 px-3 py-2 text-sm text-gray-900"
+        />
+        <input
+          name="clientPhone"
+          placeholder="Client phone (optional)"
+          className="w-full rounded-md border-0 px-3 py-2 text-sm text-gray-900"
+        />
+      </div>
+      <textarea
+        name="notes"
+        rows={2}
+        placeholder="What does the client need?"
+        className="w-full rounded-md border-0 px-3 py-2 text-sm text-gray-900"
+      />
+      <button
+        type="submit"
+        disabled={sending}
+        className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-primary hover:bg-white/90 disabled:opacity-60"
+      >
+        {sending ? 'Sending…' : 'Send referral'}
+      </button>
+    </form>
+  );
+}
+
 /**
  * The member profile card — used inside the dashboard (with sidebar) and on
  * the marketing site's public member page. Fetches by member id (profile id or
- * user id) and offers Book-a-call + Message to signed-in viewers.
+ * user id) and offers Book-a-call + Message + Refer-a-client to signed-in viewers.
  */
 export function MemberProfileView({ id }: { id: string }) {
   const router = useRouter();
@@ -47,6 +145,9 @@ export function MemberProfileView({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [messaging, setMessaging] = useState(false);
+  const [referOpen, setReferOpen] = useState(false);
+  const [referSending, setReferSending] = useState(false);
+  const [referDone, setReferDone] = useState(false);
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const status = useAuthStore((s) => s.status);
@@ -184,7 +285,25 @@ export function MemberProfileView({ id }: { id: string }) {
             >
               <MessageSquare size={14} /> {messaging ? 'Opening…' : 'Message'}
             </button>
+            <button
+              onClick={() => setReferOpen((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              <Send size={14} /> Refer a client
+            </button>
           </div>
+        )}
+        {referOpen && user && (
+          <ReferClientForm
+            targetUserId={profile.user.id}
+            targetName={profile.user.firstName}
+            accessToken={accessToken}
+            done={referDone}
+            sending={referSending}
+            setSending={setReferSending}
+            setDone={setReferDone}
+            onError={(m) => setError(m)}
+          />
         )}
         {!user && (
           <div className="mt-4">
