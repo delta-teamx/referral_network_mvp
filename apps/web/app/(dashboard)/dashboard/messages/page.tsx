@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MessageSquare, Paperclip, Send } from 'lucide-react';
-import { api, ApiError } from '../../../../lib/api';
+import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
@@ -56,7 +56,7 @@ function Linkified({ text, light }: { text: string; light: boolean }) {
           >
             {part.includes('/dashboard/members/profile')
               ? 'Book a time with me →'
-              : part.includes('amazonaws.com/chat/')
+              : part.includes('amazonaws.com/chat/') || part.includes('/attachments/file')
                 ? 'Open attachment →'
                 : part}
           </a>
@@ -233,30 +233,28 @@ function MessagesInner() {
     setUploading(true);
     setError(null);
     try {
-      const presign = await api.post<{ uploadUrl: string; publicUrl: string }>(
-        `/api/v1/messages/${activeId}/attachments/presign`,
-        { filename: file.name, contentType: file.type || 'application/pdf', sizeBytes: file.size },
-        { accessToken: accessToken ?? undefined },
-      );
-      let put: Response;
-      try {
-        put = await fetch(presign.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type || 'application/pdf' },
-          body: file,
-        });
-      } catch {
-        // A rejected fetch here is the browser blocking the cross-origin PUT —
-        // the S3 bucket is missing its CORS rule for this domain.
-        throw new ApiError(
-          'Upload blocked by storage settings: the S3 bucket must allow uploads (CORS) from dashboard.referralnova.com. Ask your admin to add the CORS rule in AWS S3.',
-          0,
-        );
+      // Upload THROUGH our API (same trusted origin as every other call) —
+      // no S3 bucket CORS or public-access settings involved.
+      const contentType = file.type || 'application/octet-stream';
+      const uploadUrl =
+        `${apiBaseUrl()}/api/v1/messages/${activeId}/attachments/upload` +
+        `?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(contentType)}`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': contentType },
+        body: file,
+        credentials: 'include',
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success: boolean; data?: { key: string }; error?: string }
+        | null;
+      if (!res.ok || !json?.success || !json.data) {
+        throw new ApiError(json?.error ?? `Upload failed (${res.status})`, res.status);
       }
-      if (!put.ok) throw new ApiError(`Upload failed (${put.status})`, put.status);
+      const fileUrl = `${apiBaseUrl()}/api/v1/messages/attachments/file?key=${encodeURIComponent(json.data.key)}`;
       const msg = await api.post<Message>(
         `/api/v1/messages/${activeId}/messages`,
-        { text: `📎 ${file.name}: ${presign.publicUrl}` },
+        { text: `📎 ${file.name}: ${fileUrl}` },
         { accessToken: accessToken ?? undefined },
       );
       setMessages((prev) => [...prev, msg]);

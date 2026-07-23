@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import express from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -6,15 +7,32 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
+  getChatAttachmentStream,
   getOrCreateConversation,
   listConversations,
   listMessages,
   markConversationRead,
   presignChatAttachment,
   sendMessage,
+  uploadChatAttachment,
 } from './messaging.service.js';
 
 export const messagingRouter: Router = Router();
+
+// Public download proxy — attachment links must open in a new tab without an
+// Authorization header. Keys contain an unguessable UUID.
+messagingRouter.get(
+  '/attachments/file',
+  asyncHandler(async (req, res) => {
+    const key = typeof req.query.key === 'string' ? req.query.key : '';
+    const f = await getChatAttachmentStream(key);
+    res.setHeader('Content-Type', f.contentType);
+    if (f.contentLength) res.setHeader('Content-Length', String(f.contentLength));
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    (f.body as unknown as { pipe: (r: typeof res) => void }).pipe(res);
+  }),
+);
+
 messagingRouter.use(authenticate);
 
 // ---- List all conversations for the authenticated user --------------------
@@ -81,6 +99,32 @@ messagingRouter.post(
     );
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
+  }),
+);
+
+// ---- Server-side attachment upload (no bucket CORS needed) -----------------
+
+messagingRouter.post(
+  '/:id/attachments/upload',
+  express.raw({ type: '*/*', limit: '16mb' }),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const filename = typeof req.query.filename === 'string' ? req.query.filename : 'file';
+    const contentType =
+      typeof req.query.contentType === 'string' ? req.query.contentType : 'application/octet-stream';
+    const data = req.body as Buffer;
+    if (!Buffer.isBuffer(data) || data.length === 0) {
+      throw AppError.badRequest('Empty upload');
+    }
+    const result = await uploadChatAttachment(
+      req.params.id ?? '',
+      req.user.id,
+      filename,
+      contentType,
+      data,
+    );
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.status(201).json(body);
   }),
 );
 

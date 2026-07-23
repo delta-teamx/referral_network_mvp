@@ -252,6 +252,85 @@ export async function presignChatAttachment(
   return { uploadUrl, publicUrl };
 }
 
+/**
+ * Server-side attachment upload: the browser sends the file to OUR API (same
+ * trusted origin policy as every other call) and the server puts it in S3 —
+ * no bucket CORS or public-access configuration required.
+ */
+export async function uploadChatAttachment(
+  conversationId: string,
+  userId: string,
+  filename: string,
+  contentType: string,
+  data: Buffer,
+): Promise<{ key: string }> {
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId },
+    select: { id: true },
+  });
+  if (!participant) throw AppError.forbidden('You are not a participant of this conversation.');
+  if (!ATTACHMENT_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported file type. Use PDF, Word, Excel, image or text.');
+  }
+  if (data.length > MAX_ATTACHMENT_BYTES) {
+    throw AppError.badRequest('File too large. Max 15MB.');
+  }
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
+    throw AppError.badRequest('File uploads are not configured yet.');
+  }
+
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+  const key = `chat/${conversationId}/${crypto.randomUUID()}-${safeName}`;
+
+  const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const s3 = new S3Client({
+    region: env.AWS_REGION,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: env.AWS_S3_BUCKET,
+      Key: key,
+      ContentType: contentType,
+      Body: data,
+    }),
+  );
+  return { key };
+}
+
+/** Stream an attachment back through the API (keys are unguessable UUIDs). */
+export async function getChatAttachmentStream(key: string): Promise<{
+  body: NodeJS.ReadableStream;
+  contentType: string;
+  contentLength?: number;
+}> {
+  if (!key.startsWith('chat/') || key.includes('..')) {
+    throw AppError.badRequest('Invalid attachment key');
+  }
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
+    throw AppError.notFound('File storage not configured');
+  }
+  const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+  const s3 = new S3Client({
+    region: env.AWS_REGION,
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
+    },
+  });
+  const out = await s3.send(
+    new GetObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key }),
+  );
+  return {
+    body: out.Body as unknown as NodeJS.ReadableStream,
+    contentType: out.ContentType ?? 'application/octet-stream',
+    contentLength: out.ContentLength,
+  };
+}
+
 /** Mark a conversation read for the given user (sets lastReadAt = now). */
 export async function markConversationRead(conversationId: string, userId: string) {
   await prisma.conversationParticipant.updateMany({

@@ -20,6 +20,9 @@ function apiBase(): string {
 /** True only when no API URL is configured (e.g. a preview build). */
 export const isDemoMode = (): boolean => !DEFAULT_API_BASE;
 
+/** The resolved API origin, for callers that need to build raw URLs (uploads, file links). */
+export const apiBaseUrl = (): string => apiBase();
+
 export class ApiError extends Error {
   constructor(
     message: string,
