@@ -290,14 +290,26 @@ export async function uploadChatAttachment(
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY as string,
     },
   });
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: env.AWS_S3_BUCKET,
-      Key: key,
-      ContentType: contentType,
-      Body: data,
-    }),
-  );
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env.AWS_S3_BUCKET,
+        Key: key,
+        ContentType: contentType,
+        Body: data,
+      }),
+    );
+  } catch (err) {
+    // Surface S3's exact rejection so the failure is self-diagnosing from the
+    // UI (NoSuchBucket = bucket doesn't exist, AccessDenied = key lacks
+    // s3:PutObject, PermanentRedirect = wrong AWS_REGION, …).
+    const name = (err as { name?: string })?.name ?? 'UnknownError';
+    // eslint-disable-next-line no-console
+    console.error('[chat-upload] S3 rejected the upload:', err);
+    throw AppError.badRequest(
+      `Storage rejected the upload: ${name}. Check the S3 bucket "${env.AWS_S3_BUCKET}" exists in ${env.AWS_REGION} and the AWS key has s3:PutObject permission.`,
+    );
+  }
   return { key };
 }
 
