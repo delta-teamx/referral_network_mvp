@@ -238,11 +238,21 @@ function MessagesInner() {
         { filename: file.name, contentType: file.type || 'application/pdf', sizeBytes: file.size },
         { accessToken: accessToken ?? undefined },
       );
-      const put = await fetch(presign.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/pdf' },
-        body: file,
-      });
+      let put: Response;
+      try {
+        put = await fetch(presign.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/pdf' },
+          body: file,
+        });
+      } catch {
+        // A rejected fetch here is the browser blocking the cross-origin PUT —
+        // the S3 bucket is missing its CORS rule for this domain.
+        throw new ApiError(
+          'Upload blocked by storage settings: the S3 bucket must allow uploads (CORS) from dashboard.referralnova.com. Ask your admin to add the CORS rule in AWS S3.',
+          0,
+        );
+      }
       if (!put.ok) throw new ApiError(`Upload failed (${put.status})`, put.status);
       const msg = await api.post<Message>(
         `/api/v1/messages/${activeId}/messages`,
