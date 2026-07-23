@@ -225,6 +225,33 @@ async function ensureRuntimeSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS "Contract_receiverId_idx" ON "Contract" ("receiverId");`,
       `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
       `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+      // DATA HEAL: resolve stale mirror intro suggestions — when one direction
+      // of a pair was accepted/declined before the mirror-resolution fix
+      // shipped, the opposite row kept resurfacing as a fresh request.
+      `DO $$ BEGIN
+         UPDATE "Introduction" AS i
+         SET "status" = m."status", "acceptedAt" = COALESCE(i."acceptedAt", m."acceptedAt")
+         FROM "Introduction" AS m
+         WHERE m."senderId" = i."targetId" AND m."targetId" = i."senderId"
+           AND m."status" IN ('accepted','declined')
+           AND i."status" IN ('suggested','requested');
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // DATA HEAL: accepted intros from before the connection fix get their
+      // My-Network connection created retroactively.
+      `DO $$ BEGIN
+         INSERT INTO "BusinessConnection" ("id","initiatorId","targetId","status","strengthScore","createdAt","acceptedAt","lastInteractAt")
+         SELECT gen_random_uuid(), s."senderId", s."targetId", 'accepted', 0, NOW(), NOW(), NOW()
+         FROM (
+           SELECT DISTINCT ON (LEAST("senderId","targetId"), GREATEST("senderId","targetId"))
+                  "senderId", "targetId"
+           FROM "Introduction" WHERE "status" = 'accepted'
+         ) s
+         WHERE NOT EXISTS (
+           SELECT 1 FROM "BusinessConnection" c
+           WHERE (c."initiatorId" = s."senderId" AND c."targetId" = s."targetId")
+              OR (c."initiatorId" = s."targetId" AND c."targetId" = s."senderId")
+         );
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // Legacy BookingCall columns the code doesn't write must not block
       // inserts ("A required value is missing" on booking requests).
       `DO $$ BEGIN ALTER TABLE "BookingCall" ALTER COLUMN "durationMin" SET DEFAULT 30; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
