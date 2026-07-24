@@ -8,7 +8,7 @@ export interface AccessTokenClaims {
   email: string;
   role: UserRole;
   tier: SubscriptionTier;
-  ev?: boolean; // emailVerified — short key to keep JWT small
+  ev?: boolean; // emailVerified - short key to keep JWT small
 }
 
 export interface RefreshTokenClaims {
@@ -20,7 +20,7 @@ export interface RefreshTokenClaims {
 function requireAccessSecret(): string {
   if (!env.JWT_ACCESS_SECRET) {
     throw new AppError(
-      'JWT_ACCESS_SECRET is not configured — set it in .env before using auth routes.',
+      'JWT_ACCESS_SECRET is not configured - set it in .env before using auth routes.',
       500,
       'auth/not_configured',
     );
@@ -31,7 +31,7 @@ function requireAccessSecret(): string {
 function requireRefreshSecret(): string {
   if (!env.JWT_REFRESH_SECRET) {
     throw new AppError(
-      'JWT_REFRESH_SECRET is not configured — set it in .env before using auth routes.',
+      'JWT_REFRESH_SECRET is not configured - set it in .env before using auth routes.',
       500,
       'auth/not_configured',
     );

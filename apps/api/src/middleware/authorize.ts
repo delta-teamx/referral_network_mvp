@@ -4,7 +4,7 @@ import { hasAllPermissions, hasAnyPermission } from '../domains/core/rbac/rbac.s
 import { AppError } from '../utils/AppError.js';
 
 /**
- * `authorize(...permissions)` — gate a route on one or more permission keys.
+ * `authorize(...permissions)` - gate a route on one or more permission keys.
  *
  * Usage:
  *   router.post('/listings', authenticate, authorize(PERMISSIONS.LISTING_CREATE), create);
@@ -15,7 +15,7 @@ import { AppError } from '../utils/AppError.js';
  * suffices.
  *
  * Expects `req.user` to have been populated by `authenticate` (Branch 2).
- * If it hasn't, returns 401 — so this middleware is safe to compose even
+ * If it hasn't, returns 401 - so this middleware is safe to compose even
  * before auth lands; unauthenticated routes simply won't use it.
  */
 export interface AuthorizeOptions {

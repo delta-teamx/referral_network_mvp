@@ -4,7 +4,7 @@ import { recomputeTrustForListing } from './trust.service.js';
 
 /**
  * On-event trust-score updates. Keeps listing cards fresh without waiting
- * for the daily scheduler. All handlers are fire-and-forget — if the DB is
+ * for the daily scheduler. All handlers are fire-and-forget - if the DB is
  * slow we don't block the publisher; worst case the next daily run covers it.
  */
 

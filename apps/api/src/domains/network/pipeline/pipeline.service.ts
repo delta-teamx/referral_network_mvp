@@ -3,7 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
- * GHL-style pipeline — every prospect (message lead, intro, consumer lead,
+ * GHL-style pipeline - every prospect (message lead, intro, consumer lead,
  * referral, booking, contract partner) becomes a card that the member moves
  * across stages. Analytics reads stages straight from this table, so moving
  * a card IS updating the report.
@@ -12,7 +12,7 @@ import { sanitizeText } from '../../../utils/sanitize.js';
  *  - cards are created automatically from real activity (idempotent);
  *  - activity only ever advances a card forward (booking → zoom_booked,
  *    signed contract → contract_signed), never backwards;
- *  - terminal stages (won / lost / dead) are never touched by sync — only
+ *  - terminal stages (won / lost / dead) are never touched by sync - only
  *    the member decides those.
  */
 
@@ -22,7 +22,7 @@ export const PIPELINE_STAGES = [
   'zoom_booked',
   'follow_up',
   'signing_contract',
-  'won', // "Won — deal signed": a signed contract IS a won deal
+  'won', // "Won - deal signed": a signed contract IS a won deal
   'lost',
   'dead',
 ] as const;
@@ -89,12 +89,12 @@ async function advanceCard(cardId: string, currentStage: string, to: PipelineSta
 /** Idempotent sync: turn real platform activity into pipeline cards. */
 export async function syncPipeline(ownerId: string): Promise<void> {
   // Legacy stage merge: contract_signed and won are now ONE stage
-  // ("Won — deal signed") — a signed contract is a won deal.
+  // ("Won - deal signed") - a signed contract is a won deal.
   await prisma.pipelineCard
     .updateMany({ where: { ownerId, stage: 'contract_signed' }, data: { stage: 'won' } })
     .catch(() => undefined);
 
-  // Peers this member has ACTUALLY engaged with — used at the end to
+  // Peers this member has ACTUALLY engaged with - used at the end to
   // auto-resolve stale intro requests (the system stays interconnected:
   // once you've messaged / met / contracted, an intro request is moot).
   const engagedPeerIds = new Set<string>();
@@ -256,7 +256,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
   }
 
   // 8. INTERCONNECTION HEAL: an intro request between two people who already
-  //    message / met on Zoom / signed a contract / are connected is stale —
+  //    message / met on Zoom / signed a contract / are connected is stale -
   //    resolve it so it stops resurfacing as "waiting for response".
   if (engagedPeerIds.size > 0) {
     const peers = [...engagedPeerIds];
@@ -279,7 +279,7 @@ export async function listPipeline(ownerId: string) {
   try {
     await syncPipeline(ownerId);
   } catch {
-    // Sync is best-effort — the board must still render existing cards.
+    // Sync is best-effort - the board must still render existing cards.
   }
   return prisma.pipelineCard.findMany({
     where: { ownerId },

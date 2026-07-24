@@ -103,7 +103,7 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
         <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
           <Users size={32} className="mx-auto mb-3 text-primary" />
           <h3 className="mb-1 text-lg font-semibold text-gray-900">You haven&rsquo;t joined a group yet</h3>
-          <p className="mb-4 text-sm text-gray-600">Groups are local networking circles — join one to meet and refer.</p>
+          <p className="mb-4 text-sm text-gray-600">Groups are local networking circles - join one to meet and refer.</p>
           <Link href="/groups" className="inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
             Browse groups →
           </Link>
@@ -371,7 +371,7 @@ function GroupChat({
     <div className="flex h-[28rem] flex-col rounded-2xl border border-gray-200 bg-white">
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          <p className="mt-8 text-center text-sm text-gray-400">No messages yet — start the conversation.</p>
+          <p className="mt-8 text-center text-sm text-gray-400">No messages yet - start the conversation.</p>
         ) : (
           messages.map((m) => {
             const mine = m.sender.id === meId;

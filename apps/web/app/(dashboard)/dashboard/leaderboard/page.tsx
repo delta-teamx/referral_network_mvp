@@ -2,7 +2,7 @@
 
 import { Trophy } from 'lucide-react';
 
-/** Leaderboard — coming soon. Will rank members by referrals given, deals
+/** Leaderboard - coming soon. Will rank members by referrals given, deals
  *  won and network activity. */
 export default function LeaderboardPage() {
   return (
@@ -17,7 +17,7 @@ export default function LeaderboardPage() {
         </div>
         <h2 className="mb-2 text-xl font-bold text-gray-900">Coming soon</h2>
         <p className="mx-auto max-w-sm text-sm text-gray-600">
-          The community leaderboard is on its way — top referrers, most deals won, and the most
+          The community leaderboard is on its way - top referrers, most deals won, and the most
           active connectors, celebrated every month.
         </p>
         <span className="mt-5 inline-block rounded-full bg-primary-light px-4 py-1.5 text-xs font-bold text-primary">

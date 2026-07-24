@@ -3,7 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
 
 /**
- * Lead notification subscribers — fire emails when a consumer creates
+ * Lead notification subscribers - fire emails when a consumer creates
  * a lead and when a provider updates its status. Console email provider
  * in dev means these show up in the API's stdout; swap in SendGrid in
  * prod and the same flow sends real mail.
@@ -36,8 +36,8 @@ export function registerLeadSubscribers(bus: EventBus): void {
         eventType: lead.eventType,
         consumerName: `${lead.consumer.firstName} ${lead.consumer.lastName}`,
         consumerEmail: lead.consumer.email,
-        consumerPhone: lead.consumer.phone ?? '—',
-        notes: lead.notes ?? '—',
+        consumerPhone: lead.consumer.phone ?? '-',
+        notes: lead.notes ?? '-',
       },
     });
   });

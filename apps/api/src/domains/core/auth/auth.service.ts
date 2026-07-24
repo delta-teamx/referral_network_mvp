@@ -24,7 +24,7 @@ import { assertEmailIsCredible } from './email.credibility.js';
 import { resolveSignupTier } from '../../billing/founding.service.js';
 
 /**
- * Internal service return — carries the refresh token that the route
+ * Internal service return - carries the refresh token that the route
  * layer places in an HTTP-only cookie. Never sent as JSON to clients.
  */
 export interface AuthResult {
@@ -49,7 +49,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   const passwordHash = await hashPassword(input.password);
 
   // Founding-member promo: the first 200 genuine sign-ups get full paid access.
-  // Never let the promo lookup block a signup — default to FREE if it fails.
+  // Never let the promo lookup block a signup - default to FREE if it fails.
   let subscriptionTier: 'PREMIUM' | 'FREE' = 'FREE';
   try {
     subscriptionTier = await resolveSignupTier();
@@ -77,7 +77,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
 
   // Post-signup side effects (onboarding row, referral linking, welcome email)
   // are best-effort. The account already exists, so a failure here must never
-  // turn a successful signup into a 500 — log it and continue.
+  // turn a successful signup into a 500 - log it and continue.
   try {
     await eventBus.publish('user.signed_up', {
       userId: user.id,
@@ -96,7 +96,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
 }
 
 /**
- * Email every admin when a new member signs up. Best-effort — never throws and
+ * Email every admin when a new member signs up. Best-effort - never throws and
  * never blocks the signup response. Delivers once an email provider
  * (SENDGRID_API_KEY) is configured; otherwise it logs to the server console.
  */
@@ -157,7 +157,7 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 
 /**
  * Exchange a refresh token for a fresh access token. Does not rotate the
- * refresh token in Branch 2 — rotation + revocation DB rows land in
+ * refresh token in Branch 2 - rotation + revocation DB rows land in
  * Branch 4 alongside the BullMQ event bus (keeps this PR focused).
  */
 export async function refresh(refreshTokenRaw: string): Promise<AuthResult> {
@@ -169,7 +169,7 @@ export async function refresh(refreshTokenRaw: string): Promise<AuthResult> {
   return buildAuthSuccess(user);
 }
 
-/** Email verification — consumes the token stored at signup. */
+/** Email verification - consumes the token stored at signup. */
 export async function verifyEmailToken(token: string): Promise<void> {
   const tokenHash = hashToken(token);
   const user = await prisma.user.findFirst({
@@ -186,7 +186,7 @@ export async function verifyEmailToken(token: string): Promise<void> {
 }
 
 /**
- * Always returns success even if the email doesn't exist — avoids exposing
+ * Always returns success even if the email doesn't exist - avoids exposing
  * which addresses are registered.
  */
 export async function requestPasswordReset(input: ForgotPasswordInput): Promise<void> {

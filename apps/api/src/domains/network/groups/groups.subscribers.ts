@@ -2,7 +2,7 @@ import type { EventBus } from '../../core/events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
 
 /**
- * Group subscribers — make group membership actually interconnect people.
+ * Group subscribers - make group membership actually interconnect people.
  *
  * `group.member_joined` previously fired into a void, so joining a group had no
  * behavioural effect: co-members never showed up in each other's network and
@@ -10,7 +10,7 @@ import { prisma } from '../../../config/prisma.js';
  * the new member and every existing member of the group, so a group becomes a
  * real, interconnected network the moment you join it.
  *
- * Runs through the event bus, which swallows subscriber errors — a failure here
+ * Runs through the event bus, which swallows subscriber errors - a failure here
  * never blocks the join itself.
  */
 export function registerGroupSubscribers(bus: EventBus): void {

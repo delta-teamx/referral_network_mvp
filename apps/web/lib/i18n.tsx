@@ -16,12 +16,12 @@ import {
  * - Locale is auto-detected from the browser on first visit, then persisted to
  *   localStorage when the user picks one from the switcher.
  * - `t(key)` looks up the active locale, falls back to English, then to the key
- *   itself — so untranslated strings degrade gracefully rather than breaking.
+ *   itself - so untranslated strings degrade gracefully rather than breaking.
  * - Arabic switches the document to right-to-left.
  *
  * Only high-traffic first-impression strings are translated today (nav, hero,
  * founding offer, auth). Everything else renders its inline English until its
- * keys are added here — no page ever breaks from a missing translation.
+ * keys are added here - no page ever breaks from a missing translation.
  */
 
 export const LOCALES = [
@@ -50,7 +50,7 @@ const en: Dict = {
   'nav.dashboard': 'Dashboard',
   'nav.logout': 'Log out',
   'common.language': 'Language',
-  'founding.bar': 'Founding offer — the first 200 businesses get every feature free.',
+  'founding.bar': 'Founding offer - the first 200 businesses get every feature free.',
   'founding.barSpots': 'Only {n} of {limit} spots left.',
   'founding.barCta': 'No credit card. Claim your spot →',
   'founding.cardTitle': 'Founding offer: the first 200 businesses get every paid feature free',
@@ -62,7 +62,7 @@ const en: Dict = {
   'hero.titleA': 'Stop hoping for referrals.',
   'hero.titleHighlight': 'Build a referral engine.',
   'hero.titleB': '',
-  'hero.sub': 'Referral Nova turns your network into revenue: AI matches you with trusted partners, and qualified referrals flow in both directions — continuously.',
+  'hero.sub': 'Referral Nova turns your network into revenue: AI matches you with trusted partners, and qualified referrals flow in both directions - continuously.',
   'hero.sub2': 'Other tools help you find who could introduce you. Referral Nova builds you a system where introductions actually happen, week after week.',
   'hero.ctaJoin': 'Join free',
   'hero.ctaHow': 'See how it works',
@@ -151,7 +151,7 @@ const de: Dict = {
   'hero.titleHighlight': 'Bauen Sie einen Empfehlungsmotor.',
   'hero.titleB': '',
   'hero.sub': 'Referral Nova macht aus Ihrem Netzwerk Umsatz: KI verbindet Sie mit vertrauenswürdigen Partnern, und qualifizierte Empfehlungen fließen kontinuierlich in beide Richtungen.',
-  'hero.sub2': 'Andere Tools zeigen, wer Sie vorstellen könnte. Referral Nova baut Ihnen ein System, in dem Vorstellungen tatsächlich passieren – Woche für Woche.',
+  'hero.sub2': 'Andere Tools zeigen, wer Sie vorstellen könnte. Referral Nova baut Ihnen ein System, in dem Vorstellungen tatsächlich passieren - Woche für Woche.',
   'hero.ctaJoin': 'Kostenlos beitreten',
   'hero.ctaHow': 'So funktioniert es',
   'auth.signupTitle': 'Konto erstellen',

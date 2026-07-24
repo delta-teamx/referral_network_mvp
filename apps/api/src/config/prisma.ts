@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { env } from './env.js';
 
 /**
- * Process-wide Prisma client. Don't construct PrismaClient anywhere else —
+ * Process-wide Prisma client. Don't construct PrismaClient anywhere else -
  * creating multiple instances opens multiple connection pools.
  *
  * Log level is noisy in dev (query + info + warn + error) but quiet in
@@ -12,7 +12,7 @@ export const prisma = new PrismaClient({
   log: env.NODE_ENV === 'development' ? ['warn', 'error'] : ['warn', 'error'],
 });
 
-/** Graceful shutdown — closes pool on SIGINT/SIGTERM. */
+/** Graceful shutdown - closes pool on SIGINT/SIGTERM. */
 export async function disconnectPrisma(): Promise<void> {
   await prisma.$disconnect();
 }

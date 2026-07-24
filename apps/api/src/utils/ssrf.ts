@@ -1,5 +1,5 @@
 /**
- * Block SSRF — reject URLs that point to internal/private networks.
+ * Block SSRF - reject URLs that point to internal/private networks.
  * Used before any server-side fetch of user-supplied URLs.
  */
 export function assertExternalUrl(url: string): void {

@@ -2,12 +2,12 @@ import { env } from '../../../config/env.js';
 
 /**
  * Email dispatch. Two providers are implemented:
- *   - SendGridEmailProvider — lazy-loads @sendgrid/mail when SENDGRID_API_KEY
+ *   - SendGridEmailProvider - lazy-loads @sendgrid/mail when SENDGRID_API_KEY
  *     is set at boot. Ships real HTML emails per template.
- *   - ConsoleEmailProvider — dev fallback that prints the email body to
+ *   - ConsoleEmailProvider - dev fallback that prints the email body to
  *     stdout so developers (and demo deploys) can continue without keys.
  *
- * Template bodies live in `renderTemplate` below — keep them plaintext-first
+ * Template bodies live in `renderTemplate` below - keep them plaintext-first
  * with a simple `html` variant so both providers can render them.
  */
 
@@ -145,7 +145,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         text: `You have a new ${d.eventType} lead on ${appName}. View: ${d.leadUrl}`,
         html: basicLayout(
           'New lead received',
-          `<p>A consumer in zip <strong>${d.zip ?? '—'}</strong> is asking for help with <strong>${d.eventType}</strong>.</p>${cta('View lead', String(d.leadUrl))}`,
+          `<p>A consumer in zip <strong>${d.zip ?? '-'}</strong> is asking for help with <strong>${d.eventType}</strong>.</p>${cta('View lead', String(d.leadUrl))}`,
         ),
       };
     case 'referral_received':
@@ -154,7 +154,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         text: `You received a referral from ${d.senderName ?? 'a peer'}. Client: ${d.clientName}. View: ${d.referralUrl}`,
         html: basicLayout(
           'New B2B referral',
-          `<p><strong>${d.senderName ?? 'A peer'}</strong> sent you a client referral.</p><p><strong>Client:</strong> ${d.clientName ?? '—'}<br><strong>Notes:</strong> ${d.notes ?? '—'}</p>${cta('View referral', String(d.referralUrl))}`,
+          `<p><strong>${d.senderName ?? 'A peer'}</strong> sent you a client referral.</p><p><strong>Client:</strong> ${d.clientName ?? '-'}<br><strong>Notes:</strong> ${d.notes ?? '-'}</p>${cta('View referral', String(d.referralUrl))}`,
         ),
       };
     case 'booking_confirmed':
@@ -168,7 +168,7 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <strong>Reason:</strong> ${d.reason ?? ''}</p>
            ${d.notes ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.notes))}</blockquote>` : ''}
            ${cta('Join Zoom meeting', String(d.zoomUrl ?? '#'))}
-           <p style="color:#888;font-size:12px">A calendar invite is attached — open it to add this to your calendar.</p>`,
+           <p style="color:#888;font-size:12px">A calendar invite is attached - open it to add this to your calendar.</p>`,
         ),
       };
     case 'event_registered':
@@ -320,7 +320,7 @@ function getProvider(): Promise<EmailProvider> {
   return providerPromise;
 }
 
-/** Queue an email for delivery. Never throws — failures are logged. */
+/** Queue an email for delivery. Never throws - failures are logged. */
 export async function sendEmail(req: EmailRequest): Promise<void> {
   try {
     const p = await getProvider();

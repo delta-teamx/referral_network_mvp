@@ -15,7 +15,7 @@ export function generateToken(bytes = 32): string {
 }
 
 /**
- * SHA-256 hash of a token — stored in DB so a DB leak doesn't hand over
+ * SHA-256 hash of a token - stored in DB so a DB leak doesn't hand over
  * valid refresh/reset tokens.
  */
 export function hashToken(token: string): string {

@@ -16,7 +16,7 @@ import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
 /**
- * Pipeline — a GHL-style kanban board. Every prospect (message lead, intro,
+ * Pipeline - a GHL-style kanban board. Every prospect (message lead, intro,
  * consumer lead, referral, booking, contract partner) is a card the member
  * drags between stages. Stage moves feed Analytics directly.
  */
@@ -179,7 +179,7 @@ export default function PipelinePage() {
           <h1 className="mt-1 text-2xl font-bold text-gray-900">Your leads</h1>
           <p className="mt-1 text-sm text-gray-500">
             Every conversation, intro, referral and booking becomes a card. Drag cards between
-            stages — Analytics updates with every move.
+            stages - Analytics updates with every move.
           </p>
         </div>
         <div className="flex items-center gap-3">

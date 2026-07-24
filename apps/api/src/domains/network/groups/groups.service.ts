@@ -4,7 +4,7 @@ import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
- * Groups — BNI-style local networking circles. A group is public-discoverable
+ * Groups - BNI-style local networking circles. A group is public-discoverable
  * (by city) and has a fixed-size roster. One LEADER + 0..N CO_LEADERs run it;
  * MEMBERs attend meetings and send referrals inside the group.
  *

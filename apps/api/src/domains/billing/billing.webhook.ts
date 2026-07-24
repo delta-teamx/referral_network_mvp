@@ -48,7 +48,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     return;
   }
 
-  // req.body here must be the raw Buffer — see the route mount in index.ts.
+  // req.body here must be the raw Buffer - see the route mount in index.ts.
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig as string, whSecret);
@@ -72,7 +72,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
   } catch (err) {
     // Only a unique-violation (P2002) means we've already processed this event;
     // ack and move on. Any other failure (DB blip, oversized payload) must NOT
-    // be treated as a duplicate — return 500 so Stripe retries later.
+    // be treated as a duplicate - return 500 so Stripe retries later.
     if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') {
       res.json({ received: true, duplicate: true });
       return;
@@ -130,7 +130,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         }
         // Active subscription: only apply a RECOGNIZED paid tier. Never downgrade
         // an active subscriber to FREE just because the price id isn't one we know
-        // (unset price env vars, an annual/alternate price, a future price change) —
+        // (unset price env vars, an annual/alternate price, a future price change) -
         // that would silently strip paid access on routine renewal/update events.
         const tier = priceIdToTier(priceId);
         if (tier !== 'FREE') {
@@ -171,7 +171,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         break;
       }
       default:
-        // Unhandled event type — ack anyway so Stripe stops retrying.
+        // Unhandled event type - ack anyway so Stripe stops retrying.
         break;
     }
     res.json({ received: true });

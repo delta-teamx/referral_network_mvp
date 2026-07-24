@@ -6,7 +6,7 @@ import { createNotification } from '../../core/notifications/notifications.servi
 import { sendEmail } from '../../core/notifications/email.service.js';
 
 /**
- * Platform contracts — two members formalise a collaboration by signing the
+ * Platform contracts - two members formalise a collaboration by signing the
  * platform's standard contract in-app.
  *
  * Flow: sender creates + signs (typed signature) → receiver gets bell + email
@@ -75,7 +75,7 @@ export async function createContract(input: {
     userId: receiver.id,
     type: 'contract',
     title: `${senderName} sent you a contract to sign`,
-    body: `"${contract.title}" — review and sign it in Contracts & Legal.`,
+    body: `"${contract.title}" - review and sign it in Contracts & Legal.`,
     data: { contractId: contract.id },
   }).catch(() => undefined);
 

@@ -4,9 +4,9 @@ import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 
 /**
- * Reviews service — consumer reviews on listings.
+ * Reviews service - consumer reviews on listings.
  *
- * One review per (listingId, userId) — enforced by Prisma @@unique.
+ * One review per (listingId, userId) - enforced by Prisma @@unique.
  * On create/update, recompute the listing's `avgRating` and `reviewCount`
  * inline so the card can render without a separate aggregate job. Branch 7
  * swaps this for an event-sourced recompute once the listings are

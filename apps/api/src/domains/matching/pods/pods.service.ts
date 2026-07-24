@@ -6,7 +6,7 @@ import { env } from '../../../config/env.js';
 
 // A "weekly board" forms once there are a few eligible members. The old min of
 // 10 meant a young network (which is every network at launch) silently formed
-// zero pods — so no boards appeared for weeks. Keep it small so boards actually
+// zero pods - so no boards appeared for weeks. Keep it small so boards actually
 // happen, and grow to larger pods as membership grows.
 const POD_SIZE = { min: 3, target: 12, max: 20 };
 
@@ -35,7 +35,7 @@ export async function runDailyMatchmaking(): Promise<{ podsCreated: number; memb
   const members = await getEligibleMembers();
   if (members.length < POD_SIZE.min) {
     // eslint-disable-next-line no-console
-    console.log(`[matchmaking] only ${members.length} eligible members — need ${POD_SIZE.min}+, skipping`);
+    console.log(`[matchmaking] only ${members.length} eligible members - need ${POD_SIZE.min}+, skipping`);
     return { podsCreated: 0, membersMatched: 0 };
   }
 
@@ -51,7 +51,7 @@ export async function runDailyMatchmaking(): Promise<{ podsCreated: number; memb
     const tomorrow9am = getNextMeetingTime();
     try {
       const zoom = await createZoomMeeting({
-        topic: `Referral Nova — Weekly AI-Matched Networking Board`,
+        topic: `Referral Nova - Weekly AI-Matched Networking Board`,
         startsAt: tomorrow9am,
         durationMin: 60,
       });

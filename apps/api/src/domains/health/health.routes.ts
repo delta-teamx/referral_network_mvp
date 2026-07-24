@@ -16,7 +16,7 @@ const STARTED_AT = new Date().toISOString();
 const COMMIT = (process.env.RENDER_GIT_COMMIT ?? 'unknown').slice(0, 7);
 
 /**
- * GET /api/v1/health — liveness probe.
+ * GET /api/v1/health - liveness probe.
  * Includes the deployed commit so anyone can verify which build is live
  * (no more guessing whether a fix actually reached production).
  * No DB/Redis/ES pings here; those belong on a separate /ready route.

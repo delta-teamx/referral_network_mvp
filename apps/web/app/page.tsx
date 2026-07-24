@@ -202,7 +202,7 @@ export default function HomePage() {
                   'AI matches you with partners who want to refer you',
                   'Warm introductions delivered to you every week',
                   'Built-in messaging, Zoom booking, and contracts',
-                  'Referrals flow both ways — and every outcome is tracked',
+                  'Referrals flow both ways - and every outcome is tracked',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm font-medium text-gray-800">
                     <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0 text-success" />
@@ -226,7 +226,7 @@ export default function HomePage() {
               </h2>
               <p className="mb-6 text-gray-600">
                 Every business already sits on a goldmine of referral relationships. The problem
-                isn&rsquo;t that you don&rsquo;t know enough people — it&rsquo;s that those
+                isn&rsquo;t that you don&rsquo;t know enough people - it&rsquo;s that those
                 relationships aren&rsquo;t organized, activated, or working for you. Referral Nova
                 turns them into a predictable source of revenue.
               </p>
@@ -298,17 +298,17 @@ export default function HomePage() {
               {
                 icon: Search,
                 title: 'Discover trusted partners',
-                desc: 'AI surfaces businesses that serve your customers before and after you do — your natural referral allies.',
+                desc: 'AI surfaces businesses that serve your customers before and after you do - your natural referral allies.',
               },
               {
                 icon: Handshake,
                 title: 'Exchange qualified referrals',
-                desc: 'Send real clients to partners and receive warm, ready-to-buy leads back — all tracked in one place.',
+                desc: 'Send real clients to partners and receive warm, ready-to-buy leads back - all tracked in one place.',
               },
               {
                 icon: RefreshCw,
                 title: 'Build referral relationships',
-                desc: 'Message, meet on Zoom, and formalize partnerships with built-in contracts — not one-off favors.',
+                desc: 'Message, meet on Zoom, and formalize partnerships with built-in contracts - not one-off favors.',
               },
               {
                 icon: BarChart3,
@@ -359,7 +359,7 @@ export default function HomePage() {
                 step: '03',
                 icon: Sparkles,
                 title: 'AI finds your partners',
-                desc: 'Our engine scans every member and surfaces the people you should meet — with a reason why.',
+                desc: 'Our engine scans every member and surfaces the people you should meet - with a reason why.',
               },
               {
                 step: '04',
@@ -413,7 +413,7 @@ export default function HomePage() {
               {
                 title: 'Referral software',
                 does: 'Manages referral campaigns',
-                gap: 'It tracks links and payouts — it can’t find you new partners who want to refer you.',
+                gap: 'It tracks links and payouts - it can’t find you new partners who want to refer you.',
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
@@ -431,7 +431,7 @@ export default function HomePage() {
             <Sparkles size={24} className="mx-auto mb-3 text-primary" />
             <p className="mx-auto max-w-2xl text-lg font-semibold text-white">
               Referral Nova matches you with the right partners, gets you introduced, books the
-              meeting, and tracks every referral to revenue — continuously, not once.
+              meeting, and tracks every referral to revenue - continuously, not once.
             </p>
           </div>
         </div>
@@ -478,7 +478,7 @@ export default function HomePage() {
                 desc: 'The marketplace compounds:',
                 points: [
                   'Every new member is a potential partner',
-                  'Givers get priority — generosity is rewarded',
+                  'Givers get priority - generosity is rewarded',
                   'Groups & communities plug in white-label',
                   'Your reach grows without more outreach',
                 ],
@@ -747,7 +747,7 @@ export default function HomePage() {
             Join the referral revolution
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
-            Stop waiting for referrals to happen. Build the engine that makes them happen — and
+            Stop waiting for referrals to happen. Build the engine that makes them happen - and
             claim one of the first 200 founding spots with every Premium feature free.
           </p>
           <div className="flex flex-wrap justify-center gap-4">

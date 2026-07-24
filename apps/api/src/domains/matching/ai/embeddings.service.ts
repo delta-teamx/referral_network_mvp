@@ -6,7 +6,7 @@ import { prisma } from '../../../config/prisma.js';
  * a single text blob, then embeds it via `text-embedding-3-small`. The
  * resulting vector is stored as JSON on MemberProfile.profileEmbedding.
  *
- * When OPENAI_API_KEY is not set, this module is a no-op — the rules-based
+ * When OPENAI_API_KEY is not set, this module is a no-op - the rules-based
  * matcher in ai-matching.service.ts handles scoring without embeddings.
  *
  * Usage:
@@ -54,7 +54,7 @@ function profileToText(p: {
 async function getOpenAI(): Promise<{ embed: (text: string) => Promise<number[]> } | null> {
   if (!process.env.OPENAI_API_KEY) return null;
   try {
-    // @ts-expect-error — openai is optional
+    // @ts-expect-error - openai is optional
     const OpenAI = (await import('openai')).default;
     const client = new OpenAI();
     return {
@@ -139,7 +139,7 @@ export async function refreshStaleEmbeddings(
 }
 
 /**
- * Cosine similarity between two embedding vectors. Returns 0–1.
+ * Cosine similarity between two embedding vectors. Returns 0-1.
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;

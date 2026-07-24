@@ -3,17 +3,17 @@ import { prisma } from '../../../config/prisma.js';
 import { eventBus } from '../events/index.js';
 
 /**
- * Onboarding — drives the first-session experience the architecture review
- * called for (retention lever): capture goals, auto-suggest 3–5 businesses
+ * Onboarding - drives the first-session experience the architecture review
+ * called for (retention lever): capture goals, auto-suggest 3-5 businesses
  * to connect with, mark steps complete, fire events so downstream systems
  * (welcome email, dashboard checklist) can react.
  *
  * Steps:
- *   1. `started`              — row created at signup via event subscriber
- *   2. `profile_submitted`    — user entered zip + category + goals
- *   3. `first_connection`     — suggestion accepted (Branch 4 wires this)
- *   4. `first_referral`       — optional booster step (Branch 4)
- *   5. `completed`            — all required steps done
+ *   1. `started`              - row created at signup via event subscriber
+ *   2. `profile_submitted`    - user entered zip + category + goals
+ *   3. `first_connection`     - suggestion accepted (Branch 4 wires this)
+ *   4. `first_referral`       - optional booster step (Branch 4)
+ *   5. `completed`            - all required steps done
  */
 
 export const REQUIRED_STEPS = ['profile_submitted'] as const;
@@ -81,7 +81,7 @@ export async function markStepCompleted(userId: string, step: string): Promise<v
 }
 
 /**
- * Stub suggestion generator for Branch 2 — returns up to N listings whose
+ * Stub suggestion generator for Branch 2 - returns up to N listings whose
  * city matches the user's zip's city (no geo query yet; Branch 3 adds the
  * proper radius search). Returns an empty list if no matches, which is
  * acceptable for a brand-new deployment with empty data.

@@ -19,7 +19,7 @@ import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 /**
  * My network = the relationships that produced results: deals you WON and
- * partners with a SIGNED contract sit on top — these are the contacts to
+ * partners with a SIGNED contract sit on top - these are the contacts to
  * nurture. Connections and invites live below.
  */
 
@@ -145,7 +145,7 @@ export default function NetworkPage() {
           <h1 className="mt-1 text-2xl font-bold text-gray-900">My network</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
             The relationships that win you business. Won deals (a signed contract counts as won)
-            live on top — keep working those first.
+            live on top - keep working those first.
           </p>
         </div>
         <Link

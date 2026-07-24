@@ -14,7 +14,7 @@ export default function AvailabilityRedirect() {
   }, [router]);
   return (
     <div className="flex min-h-64 items-center justify-center">
-      <p className="text-sm text-gray-500">Availability moved into Bookings — taking you there…</p>
+      <p className="text-sm text-gray-500">Availability moved into Bookings - taking you there…</p>
     </div>
   );
 }

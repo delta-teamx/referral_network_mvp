@@ -3,7 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 
 /**
- * BusinessConnection — the peer-to-peer relationship between two business
+ * BusinessConnection - the peer-to-peer relationship between two business
  * owners. This is distinct from:
  *   - Referral: a single client handoff (one-time event)
  *   - ConsumerLead: a consumer asking the network for help

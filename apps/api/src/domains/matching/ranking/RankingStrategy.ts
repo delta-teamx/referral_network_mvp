@@ -6,9 +6,9 @@ import type { SearchHit } from '../../search/SearchService.js';
  * which signals actually contribute to the final score.
  */
 export interface RankingCandidate extends SearchHit {
-  /** Normalised 0–10 trust score (see Branch 3 trust-score job). */
+  /** Normalised 0-10 trust score (see Branch 3 trust-score job). */
   trustScore: number;
-  /** 0–5 average rating. */
+  /** 0-5 average rating. */
   avgRating: number;
   /** Lifetime review count; a weak recency/credibility signal. */
   reviewCount: number;
@@ -18,7 +18,7 @@ export interface RankingCandidate extends SearchHit {
   isFeatured: boolean;
   /** Event-type ↔ category relevance (1 = weak fit, 10 = strong fit). */
   eventCategoryRelevance?: number;
-  /** Historical conversion rate on matched leads (0–1), null if sparse. */
+  /** Historical conversion rate on matched leads (0-1), null if sparse. */
   conversionRate?: number;
   /** 5-digit US ZIP; used for zip-prefix proximity until PostGIS lands. */
   zipCode?: string;
@@ -38,14 +38,14 @@ export interface RankedListing {
   /** Final score used for sorting. Higher is better. */
   score: number;
   /**
-   * Per-signal breakdown — useful for debugging, A/B tests, and
+   * Per-signal breakdown - useful for debugging, A/B tests, and
    * explaining results back to business owners in the dashboard.
    */
   breakdown: Record<string, number>;
 }
 
 /**
- * Strategy pattern — swap the implementation per call site without
+ * Strategy pattern - swap the implementation per call site without
  * every caller learning a new API.
  *
  * Planned Branch 5 strategies:

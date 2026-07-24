@@ -31,7 +31,7 @@ const TYPE_HREF: Record<string, string> = {
 
 /**
  * Notification bell. The panel stays open until you press the bell again,
- * hit the small ✕, or click anywhere else on the page — it never closes on
+ * hit the small ✕, or click anywhere else on the page - it never closes on
  * its own while you're reading inside it. Zoom reminders arrive here (type
  * booking_reminder), not by email.
  */

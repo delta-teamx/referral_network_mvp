@@ -1,14 +1,14 @@
 /**
- * `SearchService` — the contract every search-capable backend implements.
+ * `SearchService` - the contract every search-capable backend implements.
  *
  * Branch 3 ships a Postgres `pg_trgm` implementation as the default (good
  * enough for MVP traffic, zero infra burden). Higher-traffic deployments
  * can drop in an Elasticsearch implementation by satisfying this same
- * interface — callers in `domains/directory/listings/` and
+ * interface - callers in `domains/directory/listings/` and
  * `domains/matching/connector/` never change.
  *
  * The interface is intentionally narrow: one method to query, one to
- * upsert, one to delete. Ranking is NOT a concern of the search layer —
+ * upsert, one to delete. Ranking is NOT a concern of the search layer -
  * results come back in backend-native relevance order and the
  * `RankingStrategy` (see `domains/matching/ranking/`) re-scores for
  * business logic (trust weight, distance weight, conversion weight).
@@ -21,13 +21,13 @@ export interface SearchQuery {
   categoryIds?: string[];
   /** Geographic filter centred on this point with a mile radius. */
   near?: { latitude: number; longitude: number; radiusMiles: number };
-  /** Minimum average rating (0–5). */
+  /** Minimum average rating (0-5). */
   minRating?: number;
   /** Only return verified listings if true. */
   verifiedOnly?: boolean;
   /** Free-text filter on ListingTag.tag values. */
   tags?: string[];
-  /** Pagination — 0-based. */
+  /** Pagination - 0-based. */
   page?: number;
   limit?: number;
 }

@@ -6,7 +6,7 @@ import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
 /**
- * Admin — Support tickets. Every widget conversation lands here. Reply to
+ * Admin - Support tickets. Every widget conversation lands here. Reply to
  * the visitor live, mark tickets answered/closed. Polls so new messages
  * appear while the console is open.
  */
@@ -88,7 +88,7 @@ export default function AdminSupportPage() {
   async function loadThread(id: string) {
     if (!accessToken) return;
     try {
-      const t = await api.get<TicketDetail>(`/api/v1/support/tickets/${id}`);
+      const t = await api.get<TicketDetail>(`/api/v1/support/tickets/${id}`, { accessToken });
       setActive(t);
     } catch {
       /* list still works */
@@ -182,7 +182,7 @@ export default function AdminSupportPage() {
         </p>
         <h1 className="mt-1 text-2xl font-bold text-white">Support tickets</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Every widget conversation from the site and dashboard. Live hours: weekdays 9–5 ET.
+          Every widget conversation from the site and dashboard. Live hours: weekdays 9-5 ET.
         </p>
       </header>
 

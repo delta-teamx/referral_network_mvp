@@ -48,17 +48,19 @@ supportRouter.post(
   }),
 );
 
-// The ticket uuid doubles as the visitor's access token.
+// The ticket uuid doubles as the anonymous visitor's access token; a
+// signed-in caller must own the ticket (or be an admin).
 supportRouter.get(
   '/tickets/:id',
+  optionalAuthenticate,
   asyncHandler(async (req, res) => {
-    const ticket = await getTicket(req.params.id ?? '');
+    const ticket = await getTicket(req.params.id ?? '', req.user);
     const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
     res.json(body);
   }),
 );
 
-// Attachment upload — same server-side S3 proxy the chat uses (no bucket
+// Attachment upload - same server-side S3 proxy the chat uses (no bucket
 // CORS involved). Works for the visitor widget AND the admin console; the
 // resulting key is served by the existing public attachment proxy.
 supportRouter.post(
@@ -86,9 +88,10 @@ supportRouter.post(
 const messageSchema = z.object({ text: z.string().trim().min(1).max(4000) });
 supportRouter.post(
   '/tickets/:id/messages',
+  optionalAuthenticate,
   validate(messageSchema),
   asyncHandler(async (req, res) => {
-    const ticket = await addVisitorMessage(req.params.id ?? '', req.body.text);
+    const ticket = await addVisitorMessage(req.params.id ?? '', req.body.text, req.user);
     const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
     res.json(body);
   }),

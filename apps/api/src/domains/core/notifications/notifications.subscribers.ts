@@ -2,11 +2,11 @@ import type { EventBus } from '../events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
 import { env } from '../../../config/env.js';
 import { sendEmail } from './email.service.js';
-// SMS removed — all notifications via email (SendGrid)
+// SMS removed - all notifications via email (SendGrid)
 import { generateIcs } from '../../integrations/ics.service.js';
 
 /**
- * Notification subscribers — turn domain events into outbound emails. Kept
+ * Notification subscribers - turn domain events into outbound emails. Kept
  * separate from the services that publish the events so the hot path stays
  * fast and the side-effects stay testable.
  *

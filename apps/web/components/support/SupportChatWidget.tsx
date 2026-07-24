@@ -7,10 +7,10 @@ import { api, ApiError, apiBaseUrl } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 
 /**
- * Floating support chat — lives on the marketing site AND the dashboard
+ * Floating support chat - lives on the marketing site AND the dashboard
  * (desktop/tablet only; hidden on phones). A visitor describes their issue,
  * a ticket is opened instantly in the admin console's Support tickets tab,
- * and during live hours (9–5 ET, weekdays) a real person replies in-line.
+ * and during live hours (9-5 ET, weekdays) a real person replies in-line.
  */
 
 interface TicketMessage {
@@ -30,8 +30,9 @@ interface Ticket {
   messages: TicketMessage[];
 }
 
-const STORAGE_KEY = 'rn-support-ticket';
-const SEEN_KEY = 'rn-support-seen';
+// Ticket + seen-count storage is scoped PER ACCOUNT (or guest) so two people
+// sharing a browser never see each other's support conversation.
+const legacyKeys = ['rn-support-ticket', 'rn-support-seen'];
 
 /** Message text with URLs rendered as friendly links (attachments etc.). */
 function Linkified({ text, light }: { text: string; light: boolean }) {
@@ -69,19 +70,33 @@ export function SupportChatWidget() {
   const [hasUnseen, setHasUnseen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const storageKey = `rn-support-ticket:${user?.id ?? 'guest'}`;
+  const seenKey = `rn-support-seen:${user?.id ?? 'guest'}`;
+
+  // Account switched (or logged out): drop whatever thread is on screen and
+  // clear the old unscoped keys from before per-account storage existed.
+  useEffect(() => {
+    setTicket(null);
+    setHasUnseen(false);
+    if (typeof window !== 'undefined') {
+      for (const k of legacyKeys) window.localStorage.removeItem(k);
+    }
+  }, [storageKey]);
 
   // While CLOSED: poll the saved ticket so a red dot appears when support
-  // replies — the user gets pinged even without the widget open.
+  // replies - the user gets pinged even without the widget open.
   useEffect(() => {
     if (open) return;
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null;
     if (!saved) return;
     let cancelled = false;
     async function check() {
       try {
-        const t = await api.get<Ticket>(`/api/v1/support/tickets/${saved}`);
+        const t = await api.get<Ticket>(`/api/v1/support/tickets/${saved}`, {
+          accessToken: accessToken ?? undefined,
+        });
         if (cancelled) return;
-        const seen = Number(window.localStorage.getItem(SEEN_KEY) ?? '0');
+        const seen = Number(window.localStorage.getItem(seenKey) ?? '0');
         setHasUnseen(t.messages.length > seen && t.messages[t.messages.length - 1]?.senderType === 'agent');
       } catch {
         /* silent */
@@ -93,14 +108,14 @@ export function SupportChatWidget() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [open]);
+  }, [open, storageKey, seenKey, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Opening (or receiving inside the open widget) marks everything seen.
   useEffect(() => {
     if (!open || !ticket) return;
-    window.localStorage.setItem(SEEN_KEY, String(ticket.messages.length));
+    window.localStorage.setItem(seenKey, String(ticket.messages.length));
     setHasUnseen(false);
-  }, [open, ticket?.messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, seenKey, ticket?.messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore an existing conversation + check live-hours status once opened.
   useEffect(() => {
@@ -113,27 +128,29 @@ export function SupportChatWidget() {
       } catch {
         /* widget still works */
       }
-      const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null;
       if (saved) {
         try {
-          const t = await api.get<Ticket>(`/api/v1/support/tickets/${saved}`);
+          const t = await api.get<Ticket>(`/api/v1/support/tickets/${saved}`, {
+            accessToken: accessToken ?? undefined,
+          });
           if (!cancelled) setTicket(t);
         } catch {
-          window.localStorage.removeItem(STORAGE_KEY);
+          window.localStorage.removeItem(storageKey);
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, storageKey, accessToken]);
 
   // Poll the thread while open so agent replies appear live.
   useEffect(() => {
     if (!open || !ticket) return;
     const timer = setInterval(() => {
       void api
-        .get<Ticket>(`/api/v1/support/tickets/${ticket.id}`)
+        .get<Ticket>(`/api/v1/support/tickets/${ticket.id}`, { accessToken: accessToken ?? undefined })
         .then((t) => setTicket(t))
         .catch(() => undefined);
     }, 5000);
@@ -161,9 +178,9 @@ export function SupportChatWidget() {
         { accessToken: accessToken ?? undefined },
       );
       setTicket(t);
-      window.localStorage.setItem(STORAGE_KEY, t.id);
+      window.localStorage.setItem(storageKey, t.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not reach support — try again.');
+      setError(err instanceof ApiError ? err.message : 'Could not reach support - try again.');
     } finally {
       setBusy(false);
     }
@@ -174,7 +191,7 @@ export function SupportChatWidget() {
     setUploading(true);
     setError(null);
     try {
-      // Same server-side S3 proxy the chat uses — no bucket CORS involved.
+      // Same server-side S3 proxy the chat uses - no bucket CORS involved.
       const contentType = file.type || 'application/octet-stream';
       const uploadUrl =
         `${apiBaseUrl()}/api/v1/support/tickets/${ticket.id}/attachments/upload` +
@@ -191,9 +208,11 @@ export function SupportChatWidget() {
         throw new ApiError(json?.error ?? `Upload failed (${res.status})`, res.status);
       }
       const fileUrl = `${apiBaseUrl()}/api/v1/messages/attachments/file?key=${encodeURIComponent(json.data.key)}`;
-      const t = await api.post<Ticket>(`/api/v1/support/tickets/${ticket.id}/messages`, {
-        text: `📎 ${file.name}: ${fileUrl}`,
-      });
+      const t = await api.post<Ticket>(
+        `/api/v1/support/tickets/${ticket.id}/messages`,
+        { text: `📎 ${file.name}: ${fileUrl}` },
+        { accessToken: accessToken ?? undefined },
+      );
       setTicket(t);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not upload the file');
@@ -207,16 +226,20 @@ export function SupportChatWidget() {
     const text = draft.trim();
     setDraft('');
     try {
-      const t = await api.post<Ticket>(`/api/v1/support/tickets/${ticket.id}/messages`, { text });
+      const t = await api.post<Ticket>(
+        `/api/v1/support/tickets/${ticket.id}/messages`,
+        { text },
+        { accessToken: accessToken ?? undefined },
+      );
       setTicket(t);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Message failed — try again.');
+      setError(err instanceof ApiError ? err.message : 'Message failed - try again.');
       setDraft(text);
     }
   }
 
   return (
-    // Desktop + tablet only — the widget never renders on phones.
+    // Desktop + tablet only - the widget never renders on phones.
     <div className="fixed bottom-5 right-5 z-50 hidden md:block">
       {open ? (
         <div className="flex h-[28rem] w-80 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
@@ -232,7 +255,7 @@ export function SupportChatWidget() {
                       online ? 'bg-emerald-300' : 'bg-amber-300'
                     }`}
                   />
-                  {online === null ? 'Connecting…' : online ? 'Live now (9–5 ET)' : 'Back weekdays 9–5 ET'}
+                  {online === null ? 'Connecting…' : online ? 'Live now (9-5 ET)' : 'Back weekdays 9-5 ET'}
                 </p>
               </div>
             </div>
@@ -255,7 +278,7 @@ export function SupportChatWidget() {
             /* ── New ticket form ─────────────────────────────────── */
             <form onSubmit={startTicket} className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-4">
               <p className="text-xs text-gray-600">
-                Tell us who you are and what&rsquo;s going on — a real person will pick this up.
+                Tell us who you are and what&rsquo;s going on - a real person will pick this up.
               </p>
               <input
                 name="name"

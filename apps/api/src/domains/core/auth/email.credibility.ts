@@ -7,12 +7,12 @@ import { AppError } from '../../../utils/AppError.js';
  * Email credibility gates for signup.
  *
  *   1. Disposable / throwaway domains are rejected outright (fast, static list).
- *   2. MX record lookup — rejects domains with no mail exchanger at all.
+ *   2. MX record lookup - rejects domains with no mail exchanger at all.
  *      Gated by env `EMAIL_MX_CHECK` because it adds a DNS roundtrip and may
  *      false-positive during local dev.
  *
  * Both checks are cheap. Deeper reputation scoring (Kickbox, EmailRep) is
- * out of scope for Branch 4 — those need paid API keys.
+ * out of scope for Branch 4 - those need paid API keys.
  */
 
 const mxCache = new Map<string, { ok: boolean; expiresAt: number }>();
@@ -50,7 +50,7 @@ export async function assertEmailIsCredible(email: string): Promise<void> {
     const records = await dns.resolveMx(domain);
     hasMx = records.length > 0;
   } catch {
-    // Fall back to A/AAAA lookup — some domains accept mail without MX.
+    // Fall back to A/AAAA lookup - some domains accept mail without MX.
     try {
       await dns.resolve4(domain);
       hasMx = true;

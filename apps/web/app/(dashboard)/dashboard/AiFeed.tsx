@@ -80,7 +80,7 @@ export function AiFeed() {
       try {
         await api.post('/api/v1/ai/refresh', {}, { accessToken: accessToken ?? undefined });
       } catch {
-        // best-effort — fall through and show whatever is persisted
+        // best-effort - fall through and show whatever is persisted
       } finally {
         setScanning(false);
       }
@@ -350,7 +350,7 @@ export function AiFeed() {
 
                 <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
                   <p className="flex items-start gap-2 text-sm text-blue-900">
-                    {/* The badge already says "You might be interested" — strip the
+                    {/* The badge already says "You might be interested" - strip the
                         legacy prefix from older stored suggestions. */}
                     {intro.reason.replace(/^You might be interested:\s*/i, '')}
                   </p>

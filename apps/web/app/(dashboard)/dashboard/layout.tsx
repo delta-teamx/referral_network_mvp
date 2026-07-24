@@ -36,17 +36,17 @@ const NOTIFICATION_TAB: Record<string, string> = {
   booking_reminder: '/dashboard/bookings',
 };
 
-const NAV = [
+const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/members', label: 'Members', icon: Search },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy, tag: 'Upcoming' },
   { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
   { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/groups', label: 'Groups', icon: UsersRound },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 
@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const logout = useAuthStore((s) => s.logout);
   const accessToken = useAuthStore((s) => s.accessToken);
   const [dotTabs, setDotTabs] = useState<Set<string>>(new Set());
-  // Netlify serves pretty URLs with a trailing slash (/dashboard/messages/) —
+  // Netlify serves pretty URLs with a trailing slash (/dashboard/messages/) -
   // normalize so tab matching (active state, dot clearing) actually matches.
   const currentPath = pathname.replace(/\/+$/, '') || '/';
 
@@ -67,7 +67,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
-  // Opening a tab clears its red dot — the dot means "unseen", so seeing the
+  // Opening a tab clears its red dot - the dot means "unseen", so seeing the
   // tab marks its notification types read (server + local + bell count).
   useEffect(() => {
     if (!accessToken) return;
@@ -169,6 +169,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 <Icon size={16} />
                 {item.label}
+                {item.tag && (
+                  <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                    {item.tag}
+                  </span>
+                )}
                 {dotTabs.has(item.href) && (
                   <span className="ml-auto h-2.5 w-2.5 rounded-full bg-danger" aria-label="unread" />
                 )}

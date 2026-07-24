@@ -29,7 +29,7 @@ export interface PresignResult {
   uploadUrl: string;
   publicUrl: string;
   key: string;
-  /** When true, `uploadUrl` is a sentinel — client should just call
+  /** When true, `uploadUrl` is a sentinel - client should just call
    *  `confirmPhoto` without actually PUTting anywhere. */
   demo: boolean;
 }

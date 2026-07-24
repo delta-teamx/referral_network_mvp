@@ -5,7 +5,7 @@ import { eventBus } from '../../core/events/index.js';
 import { requestConnection } from '../connections/connections.service.js';
 
 /**
- * BusinessInvitation — a business owner invites a peer (by email) to join
+ * BusinessInvitation - a business owner invites a peer (by email) to join
  * the network. On accept, the new user is auto-connected to the sender,
  * turning every invite into a seeded BusinessConnection. Drives viral growth.
  *
@@ -178,7 +178,7 @@ export async function getInvitationByToken(token: string): Promise<InvitationPub
 }
 
 /**
- * Accept an invitation. Requires an authenticated user — typically called
+ * Accept an invitation. Requires an authenticated user - typically called
  * right after the recipient signs up. Marks the invitation accepted and
  * creates a mutual BusinessConnection (through requestConnection which
  * we then flip to accepted).

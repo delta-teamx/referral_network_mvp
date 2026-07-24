@@ -26,7 +26,7 @@ export function FoundingOffer({ variant }: { variant: 'bar' | 'card' }) {
       : '';
 
   if (variant === 'bar') {
-    if (closed) return null; // promo is over — don't show the strip
+    if (closed) return null; // promo is over - don't show the strip
     return (
       <Link
         href={SIGNUP_URL}

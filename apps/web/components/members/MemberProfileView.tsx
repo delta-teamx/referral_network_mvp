@@ -99,7 +99,7 @@ function ReferClientForm({
   if (done) {
     return (
       <p className="mt-4 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
-        ✅ Referral sent — {targetName} has been notified and it&rsquo;s on both of your
+        ✅ Referral sent - {targetName} has been notified and it&rsquo;s on both of your
         pipelines.
       </p>
     );
@@ -145,7 +145,7 @@ function ReferClientForm({
 }
 
 /**
- * The member profile — a clean CV-style layout: identity + contact block on
+ * The member profile - a clean CV-style layout: identity + contact block on
  * top, details in the main column, video and quick facts in the side panel.
  * Used inside the dashboard (with sidebar) and on the public member page.
  */

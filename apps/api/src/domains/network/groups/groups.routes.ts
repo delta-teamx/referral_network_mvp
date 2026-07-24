@@ -18,7 +18,7 @@ import {
 
 export const groupsRouter: Router = Router();
 
-// Public discovery — no auth required
+// Public discovery - no auth required
 groupsRouter.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -98,7 +98,7 @@ groupsRouter.post(
   }),
 );
 
-// Group chat — members only
+// Group chat - members only
 groupsRouter.get(
   '/:id/messages',
   asyncHandler(async (req, res) => {
@@ -121,7 +121,7 @@ groupsRouter.post(
   }),
 );
 
-// White-label settings — leader-only
+// White-label settings - leader-only
 const whitelabelSchema = z.object({
   logoUrl: z.string().url().optional().nullable(),
   primaryColor: z.string().regex(/^#[a-fA-F0-9]{6}$/).optional().nullable(),

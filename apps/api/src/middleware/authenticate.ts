@@ -3,10 +3,10 @@ import { AppError } from '../utils/AppError.js';
 import { verifyAccessToken } from '../utils/tokens.js';
 
 /**
- * `authenticate` — parses the `Authorization: Bearer <token>` header, verifies
+ * `authenticate` - parses the `Authorization: Bearer <token>` header, verifies
  * the JWT, and populates `req.user`. Throws 401 on any failure.
  *
- * Does not hit the DB — claims in the JWT are trusted until the access token
+ * Does not hit the DB - claims in the JWT are trusted until the access token
  * expires (15 min by default). Compromised accounts are handled by refresh-
  * token revocation in Branch 4.
  *
@@ -39,7 +39,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
 };
 
 /**
- * `optionalAuthenticate` — populates `req.user` if a valid token is present,
+ * `optionalAuthenticate` - populates `req.user` if a valid token is present,
  * but does not reject the request otherwise. Handy for routes that tailor
  * content for signed-in users but don't require auth (homepage, public
  * listing pages).
@@ -59,7 +59,7 @@ export const optionalAuthenticate: RequestHandler = (req, _res, next) => {
       emailVerified: claims.ev === true,
     };
   } catch {
-    // swallow — route still runs, just anonymously
+    // swallow - route still runs, just anonymously
   }
   next();
 };

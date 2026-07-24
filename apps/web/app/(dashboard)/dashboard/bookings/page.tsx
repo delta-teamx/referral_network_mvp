@@ -21,7 +21,7 @@ import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 import { Button } from '../../../../components/ui/Button';
 
 /**
- * Bookings — calendar + list of your Zoom calls, with availability setup
+ * Bookings - calendar + list of your Zoom calls, with availability setup
  * merged in (you set your hours where you see your calendar).
  */
 
@@ -172,7 +172,7 @@ export default function BookingsPage() {
   const upcoming = bookings
     .filter((b) => ['pending', 'confirmed'].includes(b.status) && new Date(b.endsAt) >= new Date())
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
-  // Finished calls you can rate — the rating feeds the analytics rating card.
+  // Finished calls you can rate - the rating feeds the analytics rating card.
   const past = bookings
     .filter((b) => ['confirmed', 'completed'].includes(b.status) && new Date(b.endsAt) < new Date())
     .sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
@@ -252,7 +252,7 @@ export default function BookingsPage() {
         </p>
       )}
 
-      {/* Requests needing your answer — always on top */}
+      {/* Requests needing your answer - always on top */}
       {pendingForMe.length > 0 && (
         <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-amber-800">
@@ -442,11 +442,11 @@ export default function BookingsPage() {
             </ul>
           )}
 
-          {/* Finished calls: rate the other person — feeds your analytics */}
+          {/* Finished calls: rate the other person - feeds your analytics */}
           {past.length > 0 && (
             <section>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Past calls — rate how it went
+                Past calls - rate how it went
               </h2>
               <ul className="space-y-2">
                 {past.slice(0, 10).map((b) => {
@@ -618,7 +618,7 @@ function BookingRow({
   );
 }
 
-/** Weekly availability editor — must be set before people can book you. */
+/** Weekly availability editor - must be set before people can book you. */
 function AvailabilityEditor({ accessToken }: { accessToken: string | null }) {
   const [windows, setWindows] = useState<AvailWindow[]>([]);
   const [loading, setLoading] = useState(true);

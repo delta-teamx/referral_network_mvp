@@ -7,16 +7,16 @@ import type { ReactNode } from 'react';
 import { Calendar, FileSignature, Headset, LayoutDashboard, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
-const NAV = [
+const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy, tag: 'Upcoming' },
   { href: '/admin/events', label: 'Zoom events', icon: Video },
   { href: '/admin/pods', label: 'Matchmaking pods', icon: UsersRound },
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
   { href: '/admin/support', label: 'Support tickets', icon: Headset },
-  { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -74,6 +74,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <Icon size={16} />
                 {item.label}
+                {item.tag && (
+                  <span className="ml-auto rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-400">
+                    {item.tag}
+                  </span>
+                )}
               </Link>
             );
           })}

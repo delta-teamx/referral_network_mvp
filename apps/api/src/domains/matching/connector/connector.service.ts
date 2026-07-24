@@ -6,7 +6,7 @@ import type { RankingCandidate } from '../ranking/RankingStrategy.js';
 import { strategyByName } from '../ranking/registry.js';
 
 /**
- * Life-events connector — turn an EventType + ZIP into a ranked list of
+ * Life-events connector - turn an EventType + ZIP into a ranked list of
  * local pros. Delegates scoring to a pluggable `RankingStrategy` (see
  * `domains/matching/ranking/`). Default strategy is `life-event-match`;
  * override via `RANKING_STRATEGY` env var or per-request `strategy` field.
@@ -146,7 +146,7 @@ export async function match(req: MatchRequest): Promise<MatchedListing[]> {
 /**
  * Historical conversion rate = CONVERTED / (CONVERTED + DECLINED + PENDING)
  * over the last 180 days, per business owner. Returns undefined for owners
- * without enough lead history — the strategy will cold-start them to trust.
+ * without enough lead history - the strategy will cold-start them to trust.
  */
 async function conversionRatesFor(userIds: string[]): Promise<Map<string, number>> {
   if (userIds.length === 0) return new Map();

@@ -32,31 +32,31 @@ const envSchema = z.object({
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   ELASTICSEARCH_URL: z.string().url().default('http://localhost:9200'),
 
-  // JWT — optional in Branch 1, required in Branch 2
+  // JWT - optional in Branch 1, required in Branch 2
   JWT_ACCESS_SECRET: z.string().min(32).optional(),
   JWT_REFRESH_SECRET: z.string().min(32).optional(),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
 
-  // OAuth — Branch 2
+  // OAuth - Branch 2
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().url().optional(),
-  // Facebook OAuth removed — using Google only
+  // Facebook OAuth removed - using Google only
 
-  // Stripe — Branch 5
+  // Stripe - Branch 5
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRO_PRICE_ID: z.string().optional(),
   STRIPE_PREMIUM_PRICE_ID: z.string().optional(),
 
-  // AWS — Branch 3
+  // AWS - Branch 3
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().default('us-east-1'),
   AWS_S3_BUCKET: z.string().optional(),
 
-  // Email — handles notifications, OTP, and all transactional email.
+  // Email - handles notifications, OTP, and all transactional email.
   // Provider is chosen by whichever key is set: Resend takes priority, then
   // SendGrid, otherwise emails are logged to the console.
   EMAIL_FROM: z.string().email().default('noreply@referralnova.com'),
@@ -78,7 +78,7 @@ const envSchema = z.object({
   AI_SERVICE_URL: z.string().url().optional(),
   AI_SERVICE_SECRET: z.string().optional(),
 
-  // Admin bootstrap — comma-separated emails that get ADMIN role on seed.
+  // Admin bootstrap - comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).
   ADMIN_EMAILS: z.string().optional(),

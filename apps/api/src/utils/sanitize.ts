@@ -1,6 +1,6 @@
 /**
  * Strip HTML tags and dangerous content from user-generated text.
- * Applied before storage — prevents stored XSS if data is ever
+ * Applied before storage - prevents stored XSS if data is ever
  * rendered outside React's JSX escaping (emails, PDFs, exports).
  */
 

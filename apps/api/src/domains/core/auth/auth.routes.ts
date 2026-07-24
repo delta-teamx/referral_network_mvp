@@ -42,7 +42,7 @@ const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 
 // The web app (dashboard.referralnova.com) and the API (api.referralnova.com)
 // are different origins, so the refresh cookie MUST be SameSite=None to be sent
-// on cross-site XHR — with SameSite=Strict the browser withholds it and every
+// on cross-site XHR - with SameSite=Strict the browser withholds it and every
 // token refresh 401s, logging the user out on any page reload / navigation.
 // SameSite=None requires Secure (HTTPS), which production is. Locally we fall
 // back to Lax over plain HTTP.
@@ -175,7 +175,7 @@ authRouter.post(
 
 // ---------- Google OAuth ----------------------------------------------------
 // Stateless CSRF: the state parameter is a signed JWT containing a nonce.
-// On callback, we verify the signature — no cookies, no memory store,
+// On callback, we verify the signature - no cookies, no memory store,
 // survives process restarts and redeployments.
 import jwt from 'jsonwebtoken';
 

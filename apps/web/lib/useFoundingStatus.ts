@@ -12,7 +12,7 @@ export interface FoundingStatus {
 
 /**
  * Fetches live founding-member promo status ("N of 200 spots left").
- * Returns null until loaded or if the API is unreachable — callers should
+ * Returns null until loaded or if the API is unreachable - callers should
  * fall back to the static offer copy in that case (safer during launch than
  * hiding the offer).
  */

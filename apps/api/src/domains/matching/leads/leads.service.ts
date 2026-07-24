@@ -5,7 +5,7 @@ import { eventBus } from '../../core/events/index.js';
 import { canReceiveMoreLeads } from '../../billing/billing.tiers.js';
 
 /**
- * Consumer leads — created when a consumer clicks "Connect" on a matched
+ * Consumer leads - created when a consumer clicks "Connect" on a matched
  * listing (from /connect/[event]) or "Request a quote" (from /listing/[slug]).
  *
  * Creation publishes `consumer_lead.created` which the notifications

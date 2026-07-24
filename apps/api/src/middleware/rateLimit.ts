@@ -41,7 +41,7 @@ function getStore(namespace: string): Map<string, Bucket> {
 }
 
 function extractIp(req: Request): string {
-  // Trust `X-Forwarded-For` only behind a known proxy — in production Express
+  // Trust `X-Forwarded-For` only behind a known proxy - in production Express
   // should be configured with `app.set('trust proxy', 1)` before entries in
   // this header are honoured. Fall back to socket.remoteAddress.
   const xff = req.headers['x-forwarded-for'];

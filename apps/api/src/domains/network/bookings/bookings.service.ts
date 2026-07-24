@@ -44,7 +44,7 @@ export async function setAvailability(
       throw AppError.badRequest('endMin must be after startMin and <= 1440');
     }
   }
-  // Replace the whole set — simpler than diffing.
+  // Replace the whole set - simpler than diffing.
   await prisma.availability.deleteMany({ where: { userId } });
   if (windows.length > 0) {
     await prisma.availability.createMany({
@@ -162,7 +162,7 @@ export async function createBooking(input: CreateBookingInput) {
   if (!host) throw AppError.notFound('Host not found');
   if (!guest) throw AppError.notFound('Guest not found');
 
-  // Conflict check — a pending request holds the slot too.
+  // Conflict check - a pending request holds the slot too.
   const conflict = await prisma.bookingCall.findFirst({
     where: {
       hostId: input.hostUserId,
@@ -179,7 +179,7 @@ export async function createBooking(input: CreateBookingInput) {
   if (conflict) throw AppError.conflict('That time slot is no longer available.');
 
   // A booking is a REQUEST: the host must accept before it's confirmed and a
-  // meeting link is provisioned — nobody gets a call on their calendar without
+  // meeting link is provisioned - nobody gets a call on their calendar without
   // prior notice.
   const booking = await prisma.bookingCall.create({
     data: {
@@ -273,7 +273,7 @@ export async function respondToBooking(
     userId: booking.guestId,
     type: 'booking_confirmed',
     title: 'Call confirmed 🎉',
-    body: `${booking.host.firstName} ${booking.host.lastName} accepted your call request — the Zoom link is in your Bookings tab.`,
+    body: `${booking.host.firstName} ${booking.host.lastName} accepted your call request - the Zoom link is in your Bookings tab.`,
     data: { bookingId: booking.id },
   }).catch(() => undefined);
 

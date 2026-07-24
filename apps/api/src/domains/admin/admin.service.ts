@@ -5,7 +5,7 @@ import { signAccessToken } from '../../utils/tokens.js';
 import { toAuthenticatedUserDto } from '../core/users/users.service.js';
 
 /**
- * Admin operations. Thin wrapper over existing services — admins moderate,
+ * Admin operations. Thin wrapper over existing services - admins moderate,
  * they don't get to bypass core domain logic. All methods take an
  * `adminUserId` for the audit log; every mutation publishes a DomainEvent.
  */

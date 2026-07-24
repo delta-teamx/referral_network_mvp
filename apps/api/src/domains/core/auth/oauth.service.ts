@@ -14,15 +14,15 @@ import {
 import type { AuthResult } from './auth.service.js';
 
 /**
- * Google OAuth 2.0 — authorization-code flow.
+ * Google OAuth 2.0 - authorization-code flow.
  *
  * We implement it directly against Google's endpoints (no Passport strategy
  * dependency) to keep the bundle small and avoid a webpack-unfriendly
  * transitive. The flow:
  *
- *   1. /api/v1/auth/oauth/google           — issues a signed state cookie
+ *   1. /api/v1/auth/oauth/google           - issues a signed state cookie
  *                                            and 302s the user to Google
- *   2. /api/v1/auth/oauth/google/callback  — verifies state, trades code
+ *   2. /api/v1/auth/oauth/google/callback  - verifies state, trades code
  *                                            for tokens, fetches userinfo,
  *                                            upserts the user, issues our
  *                                            own access/refresh token pair,

@@ -47,7 +47,7 @@ export async function markRead(userId: string, notificationId: string) {
   });
 }
 
-/** Mark all unread notifications of the given types read — used when the user
+/** Mark all unread notifications of the given types read - used when the user
  *  opens the tab those notifications point at (the red dot means "unseen"). */
 export async function markReadByTypes(userId: string, types: string[]) {
   return prisma.notification.updateMany({

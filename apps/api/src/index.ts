@@ -54,13 +54,13 @@ const app = express();
 // Needed for accurate IP extraction in rate limiter + Sentry.
 app.set('trust proxy', 1);
 
-// Sentry must be first in the middleware chain — it wraps all subsequent
+// Sentry must be first in the middleware chain - it wraps all subsequent
 // handlers. No-op when SENTRY_DSN is not configured.
 void initSentry(app);
 
 app.use(helmet());
 
-// CORS — allow every origin listed in FRONTEND_URL (comma-separated) plus any
+// CORS - allow every origin listed in FRONTEND_URL (comma-separated) plus any
 // *.netlify.app preview domain. Keeps localhost dev working and lets us add
 // staging/prod domains without code changes.
 const allowedOrigins = env.FRONTEND_URL.split(',')
@@ -114,9 +114,9 @@ const verifiedWriteGate: express.RequestHandler = (req, res, next) => {
   // This gate runs BEFORE each router's own `authenticate`, so req.user is
   // never populated at this point. Checking requireVerified directly here
   // therefore 401'd EVERY write on gated routes (messages, groups, bookings,
-  // connections, listings, …) for everyone — which the client interpreted as
+  // connections, listings, …) for everyone - which the client interpreted as
   // "logged out", causing the endless bounce to the login page.
-  // Parse the token first (optional — routers still enforce auth), then only
+  // Parse the token first (optional - routers still enforce auth), then only
   // block writes from a genuinely-unverified account.
   optionalAuthenticate(req, res, (err?: unknown) => {
     if (err) return next(err);
@@ -164,7 +164,7 @@ app.use(errorHandler);
 
 /**
  * Ensure runtime-added tables exist even when a migration didn't apply (managed
- * DB where `prisma migrate deploy` is skipped/failed). Idempotent + non-fatal —
+ * DB where `prisma migrate deploy` is skipped/failed). Idempotent + non-fatal -
  * a failure here must never block boot.
  */
 async function ensureRuntimeSchema(): Promise<void> {
@@ -194,7 +194,7 @@ async function ensureRuntimeSchema(): Promise<void> {
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "Availability" ADD COLUMN IF NOT EXISTS "timezone" TEXT NOT NULL DEFAULT 'America/Chicago';`,
     );
-    // Messaging tables — the conversation LIST query selects columns the
+    // Messaging tables - the conversation LIST query selects columns the
     // create path never touches (lastReadAt, message fields, timestamps);
     // ensure every one of them exists.
     for (const ddl of [
@@ -202,14 +202,14 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
       `ALTER TABLE "ConversationParticipant" ADD COLUMN IF NOT EXISTS "lastReadAt" TIMESTAMP(3);`,
       // Bookings/events: prod named the meeting-link column "zoomJoinUrl" but
-      // the code reads "zoomUrl" — add the expected column and copy links over.
+      // the code reads "zoomUrl" - add the expected column and copy links over.
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "zoomUrl" TEXT;`,
       `DO $$ BEGIN UPDATE "BookingCall" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       `ALTER TABLE "NetworkingEvent" ADD COLUMN IF NOT EXISTS "zoomUrl" TEXT;`,
       `DO $$ BEGIN UPDATE "NetworkingEvent" SET "zoomUrl" = "zoomJoinUrl" WHERE "zoomUrl" IS NULL; EXCEPTION WHEN undefined_column THEN NULL; END $$;`,
       // Member-to-member referrals have no directory listing.
       `ALTER TABLE "Referral" ALTER COLUMN "listingId" DROP NOT NULL;`,
-      // In-platform contracts (created here — no migration needed).
+      // In-platform contracts (created here - no migration needed).
       `CREATE TABLE IF NOT EXISTS "Contract" (
          "id" TEXT NOT NULL,
          "title" TEXT NOT NULL,
@@ -229,7 +229,7 @@ async function ensureRuntimeSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS "Contract_receiverId_idx" ON "Contract" ("receiverId");`,
       `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
       `DO $$ BEGIN ALTER TABLE "Contract" ADD CONSTRAINT "Contract_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
-      // DATA HEAL: resolve stale mirror intro suggestions — when one direction
+      // DATA HEAL: resolve stale mirror intro suggestions - when one direction
       // of a pair was accepted/declined before the mirror-resolution fix
       // shipped, the opposite row kept resurfacing as a fresh request.
       `DO $$ BEGIN
@@ -265,7 +265,7 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "senderId" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "text" TEXT;`,
       `ALTER TABLE "Message" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
-      // Pipeline board (created here — no migration needed).
+      // Pipeline board (created here - no migration needed).
       `CREATE TABLE IF NOT EXISTS "PipelineCard" (
          "id" TEXT NOT NULL,
          "ownerId" TEXT NOT NULL,
@@ -309,7 +309,7 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE INDEX IF NOT EXISTS "SupportMessage_ticketId_createdAt_idx" ON "SupportMessage" ("ticketId", "createdAt");`,
       `DO $$ BEGIN ALTER TABLE "SupportMessage" ADD CONSTRAINT "SupportMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
-      // Post-call peer ratings (no listing required) — feed the analytics
+      // Post-call peer ratings (no listing required) - feed the analytics
       // rating card for members without a directory listing.
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "hostRating" INTEGER;`,
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestRating" INTEGER;`,
@@ -335,7 +335,7 @@ async function ensureRuntimeSchema(): Promise<void> {
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }
-    // Group white-label fields — prod was missing some, which 500'd group
+    // Group white-label fields - prod was missing some, which 500'd group
     // creation (Prisma includes defaulted columns in the INSERT) and the
     // group-detail include (selects every column).
     for (const ddl of [
@@ -360,7 +360,7 @@ async function ensureRuntimeSchema(): Promise<void> {
 
 async function start(): Promise<void> {
   await ensureRuntimeSchema();
-  // RBAC seeding is idempotent — safe to run on every boot. Failure here
+  // RBAC seeding is idempotent - safe to run on every boot. Failure here
   // shouldn't block startup; log and continue (authz still works against
   // the in-memory ROLE_PERMISSIONS map from @refnet/shared).
   try {
@@ -374,7 +374,7 @@ async function start(): Promise<void> {
     console.warn('[rbac] seed skipped (DB not reachable or migrations not applied):', String(err));
   }
 
-  // Background jobs — BullMQ when REDIS_URL is real, setInterval otherwise.
+  // Background jobs - BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();
   startMatchmakingScheduler();
 
@@ -386,7 +386,7 @@ async function start(): Promise<void> {
   });
 }
 
-// Graceful shutdown — close DB pool before exit.
+// Graceful shutdown - close DB pool before exit.
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {
     void disconnectPrisma().finally(() => process.exit(0));

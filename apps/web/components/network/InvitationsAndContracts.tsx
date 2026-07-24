@@ -29,7 +29,7 @@ interface Contract {
   receiver: { id: string; firstName: string; lastName: string; email: string };
 }
 
-/** People you can send a contract to: only leads you actually talk to —
+/** People you can send a contract to: only leads you actually talk to -
  *  conversation partners and pipeline contacts, never the whole member list. */
 interface ContactOption {
   id: string;
@@ -41,17 +41,17 @@ const CONTRACT_TEMPLATE = `REFERRAL COLLABORATION AGREEMENT
 
 This agreement is made between the two undersigned members of the Referral Nova platform.
 
-1. PURPOSE — The parties agree to collaborate in good faith on client referrals, introductions, and joint business opportunities arranged through the platform.
+1. PURPOSE - The parties agree to collaborate in good faith on client referrals, introductions, and joint business opportunities arranged through the platform.
 
-2. REFERRALS — Each party agrees to handle referred clients professionally, keep the referring party informed of the outcome, and update the referral status on the platform.
+2. REFERRALS - Each party agrees to handle referred clients professionally, keep the referring party informed of the outcome, and update the referral status on the platform.
 
-3. CONFIDENTIALITY — Client details shared between the parties remain confidential and may only be used for the referred engagement.
+3. CONFIDENTIALITY - Client details shared between the parties remain confidential and may only be used for the referred engagement.
 
-4. COMPENSATION — Any referral fee or revenue share must be agreed in writing between the parties before work begins. (Edit this section with your agreed terms.)
+4. COMPENSATION - Any referral fee or revenue share must be agreed in writing between the parties before work begins. (Edit this section with your agreed terms.)
 
-5. TERM — This agreement remains in effect until either party ends it with written notice. Ending it does not affect engagements already in progress.
+5. TERM - This agreement remains in effect until either party ends it with written notice. Ending it does not affect engagements already in progress.
 
-6. PLATFORM — Both parties acknowledge this agreement was executed on the Referral Nova platform, which retains a copy for both parties' records.
+6. PLATFORM - Both parties acknowledge this agreement was executed on the Referral Nova platform, which retains a copy for both parties' records.
 
 Signed electronically by both parties below.`;
 
@@ -208,7 +208,7 @@ export function InvitationsAndContracts({
         },
         { accessToken: accessToken ?? undefined },
       );
-      setNotice('Contract sent for signature ✅ — they and the admins have been notified.');
+      setNotice('Contract sent for signature ✅ - they and the admins have been notified.');
       setBuilderOpen(false);
       await loadAll();
     } catch (err) {
@@ -234,7 +234,7 @@ export function InvitationsAndContracts({
         { signature: String(form.get('signature') ?? '').trim() },
         { accessToken: accessToken ?? undefined },
       );
-      setNotice('Contract signed ✅ — the deal moves to Won · Deal signed on your Pipeline. Both parties and the admins have been emailed.');
+      setNotice('Contract signed ✅ - the deal moves to Won · Deal signed on your Pipeline. Both parties and the admins have been emailed.');
       setSigningId(null);
       await loadAll();
     } catch (err) {
@@ -291,14 +291,14 @@ export function InvitationsAndContracts({
     y += 16;
     doc.setFont('helvetica', 'italic');
     doc.text(
-      `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" — ${new Date(contract.senderSignedAt).toLocaleString()}`,
+      `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" - ${new Date(contract.senderSignedAt).toLocaleString()}`,
       margin,
       y,
     );
     y += 14;
     if (contract.receiverSignature && contract.receiverSignedAt) {
       doc.text(
-        `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" — ${new Date(contract.receiverSignedAt).toLocaleString()}`,
+        `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" - ${new Date(contract.receiverSignedAt).toLocaleString()}`,
         margin,
         y,
       );
@@ -355,7 +355,7 @@ export function InvitationsAndContracts({
             </p>
             {contacts.length === 0 ? (
               <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                No leads yet — contracts go to people you&apos;re already talking to. Start a
+                No leads yet - contracts go to people you&apos;re already talking to. Start a
                 conversation or add them to your Pipeline first.
               </p>
             ) : (
@@ -370,7 +370,7 @@ export function InvitationsAndContracts({
                 </option>
                 {contacts.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} — {m.detail}
+                    {m.name} - {m.detail}
                   </option>
                 ))}
               </select>
@@ -410,7 +410,7 @@ export function InvitationsAndContracts({
 
         {contracts.length === 0 ? (
           <p className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-            No contracts yet. When a collaboration gets serious, send the platform contract —
+            No contracts yet. When a collaboration gets serious, send the platform contract -
             both signatures live here and admins keep a copy.
           </p>
         ) : (

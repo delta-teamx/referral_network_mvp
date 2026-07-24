@@ -62,14 +62,14 @@ async function downloadPdf(contract: Contract) {
   y += 16;
   doc.setFont('helvetica', 'italic');
   doc.text(
-    `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" — ${new Date(contract.senderSignedAt).toLocaleString()}`,
+    `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" - ${new Date(contract.senderSignedAt).toLocaleString()}`,
     margin,
     y,
   );
   y += 14;
   if (contract.receiverSignature && contract.receiverSignedAt) {
     doc.text(
-      `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" — ${new Date(contract.receiverSignedAt).toLocaleString()}`,
+      `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" - ${new Date(contract.receiverSignedAt).toLocaleString()}`,
       margin,
       y,
     );

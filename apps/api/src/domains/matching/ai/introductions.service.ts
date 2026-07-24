@@ -5,7 +5,7 @@ import { createNotification } from '../../core/notifications/notifications.servi
 import { getOrCreateConversation, sendMessage } from '../../network/messaging/messaging.service.js';
 
 /**
- * Introduction lifecycle — manage AI-suggested introductions between members.
+ * Introduction lifecycle - manage AI-suggested introductions between members.
  *
  * Flow: suggested → requested → accepted → completed (with outcome)
  *                 → declined
@@ -131,7 +131,7 @@ export async function respondToIntro(
     select: introSelect,
   });
 
-  // The matcher creates a suggestion in each direction — resolve the mirror
+  // The matcher creates a suggestion in each direction - resolve the mirror
   // row too, so the same pair can't keep resurfacing as a fresh request.
   await prisma.introduction.updateMany({
     where: {
@@ -180,19 +180,19 @@ export async function respondToIntro(
 
     // Accepting an intro STARTS the relationship: open the conversation with
     // the match details as the first message, and tell the requester. All
-    // best-effort — the accept itself never fails on these.
+    // best-effort - the accept itself never fails on these.
     void (async () => {
       const conversation = await getOrCreateConversation(userId, intro.senderId);
       await sendMessage(
         conversation.id,
         userId,
-        `Hi ${updated.sender.firstName} — I accepted your intro request. Why we matched: ${updated.reason} Let's find a time to talk — happy to jump on a call.`,
+        `Hi ${updated.sender.firstName} - I accepted your intro request. Why we matched: ${updated.reason} Let's find a time to talk - happy to jump on a call.`,
       );
       await createNotification({
         userId: intro.senderId,
         type: 'intro_accepted',
         title: `${updated.target.firstName} ${updated.target.lastName} accepted your intro 🎉`,
-        body: 'A conversation has been started — continue in Messages and set up a call.',
+        body: 'A conversation has been started - continue in Messages and set up a call.',
         data: { introId: updated.id, conversationId: conversation.id },
       });
     })().catch(() => undefined);

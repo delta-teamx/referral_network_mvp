@@ -75,7 +75,7 @@ function Linkified({ text, light }: { text: string; light: boolean }) {
 function MessagesInner() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  // ?c=<conversationId> — set when arriving from a member profile's Message
+  // ?c=<conversationId> - set when arriving from a member profile's Message
   // button, so we open that lead's thread immediately.
   const preselectId = useSearchParams().get('c');
 
@@ -104,7 +104,7 @@ function MessagesInner() {
       setConversations(data);
     } catch (err) {
       // A failed list load must be VISIBLE (it used to fail silently into an
-      // empty panel) — show the message + status so it's self-diagnosing.
+      // empty panel) - show the message + status so it's self-diagnosing.
       setListError(
         err instanceof ApiError
           ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
@@ -123,7 +123,7 @@ function MessagesInner() {
   // ---- Auto-open a conversation -------------------------------------------
   // Prefer the one passed via ?c= (from a profile's Message button);
   // otherwise open the most recent so the page is never an empty pane.
-  // On phones the list IS the first screen, so only ?c= auto-opens there —
+  // On phones the list IS the first screen, so only ?c= auto-opens there -
   // and pressing Back must not immediately re-open the thread.
   const autoOpened = useRef(false);
   useEffect(() => {
@@ -242,7 +242,7 @@ function MessagesInner() {
     setUploading(true);
     setError(null);
     try {
-      // Upload THROUGH our API (same trusted origin as every other call) —
+      // Upload THROUGH our API (same trusted origin as every other call) -
       // no S3 bucket CORS or public-access settings involved.
       const contentType = file.type || 'application/octet-stream';
       const uploadUrl =
@@ -323,7 +323,7 @@ function MessagesInner() {
             <MessageSquare size={18} className="text-primary" /> Messages
           </h1>
           <p className="mt-0.5 text-[11px] text-gray-400">
-            Every conversation is a lead — find it on your Pipeline too.
+            Every conversation is a lead - find it on your Pipeline too.
           </p>
         </div>
 

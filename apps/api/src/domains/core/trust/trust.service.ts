@@ -3,9 +3,9 @@ import { prisma } from '../../../config/prisma.js';
 /**
  * Trust-score recompute job.
  *
- * Formula (0–100):
- *   reviews:      avg rating (0–5) normalised to 0–40 + log(count) bonus to +10
- *   conversions:  converted-referral fraction (0–1) scaled to 0–20
+ * Formula (0-100):
+ *   reviews:      avg rating (0-5) normalised to 0-40 + log(count) bonus to +10
+ *   conversions:  converted-referral fraction (0-1) scaled to 0-20
  *   verified:     +10 if owner has verified email/listing
  *   network:      up to +10 for accepted BusinessConnections, log-scaled
  *   activity:     up to +10 for a fresh listing edit in the last 30 days

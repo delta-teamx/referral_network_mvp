@@ -23,7 +23,7 @@ import {
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
 
-// Coarse-grained gate — the RBAC permission middleware can lock specific
+// Coarse-grained gate - the RBAC permission middleware can lock specific
 // endpoints down further; this stops any non-ADMIN from probing the router.
 adminRouter.use((req, _res, next) => {
   if (!req.user) return next(AppError.unauthorized());

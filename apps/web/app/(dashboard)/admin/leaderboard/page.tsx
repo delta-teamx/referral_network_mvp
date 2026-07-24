@@ -2,7 +2,7 @@
 
 import { Trophy } from 'lucide-react';
 
-/** Admin leaderboard — coming soon. Platform-wide member rankings. */
+/** Admin leaderboard - coming soon. Platform-wide member rankings. */
 export default function AdminLeaderboardPage() {
   return (
     <div className="p-6 md:p-8">
@@ -16,7 +16,7 @@ export default function AdminLeaderboardPage() {
         </div>
         <h2 className="mb-2 text-xl font-bold text-white">Coming soon</h2>
         <p className="mx-auto max-w-sm text-sm text-gray-400">
-          Platform-wide member rankings — top referrers, most deals won, most active connectors —
+          Platform-wide member rankings - top referrers, most deals won, most active connectors -
           will live here.
         </p>
         <span className="mt-5 inline-block rounded-full bg-amber-500/15 px-4 py-1.5 text-xs font-bold text-amber-400">

@@ -4,11 +4,11 @@ import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../notifications/notifications.service.js';
 
 /**
- * Support chat — the floating widget on the marketing site and dashboard.
+ * Support chat - the floating widget on the marketing site and dashboard.
  * A visitor (signed in or not) opens a ticket; messages flow both ways.
  * Agents answer from the admin console's "Support tickets" tab.
  *
- * Live-hours logic: 9am–5pm US Eastern on weekdays gets a "we're online"
+ * Live-hours logic: 9am-5pm US Eastern on weekdays gets a "we're online"
  * auto-greeting; outside that window the greeting says the team will follow
  * up soon. Either way the ticket lands in the admin queue immediately.
  */
@@ -40,8 +40,8 @@ export function isSupportOnline(now = new Date()): boolean {
 function autoGreeting(name: string): string {
   const first = name.split(' ')[0] || 'there';
   return isSupportOnline()
-    ? `Thanks ${first}! Your message reached our support team — someone is online now and will jump in shortly.`
-    : `Thanks ${first}! Our live team is online weekdays 9am–5pm ET. Your message has been logged and the right person will get back to you as soon as they're in — we'll fix this for you soon. Thanks for understanding!`;
+    ? `Thanks ${first}! Your message reached our support team - someone is online now and will jump in shortly.`
+    : `Thanks ${first}! Our live team is online weekdays 9am-5pm ET. Your message has been logged and the right person will get back to you as soon as they're in - we'll fix this for you soon. Thanks for understanding!`;
 }
 
 export async function createTicket(input: {
@@ -79,7 +79,7 @@ export async function createTicket(input: {
         userId: a.id,
         type: 'support_ticket',
         title: `New support ticket from ${ticket.name}`,
-        body: `${ticket.topic} — reply from Admin → Support tickets.`,
+        body: `${ticket.topic} - reply from Admin → Support tickets.`,
         data: { ticketId: ticket.id },
       }).catch(() => undefined),
     ),
@@ -88,8 +88,12 @@ export async function createTicket(input: {
   return getTicket(ticket.id);
 }
 
-/** Ticket + full thread. The ticket id (uuid) is the access token. */
-export async function getTicket(ticketId: string) {
+/**
+ * Ticket + full thread. For anonymous visitors the unguessable ticket uuid is
+ * the access token; for SIGNED-IN viewers the ticket must be their own (or
+ * they must be an admin) - accounts never see each other's support threads.
+ */
+export async function getTicket(ticketId: string, viewer?: { id: string; role: string }) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
     select: {
@@ -102,15 +106,30 @@ export async function getTicket(ticketId: string) {
     },
   });
   if (!ticket) throw AppError.notFound('Ticket not found');
+  if (
+    viewer &&
+    viewer.role !== 'ADMIN' &&
+    ticket.userId &&
+    ticket.userId !== viewer.id
+  ) {
+    throw AppError.notFound('Ticket not found');
+  }
   return { ...ticket, online: isSupportOnline() };
 }
 
-export async function addVisitorMessage(ticketId: string, text: string) {
+export async function addVisitorMessage(
+  ticketId: string,
+  text: string,
+  viewer?: { id: string; role: string },
+) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, userId: true },
   });
   if (!ticket) throw AppError.notFound('Ticket not found');
+  if (viewer && viewer.role !== 'ADMIN' && ticket.userId && ticket.userId !== viewer.id) {
+    throw AppError.notFound('Ticket not found');
+  }
   await prisma.supportMessage.create({
     data: { ticketId: ticket.id, senderType: 'user', body: sanitizeText(text).slice(0, 4000) },
   });
@@ -118,7 +137,7 @@ export async function addVisitorMessage(ticketId: string, text: string) {
     where: { id: ticket.id },
     data: { status: 'open' },
   });
-  return getTicket(ticketId);
+  return getTicket(ticketId, viewer);
 }
 
 // ── Admin side ──────────────────────────────────────────────────────────────
@@ -159,7 +178,7 @@ export async function agentReply(ticketId: string, text: string) {
       userId: ticket.userId,
       type: 'support_reply',
       title: 'Support replied to your ticket 💬',
-      body: `${ticket.topic} — open the Support chat (bottom-right) to read it.`,
+      body: `${ticket.topic} - open the Support chat (bottom-right) to read it.`,
       data: { ticketId: ticket.id },
     }).catch(() => undefined);
   }

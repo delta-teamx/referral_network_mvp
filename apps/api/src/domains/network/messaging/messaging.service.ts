@@ -24,7 +24,7 @@ export async function getOrCreateConversation(
     throw AppError.badRequest("You can't message yourself.");
   }
 
-  // The route only validates that userIdB is a UUID — confirm the target user
+  // The route only validates that userIdB is a UUID - confirm the target user
   // actually exists (and isn't soft-deleted) before creating participant rows,
   // otherwise the FK insert throws a raw 500 instead of a clean 404.
   const target = await prisma.user.findFirst({
@@ -204,7 +204,7 @@ const ATTACHMENT_TYPES = new Set([
 ]);
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15MB
 
-// The bucket's true region — resolved automatically on the first
+// The bucket's true region - resolved automatically on the first
 // PermanentRedirect (bucket created in a different region than AWS_REGION).
 let resolvedS3Region: string | null = null;
 
@@ -283,7 +283,7 @@ export async function presignChatAttachment(
 
 /**
  * Server-side attachment upload: the browser sends the file to OUR API (same
- * trusted origin policy as every other call) and the server puts it in S3 —
+ * trusted origin policy as every other call) and the server puts it in S3 -
  * no bucket CORS or public-access configuration required.
  */
 export async function uploadChatAttachment(
@@ -315,7 +315,7 @@ export async function uploadChatAttachment(
 }
 
 /**
- * Reusable server-side S3 upload with the region self-heal — the exact path
+ * Reusable server-side S3 upload with the region self-heal - the exact path
  * chat attachments use. Support-chat attachments (and anything else) go
  * through here so upload behavior is identical everywhere.
  */
@@ -360,7 +360,7 @@ async function putObjectWithRegionHeal(
     await s3.send(put());
   } catch (err) {
     const name = (err as { name?: string })?.name ?? 'UnknownError';
-    // Bucket lives in a different region than AWS_REGION: S3 tells us which —
+    // Bucket lives in a different region than AWS_REGION: S3 tells us which -
     // resolve it once and retry, so region mismatches self-heal.
     if (name === 'PermanentRedirect' || name === 'AuthorizationHeaderMalformed') {
       const region = regionFromRedirect(err);

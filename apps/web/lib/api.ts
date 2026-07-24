@@ -66,7 +66,7 @@ export async function apiRequest<T>(
         headers,
         credentials: opts.credentials ?? 'include',
         body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
-        // API responses must never be served from the browser's HTTP cache —
+        // API responses must never be served from the browser's HTTP cache -
         // Express sends ETags, and a cached 304 has no JSON body, which parsed
         // as a silent failure (empty lists).
         cache: 'no-store',
@@ -81,7 +81,7 @@ export async function apiRequest<T>(
           0,
         );
       }
-      throw new ApiError('Network error — please try again.', 0);
+      throw new ApiError('Network error - please try again.', 0);
     }
 
     let envelope: ApiResponse<T>;
@@ -90,7 +90,7 @@ export async function apiRequest<T>(
     } catch {
       if (res.status === 502 || res.status === 503 || res.status === 504) {
         throw new ApiError(
-          'The server is waking up — please try again in about 30 seconds.',
+          'The server is waking up - please try again in about 30 seconds.',
           res.status,
         );
       }
@@ -131,7 +131,7 @@ export async function apiRequest<T>(
         return await doFetch(refreshed.tokens.accessToken);
       } catch (refreshErr) {
         // Only a definitive 401 from the refresh endpoint means the session is
-        // dead — log out and round-trip through login. A cold-starting API
+        // dead - log out and round-trip through login. A cold-starting API
         // (Render free tier), network blip or 5xx must NOT nuke the session;
         // surface the original error so the page can show "try again".
         if (refreshErr instanceof ApiError && refreshErr.status === 401) {

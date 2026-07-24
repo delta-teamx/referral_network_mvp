@@ -1,7 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 
 /**
- * AI-powered matching engine — the heart of Igor's vision.
+ * AI-powered matching engine - the heart of Igor's vision.
  *
  * Takes a member's profile (ICP, keywords, services, referral capabilities)
  * and finds the best matches in the network. Two modes:
@@ -41,8 +41,8 @@ export interface MatchResult {
   reason: string;
   factors: Record<string, number>;
   /**
-   * 'strong'  — a real two-sided fit (industry / referral / ICP overlap).
-   * 'discovery' — an out-of-the-box pick surfaced so the network is never
+   * 'strong'  - a real two-sided fit (industry / referral / ICP overlap).
+   * 'discovery' - an out-of-the-box pick surfaced so the network is never
    *   hidden; shown as "you might be interested" rather than a % match.
    */
   kind: 'strong' | 'discovery';
@@ -90,8 +90,8 @@ export async function generateMatchesForUser(
     .sort((a, b) => b.m.score - a.m.score);
 
   // Two tiers, so the network is NEVER hidden behind a strict threshold:
-  //   • strong    — real two-sided overlap (score ≥ floor), shown with reasons
-  //   • discovery — everyone else, surfaced as "you might be interested" picks
+  //   • strong    - real two-sided overlap (score ≥ floor), shown with reasons
+  //   • discovery - everyone else, surfaced as "you might be interested" picks
   // We take the strong matches first, then fill the remaining slots with the
   // best-ranked discovery members so a small/new network still feels alive.
   const STRONG_FLOOR = 15;
@@ -127,8 +127,8 @@ function discoveryReason(me: ProfileData, them: ProfileData): string {
   const who = them.businessName
     ? `${them.businessName}${them.industry ? ` (${them.industry})` : ''}`
     : 'A member of your network';
-  const context = signals.length ? ` — ${signals.join(', ')}` : '';
-  // The feed already badges this card "You might be interested" — don't repeat
+  const context = signals.length ? ` - ${signals.join(', ')}` : '';
+  // The feed already badges this card "You might be interested" - don't repeat
   // the phrase in the reason text.
   return `${who}${context}. Not an obvious match on paper, but new referral partners often come from outside your usual circle.`;
 }
@@ -143,7 +143,7 @@ function scoreMatch(me: ProfileData, them: ProfileData): Omit<MatchResult, 'kind
   // 1. Industry alignment: do they work in an industry I want to meet?
   //    NB: industries/keywords are stored with their original casing (e.g.
   //    "Real Estate"), so every comparison must be case-insensitive on BOTH
-  //    sides — otherwise well-formed profiles silently score 0.
+  //    sides - otherwise well-formed profiles silently score 0.
   const industryMatch = me.icpIndustries.some((ind) =>
     industryMatches(ind, them.industry, them.keywords),
   );
@@ -179,7 +179,7 @@ function scoreMatch(me: ProfileData, them: ProfileData): Omit<MatchResult, 'kind
   const sameState = me.state && them.state && me.state === them.state;
   factors.location = sameCity ? 10 : sameState ? 5 : 0;
 
-  // 7. Barter compatibility — both must be open to barter AND have
+  // 7. Barter compatibility - both must be open to barter AND have
   // overlapping offerings ↔ wants for a bonus.
   let barterMatch = false;
   if (me.openToBarter && them.openToBarter) {
@@ -250,7 +250,7 @@ function countOverlap(a: string[], b: string[]): number {
 
 /**
  * Batch: generate and persist Introduction rows for a user. Called by the
- * scheduler or after a profile update. Idempotent — skips suggestions
+ * scheduler or after a profile update. Idempotent - skips suggestions
  * that already exist for the same sender+target pair.
  */
 export async function refreshSuggestionsForUser(

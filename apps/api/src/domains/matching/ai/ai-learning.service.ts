@@ -1,7 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 
 /**
- * AI learning loop — adjusts matching weights based on actual outcomes.
+ * AI learning loop - adjusts matching weights based on actual outcomes.
  *
  * The core idea: when an Introduction leads to "deal_closed", every matching
  * factor that contributed positively to that match should get boosted. When

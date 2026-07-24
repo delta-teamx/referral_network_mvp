@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 /**
  * Sets the Referral Nova favicon on the client. (Title is handled by the root
- * layout metadata.) Post-rebrand there is no per-domain branding — it's
+ * layout metadata.) Post-rebrand there is no per-domain branding - it's
  * Referral Nova everywhere.
  */
 export function DomainHead() {

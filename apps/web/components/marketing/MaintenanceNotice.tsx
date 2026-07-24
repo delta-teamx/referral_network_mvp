@@ -14,7 +14,7 @@ export function MaintenanceNotice() {
         <h1 className="mb-2 text-2xl font-bold text-gray-900">We&rsquo;ll be right back</h1>
         <p className="mb-6 text-sm leading-relaxed text-gray-600">
           Referral Nova is undergoing a short upgrade. Sign-up and log-in are paused for a little
-          while — please check back soon. Thanks for your patience!
+          while - please check back soon. Thanks for your patience!
         </p>
         <a
           href="https://referralnova.com"

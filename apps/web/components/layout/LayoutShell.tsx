@@ -14,7 +14,7 @@ const ALWAYS_HIDE = ['/dashboard', '/admin', '/onboarding', '/verify-otp'];
 export function LayoutShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   // The app subdomain (dashboard.referralnova.com) never shows the marketing
-  // chrome — the dashboard has its own sidebar and auth pages are self-styled.
+  // chrome - the dashboard has its own sidebar and auth pages are self-styled.
   // isAppHost() needs window, so resolve it after mount to keep SSR consistent.
   const [onAppHost, setOnAppHost] = useState(false);
   useEffect(() => {
@@ -22,7 +22,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   }, []);
 
   const hideShell = onAppHost || ALWAYS_HIDE.some((p) => pathname.startsWith(p));
-  // Support chat floats on the marketing site and the member dashboard —
+  // Support chat floats on the marketing site and the member dashboard -
   // everywhere except the admin console (agents answer from there).
   const showSupport = !pathname.startsWith('/admin');
 

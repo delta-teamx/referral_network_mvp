@@ -67,7 +67,7 @@ const JOBS: JobDefinition[] = [
 ];
 
 function isRealRedis(url: string): boolean {
-  // Local default we ship in .env.example — treat as "not configured".
+  // Local default we ship in .env.example - treat as "not configured".
   if (!url) return false;
   if (url === 'redis://localhost:6379' || url === 'redis://127.0.0.1:6379') return false;
   return url.startsWith('redis://') || url.startsWith('rediss://');
@@ -77,7 +77,7 @@ async function tryBullMqStart(): Promise<boolean> {
   if (!isRealRedis(env.REDIS_URL)) return false;
 
   try {
-    // @ts-expect-error — bullmq is an optional runtime dep.
+    // @ts-expect-error - bullmq is an optional runtime dep.
     const bullmq = await import('bullmq');
     const { Queue, Worker } = bullmq;
     const connection = { connection: { url: env.REDIS_URL } };

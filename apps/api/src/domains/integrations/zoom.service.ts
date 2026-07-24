@@ -50,7 +50,7 @@ async function getZoomAccessToken(): Promise<string> {
  * A REAL, joinable fallback video room. Unlike a fabricated zoom.us/j/<random>
  * link (which 404s), a Jitsi Meet room is created implicitly by its URL, so the
  * generated link works with no API keys. The random token keeps it unguessable.
- * Used when Zoom isn't configured OR when a real Zoom call fails — so a booking
+ * Used when Zoom isn't configured OR when a real Zoom call fails - so a booking
  * always ends up with a working meeting link.
  */
 function jitsiFallback(topic: string): ZoomMeetingResult {
@@ -102,7 +102,7 @@ export async function createZoomMeeting(
     }
     data = (await res.json()) as { id: number; join_url: string; start_url: string };
   } catch (err) {
-    // Bad credentials / missing scope / Zoom outage must NOT break the booking —
+    // Bad credentials / missing scope / Zoom outage must NOT break the booking -
     // fall back to a working Jitsi room and log for follow-up.
     // eslint-disable-next-line no-console
     console.error('[zoom] falling back to Jitsi after error:', err);

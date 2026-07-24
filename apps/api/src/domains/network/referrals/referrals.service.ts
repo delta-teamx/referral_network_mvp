@@ -5,7 +5,7 @@ import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 
 /**
- * B2B referrals — one business owner sending a client to another business.
+ * B2B referrals - one business owner sending a client to another business.
  * Distinct from ConsumerLead (consumer→business via the life-events
  * connector) and BusinessConnection (durable owner↔owner relationship).
  *
@@ -80,7 +80,7 @@ export async function sendReferral(input: CreateReferralInput) {
     userId: receiverId,
     type: 'referral',
     title: 'New client referral 🎉',
-    body: `You received a referral${input.clientName ? ` for ${sanitizeText(input.clientName)}` : ''} — view it in your Referrals tab.`,
+    body: `You received a referral${input.clientName ? ` for ${sanitizeText(input.clientName)}` : ''} - view it in your Referrals tab.`,
     data: { referralId: referral.id },
   }).catch(() => undefined);
 

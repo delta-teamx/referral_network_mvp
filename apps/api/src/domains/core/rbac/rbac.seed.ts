@@ -2,11 +2,11 @@ import { PERMISSIONS, ROLE_PERMISSIONS, USER_ROLES, type UserRole } from '@refne
 import { prisma } from '../../../config/prisma.js';
 
 /**
- * Idempotent seeder — ensures every `PERMISSIONS` key is present in the
+ * Idempotent seeder - ensures every `PERMISSIONS` key is present in the
  * `Permission` table and every default role grant is present in
  * `RolePermission`. Called once at boot from `src/index.ts`.
  *
- * Grants that don't exist are inserted. Existing grants are left alone —
+ * Grants that don't exist are inserted. Existing grants are left alone -
  * admins can revoke defaults per role in production, and re-seeding must
  * not silently restore them. Permissions no longer in code are NOT pruned
  * (safety rail; use an explicit admin tool for that later).

@@ -19,7 +19,7 @@ import {
 
 export const messagingRouter: Router = Router();
 
-// Public download proxy — attachment links must open in a new tab without an
+// Public download proxy - attachment links must open in a new tab without an
 // Authorization header. Keys contain an unguessable UUID.
 messagingRouter.get(
   '/attachments/file',

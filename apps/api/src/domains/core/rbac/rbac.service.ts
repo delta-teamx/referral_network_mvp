@@ -1,7 +1,7 @@
 import { PERMISSIONS, ROLE_PERMISSIONS, type Permission, type UserRole } from '@refnet/shared';
 
 /**
- * RBAC service — the single place authorization decisions happen in-process.
+ * RBAC service - the single place authorization decisions happen in-process.
  *
  * Branch 1 serves answers purely from the static `ROLE_PERMISSIONS` map in
  * `@refnet/shared` so the authorize middleware can be wired without a DB.

@@ -18,7 +18,7 @@ import {
 export const aiRouter: Router = Router();
 aiRouter.use(authenticate);
 
-// On-demand "who should I meet?" — returns transient suggestions (not persisted)
+// On-demand "who should I meet?" - returns transient suggestions (not persisted)
 aiRouter.get(
   '/matches',
   asyncHandler(async (req, res) => {

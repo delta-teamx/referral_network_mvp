@@ -134,7 +134,7 @@ export async function confirmVideoUpload(
 }
 
 // ---------------------------------------------------------------------------
-// Profile headshot photo upload — same presign→PUT→confirm pattern as video,
+// Profile headshot photo upload - same presign→PUT→confirm pattern as video,
 // but stored on MemberProfile.photoUrl. Demo mode returns a placeholder image
 // so the onboarding flow is fully testable without AWS keys.
 // ---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ export async function confirmPhotoUpload(
 }
 
 async function transcribeAsync(userId: string, videoUrl: string): Promise<void> {
-  // @ts-expect-error — openai SDK is optional.
+  // @ts-expect-error - openai SDK is optional.
   const OpenAI = (await import('openai')).default;
   const openai = new OpenAI();
 

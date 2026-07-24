@@ -2,7 +2,7 @@ import type { DomainEventMap } from '@refnet/shared';
 import type { EventBus, EventHandler, Unsubscribe } from './EventBus.js';
 
 /**
- * In-process `EventBus` implementation — the Branch 1 default.
+ * In-process `EventBus` implementation - the Branch 1 default.
  *
  * Behaviour:
  *   - Handlers for a single event type run in parallel (`Promise.all`).
@@ -14,7 +14,7 @@ import type { EventBus, EventHandler, Unsubscribe } from './EventBus.js';
  *     per-handler retry/DLQ semantics arrive with the BullMQ bus in Branch 4.
  *   - Synchronous handlers are allowed (wrapped via `Promise.resolve`).
  *
- * Not suitable beyond a single process — Branch 4 replaces this with a
+ * Not suitable beyond a single process - Branch 4 replaces this with a
  * BullMQ-backed implementation that persists events to the `DomainEvent`
  * table for audit, and distributes handlers across worker processes.
  */
@@ -37,7 +37,7 @@ export class InMemoryEventBus implements EventBus {
       ),
     );
 
-    // Log every handler failure, but never surface it to the publisher — a
+    // Log every handler failure, but never surface it to the publisher - a
     // side-effect subscriber must not break the primary action that already
     // committed (see class docstring).
     for (const r of results) {

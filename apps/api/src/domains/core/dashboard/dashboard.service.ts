@@ -2,7 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { pipelineStats, syncPipeline } from '../../network/pipeline/pipeline.service.js';
 
 /**
- * Dashboard — aggregate read-only queries for a business owner's home page.
+ * Dashboard - aggregate read-only queries for a business owner's home page.
  * Cheap enough to compute on request for Branch 2 volumes; move to
  * materialised views / event-sourced aggregates in Branch 7.
  */
@@ -85,7 +85,7 @@ export async function getAnalytics(userId: string) {
   ]);
 
   // Ratings RECEIVED from call peers (host is rated by guestRating and vice
-  // versa) — combined with listing reviews below.
+  // versa) - combined with listing reviews below.
   const ratedCalls = await prisma.bookingCall
     .findMany({
       where: {

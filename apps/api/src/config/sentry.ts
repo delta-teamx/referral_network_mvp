@@ -10,7 +10,7 @@ import { env } from './env.js';
  *   - `sentryErrorHandler` is inserted before our own `errorHandler` so
  *     Sentry sees 4xx/5xx before we format the JSON envelope.
  *
- * SDK is lazy-imported. That keeps `@sentry/node` an optional dependency —
+ * SDK is lazy-imported. That keeps `@sentry/node` an optional dependency -
  * the API boots without it installed.
  */
 
@@ -33,7 +33,7 @@ export async function initSentry(app: Application): Promise<void> {
   if (!env.SENTRY_DSN) return;
 
   try {
-    // @ts-expect-error — @sentry/node is optional.
+    // @ts-expect-error - @sentry/node is optional.
     const Sentry = await import('@sentry/node');
     Sentry.init({
       dsn: env.SENTRY_DSN,
@@ -57,7 +57,7 @@ export async function initSentry(app: Application): Promise<void> {
     console.log('[sentry] initialized');
   } catch {
     // eslint-disable-next-line no-console
-    console.warn('[sentry] SENTRY_DSN set but @sentry/node not installed — skipping');
+    console.warn('[sentry] SENTRY_DSN set but @sentry/node not installed - skipping');
   }
 }
 

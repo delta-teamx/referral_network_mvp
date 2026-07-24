@@ -18,7 +18,7 @@ const NAV_LINKS = [
   { href: '/pricing', key: 'nav.pricing' },
 ];
 
-// On the app domain the header is part of the product, not the marketing site —
+// On the app domain the header is part of the product, not the marketing site -
 // link to the app's own sections instead of marketing pages.
 const APP_LINKS = [
   { href: '/dashboard', label: 'Overview' },

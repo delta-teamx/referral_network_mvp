@@ -6,7 +6,7 @@ import { sanitizeText } from '../../../utils/sanitize.js';
 import { geocodeZip } from '../../search/geocoding.service.js';
 
 /**
- * Listings service — directory read/write.
+ * Listings service - directory read/write.
  *
  * Writes are gated by RBAC permissions at the route layer (listing:create,
  * listing:update:own, listing:delete:own). Reads are public.
@@ -210,7 +210,7 @@ export async function createListing(userId: string, input: CreateListingInput) {
 
   await eventBus.publish('listing.created', { listingId: listing.id, userId });
 
-  // Geocode ZIP in background — updates lat/lng after creation
+  // Geocode ZIP in background - updates lat/lng after creation
   void geocodeZip(input.zipCode).then(async (coords) => {
     if (coords) {
       await prisma.listing.update({

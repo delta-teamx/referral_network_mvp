@@ -52,7 +52,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     }
   }
 
-  // Unknown error — log with the route so Render logs name the failing
+  // Unknown error - log with the route so Render logs name the failing
   // endpoint directly. Do not leak stack traces to clients in prod.
   // eslint-disable-next-line no-console
   console.error(`[unhandled] ${req.method} ${req.originalUrl}`, err);

@@ -14,7 +14,7 @@ import {
 
 export const photosRouter: Router = Router();
 
-// Public — anyone can see a listing's gallery
+// Public - anyone can see a listing's gallery
 photosRouter.get(
   '/:listingId',
   asyncHandler(async (req, res) => {

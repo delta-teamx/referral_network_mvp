@@ -83,7 +83,7 @@ export default function ReferralsPage() {
         <h1 className="mt-1 text-2xl font-bold text-gray-900">Contracts &amp; Legal</h1>
         <p className="mt-1 text-sm text-gray-500">
           Draft collaboration contracts, share them in chat with your leads, sign the ones you
-          receive, and keep every referral record — all in one place. Working a deal? Track its
+          receive, and keep every referral record - all in one place. Working a deal? Track its
           stages on the{' '}
           <Link href="/dashboard/leads" className="font-semibold text-primary hover:underline">
             Pipeline
@@ -100,7 +100,7 @@ export default function ReferralsPage() {
       </h2>
       <p className="mb-4 text-xs text-gray-500">
         Client referrals exchanged with partners. Each one also appears as a card on your
-        Pipeline — mark it converted here (or move it to Won there) and analytics update.
+        Pipeline - mark it converted here (or move it to Won there) and analytics update.
       </p>
 
       <div className="mb-5 flex gap-2">

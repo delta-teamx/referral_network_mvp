@@ -26,7 +26,7 @@ function LoginInner() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // If the session is (or becomes) valid, never strand the user on the login
-  // form — send them straight to where they were headed / the dashboard.
+  // form - send them straight to where they were headed / the dashboard.
   useEffect(() => {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);

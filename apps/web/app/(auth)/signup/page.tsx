@@ -53,7 +53,7 @@ export default function SignupPage() {
       // globalError is already set by the store
       return;
     }
-    // Account is active immediately — send them straight into onboarding so
+    // Account is active immediately - send them straight into onboarding so
     // they can build their profile and start getting matched right away.
     window.location.href = '/onboarding';
   }
