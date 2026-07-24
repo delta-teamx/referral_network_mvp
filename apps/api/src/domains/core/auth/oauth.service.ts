@@ -124,7 +124,8 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user:
       avatarUrl: profile.picture ?? null,
       role: 'CONSUMER',
       subscriptionTier: await resolveSignupTier(),
-      emailVerified: profile.email_verified === true,
+      // Verification-code step removed: OAuth accounts are active immediately.
+      emailVerified: true,
     },
   });
 
