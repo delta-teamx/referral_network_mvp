@@ -132,7 +132,7 @@ export default function SignupPage() {
               <span>
                 <span className="block font-semibold text-gray-900">Find a trusted local pro</span>
                 <span className="block text-xs text-gray-500">
-                  I&rsquo;m looking for recommendations from trusted business owners.
+                  I&rsquo;m looking for recommendations from trusted businesses.
                 </span>
               </span>
             </label>

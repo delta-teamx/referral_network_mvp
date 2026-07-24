@@ -128,7 +128,7 @@ export default function ForMembersPage() {
             For Members
           </motion.p>
           <motion.h1 variants={fadeInUp} className="mt-3 text-3xl font-bold text-gray-900 md:text-4xl">
-            Built for business owners who are tired of networking the old way
+            Built for businesses that are tired of networking the old way
           </motion.h1>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
             No more rubber-chicken dinners. No more swapping cards with people who will never refer you.
@@ -258,7 +258,7 @@ export default function ForMembersPage() {
                 The referral feed
               </motion.h2>
               <motion.p variants={fadeInUp} className="mt-4 text-gray-600 leading-relaxed">
-                Think of it as a social feed, but every card is a vetted business owner the AI believes can either
+                Think of it as a social feed, but every card is a vetted business the AI believes can either
                 send you referrals or receive them. Swipe through your daily matches, request intros, and watch
                 your pipeline grow.
               </motion.p>

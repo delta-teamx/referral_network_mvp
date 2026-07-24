@@ -335,7 +335,7 @@ export default function HowItWorksPage() {
             Ready to get matched?
           </motion.h2>
           <motion.p variants={fadeInUp} className="mt-4 text-gray-600">
-            Join thousands of business owners who are growing revenue through AI-powered referrals - no cold calls, no awkward mixers.
+            Join thousands of businesses that are growing revenue through AI-powered referrals - no cold calls, no awkward mixers.
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8">
             <Link

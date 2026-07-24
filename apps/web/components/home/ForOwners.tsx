@@ -46,7 +46,7 @@ export function ForOwners() {
       <div className="grid items-start gap-16 md:grid-cols-2">
         <motion.div variants={slideInLeft}>
           <p className="mb-3 inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-            For business owners
+            For businesses
           </p>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
             Stop buying cold leads. Start earning warm ones.
