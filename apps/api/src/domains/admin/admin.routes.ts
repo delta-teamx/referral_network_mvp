@@ -17,6 +17,7 @@ import {
   listPendingListings,
   rejectListing,
   setUserRole,
+  hardDeleteUser,
   suspendUser,
 } from './admin.service.js';
 
@@ -79,6 +80,17 @@ adminRouter.post(
       throw AppError.badRequest('You cannot suspend your own account.');
     }
     const data = await suspendUser(req.user.id, req.params.id ?? '', req.body.reason);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Irreversible: wipe a (non-admin) user and all their data. Test-data cleanup.
+adminRouter.delete(
+  '/users/:id',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await hardDeleteUser(req.user.id, req.params.id ?? '');
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

@@ -110,6 +110,116 @@ export async function suspendUser(adminId: string, userId: string, reason: strin
   return updated;
 }
 
+/**
+ * HARD delete: remove the user and every trace of their activity - messages
+ * (whole threads, both sides), intros, connections, contracts, referrals,
+ * pipeline cards, bookings, listings + reviews/leads on them, group posts,
+ * support tickets, notifications, subscription, profile. Built for wiping
+ * test accounts; irreversible, admin-only, and never allowed on admins.
+ */
+export async function hardDeleteUser(adminId: string, userId: string) {
+  if (adminId === userId) throw AppError.badRequest('You cannot delete your own account.');
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, role: true },
+  });
+  if (!user) throw AppError.notFound('User not found');
+  if (user.role === 'ADMIN') {
+    throw AppError.badRequest('Admin accounts cannot be hard-deleted from the console.');
+  }
+
+  // Whole conversations the user is part of (removes both sides of test chats).
+  const convoIds = (
+    await prisma.conversationParticipant.findMany({
+      where: { userId },
+      select: { conversationId: true },
+    })
+  ).map((c) => c.conversationId);
+
+  // Their listings and everything hanging off them.
+  const listingIds = (
+    await prisma.listing.findMany({ where: { userId }, select: { id: true } })
+  ).map((l) => l.id);
+
+  await prisma.$transaction([
+    // Messaging
+    prisma.message.deleteMany({
+      where: { OR: [{ senderId: userId }, { conversationId: { in: convoIds } }] },
+    }),
+    prisma.conversationParticipant.deleteMany({
+      where: { conversationId: { in: convoIds } },
+    }),
+    prisma.conversation.deleteMany({ where: { id: { in: convoIds } } }),
+    // Matching + network
+    prisma.introduction.deleteMany({
+      where: { OR: [{ senderId: userId }, { targetId: userId }] },
+    }),
+    prisma.businessConnection.deleteMany({
+      where: { OR: [{ initiatorId: userId }, { targetId: userId }] },
+    }),
+    prisma.businessInvitation.deleteMany({
+      where: { OR: [{ senderId: userId }, { recipientUserId: userId }] },
+    }),
+    prisma.contract.deleteMany({
+      where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+    }),
+    prisma.referral.deleteMany({
+      where: {
+        OR: [{ senderId: userId }, { receiverId: userId }, { listingId: { in: listingIds } }],
+      },
+    }),
+    prisma.referralTracking.deleteMany({
+      where: { OR: [{ referrerUserId: userId }, { inviteeUserId: userId }] },
+    }),
+    prisma.pipelineCard.deleteMany({
+      where: { OR: [{ ownerId: userId }, { contactUserId: userId }] },
+    }),
+    // Bookings, events, pods
+    prisma.bookingCall.deleteMany({
+      where: { OR: [{ hostId: userId }, { guestId: userId }] },
+    }),
+    prisma.availability.deleteMany({ where: { userId } }),
+    prisma.eventRegistration.deleteMany({ where: { userId } }),
+    prisma.podFeedback.deleteMany({ where: { userId } }),
+    prisma.podMember.deleteMany({ where: { userId } }),
+    prisma.meetingHistory.deleteMany({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    }),
+    // Groups
+    prisma.groupMessage.deleteMany({ where: { senderId: userId } }),
+    prisma.groupMember.deleteMany({ where: { userId } }),
+    // Directory
+    prisma.review.deleteMany({
+      where: { OR: [{ userId }, { listingId: { in: listingIds } }] },
+    }),
+    prisma.consumerLead.deleteMany({
+      where: { OR: [{ consumerId: userId }, { listingId: { in: listingIds } }] },
+    }),
+    prisma.favorite.deleteMany({
+      where: { OR: [{ userId }, { listingId: { in: listingIds } }] },
+    }),
+    prisma.pageView.deleteMany({ where: { listingId: { in: listingIds } } }),
+    prisma.listingPhoto.deleteMany({ where: { listingId: { in: listingIds } } }),
+    prisma.listingTag.deleteMany({ where: { listingId: { in: listingIds } } }),
+    prisma.listing.deleteMany({ where: { id: { in: listingIds } } }),
+    // Account
+    prisma.supportTicket.deleteMany({ where: { userId } }),
+    prisma.notification.deleteMany({ where: { userId } }),
+    prisma.subscription.deleteMany({ where: { userId } }),
+    prisma.oAuthAccount.deleteMany({ where: { userId } }),
+    prisma.onboardingProgress.deleteMany({ where: { userId } }),
+    prisma.memberProfile.deleteMany({ where: { userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  await eventBus.publish('admin.user_suspended', {
+    adminId,
+    userId,
+    reason: `hard_deleted:${user.email}`,
+  });
+  return { deleted: user.email };
+}
+
 export async function impersonateUser(adminId: string, targetUserId: string) {
   const target = await prisma.user.findFirst({
     where: { id: targetUserId, deletedAt: null },

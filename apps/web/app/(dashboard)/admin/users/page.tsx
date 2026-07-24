@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Eye, Search, X } from 'lucide-react';
+import { Ban, Eye, Search, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -89,6 +89,30 @@ export default function AdminUsersPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Suspend failed');
+    }
+  }
+
+  /** Irreversible: wipes the account and ALL its data (test-data cleanup). */
+  async function hardDelete(u: AdminUser) {
+    if (!accessToken) return;
+    if (u.role === 'ADMIN') {
+      setError('Admin accounts cannot be hard-deleted.');
+      return;
+    }
+    if (
+      !window.confirm(
+        `PERMANENTLY delete ${u.firstName} ${u.lastName} (${u.email})?\n\nThis wipes their profile, conversations (both sides), bookings, contracts, referrals, pipeline cards, listings and support tickets. This cannot be undone.`,
+      )
+    )
+      return;
+    const typed = window.prompt(`Type DELETE to confirm wiping ${u.email}:`);
+    if (typed !== 'DELETE') return;
+    try {
+      await api.delete(`/api/v1/admin/users/${u.id}`, { accessToken: accessToken ?? undefined });
+      setError(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Delete failed');
     }
   }
 
@@ -302,6 +326,15 @@ export default function AdminUsersPage() {
                           className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/5 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
                         >
                           <Ban size={12} /> Suspend
+                        </button>
+                      )}
+                      {!isSelf && u.role !== 'ADMIN' && (
+                        <button
+                          onClick={() => void hardDelete(u)}
+                          title="Permanently delete this user and all their data"
+                          className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-500"
+                        >
+                          <Trash2 size={12} /> Delete
                         </button>
                       )}
                     </div>
