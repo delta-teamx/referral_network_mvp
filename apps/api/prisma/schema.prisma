@@ -804,6 +804,8 @@ model BookingCall {
   status      String   @default("confirmed") // confirmed, canceled, completed, no_show
   zoomUrl     String?
   zoomMeetingId String?
+  hostRating  Int?     // 1-5, host's rating of the call/peer
+  guestRating Int?     // 1-5, guest's rating of the call/peer
   createdAt   DateTime @default(now())
   canceledAt  DateTime?
 

@@ -103,7 +103,7 @@ export default function NetworkPage() {
       ]);
       setConnections(conns);
       setInvitations(invs);
-      setWonCards(cards.filter((c) => c.stage === 'won' || c.stage === 'contract_signed'));
+      setWonCards(cards.filter((c) => c.stage === 'won'));
       setSignedContracts(contracts.filter((c) => c.status === 'signed'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Load failed');
@@ -144,7 +144,7 @@ export default function NetworkPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Network</p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900">My network</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            The relationships that win you business. Deals you won and signed contract partners
+            The relationships that win you business. Won deals (a signed contract counts as won)
             live on top — keep working those first.
           </p>
         </div>
@@ -198,14 +198,8 @@ export default function NetworkPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="truncate font-semibold text-gray-900">{c.name}</p>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            c.stage === 'won'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-teal-100 text-teal-700'
-                          }`}
-                        >
-                          {c.stage === 'won' ? 'Won 🏆' : 'Contract signed'}
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          Won · Signed 🏆
                         </span>
                       </div>
                       {c.contact?.memberProfile && (

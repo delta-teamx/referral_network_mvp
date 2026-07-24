@@ -142,7 +142,7 @@ export async function listTickets(status?: string) {
 export async function agentReply(ticketId: string, text: string) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true },
+    select: { id: true, userId: true, topic: true },
   });
   if (!ticket) throw AppError.notFound('Ticket not found');
   await prisma.supportMessage.create({
@@ -152,6 +152,17 @@ export async function agentReply(ticketId: string, text: string) {
     where: { id: ticket.id },
     data: { status: 'pending' },
   });
+  // Signed-in ticket owners see the reply in their bell too, so they don't
+  // have to keep the widget open.
+  if (ticket.userId) {
+    void createNotification({
+      userId: ticket.userId,
+      type: 'support_reply',
+      title: 'Support replied to your ticket 💬',
+      body: `${ticket.topic} — open the Support chat (bottom-right) to read it.`,
+      data: { ticketId: ticket.id },
+    }).catch(() => undefined);
+  }
   return getTicket(ticketId);
 }
 

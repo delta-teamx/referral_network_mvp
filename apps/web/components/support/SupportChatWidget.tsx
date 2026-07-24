@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Headset, Send, X } from 'lucide-react';
-import { api, ApiError } from '../../lib/api';
+import { Headset, Paperclip, Send, X } from 'lucide-react';
+import { api, ApiError, apiBaseUrl } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 
 /**
@@ -31,6 +31,31 @@ interface Ticket {
 }
 
 const STORAGE_KEY = 'rn-support-ticket';
+const SEEN_KEY = 'rn-support-seen';
+
+/** Message text with URLs rendered as friendly links (attachments etc.). */
+function Linkified({ text, light }: { text: string; light: boolean }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className={`underline ${light ? 'text-white' : 'text-primary'}`}
+          >
+            {part.includes('/attachments/file') ? 'Open attachment →' : part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export function SupportChatWidget() {
   const user = useAuthStore((s) => s.user);
@@ -40,8 +65,42 @@ export function SupportChatWidget() {
   const [online, setOnline] = useState<boolean | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [hasUnseen, setHasUnseen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // While CLOSED: poll the saved ticket so a red dot appears when support
+  // replies — the user gets pinged even without the widget open.
+  useEffect(() => {
+    if (open) return;
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+    if (!saved) return;
+    let cancelled = false;
+    async function check() {
+      try {
+        const t = await api.get<Ticket>(`/api/v1/support/tickets/${saved}`);
+        if (cancelled) return;
+        const seen = Number(window.localStorage.getItem(SEEN_KEY) ?? '0');
+        setHasUnseen(t.messages.length > seen && t.messages[t.messages.length - 1]?.senderType === 'agent');
+      } catch {
+        /* silent */
+      }
+    }
+    void check();
+    const timer = setInterval(() => void check(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [open]);
+
+  // Opening (or receiving inside the open widget) marks everything seen.
+  useEffect(() => {
+    if (!open || !ticket) return;
+    window.localStorage.setItem(SEEN_KEY, String(ticket.messages.length));
+    setHasUnseen(false);
+  }, [open, ticket?.messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore an existing conversation + check live-hours status once opened.
   useEffect(() => {
@@ -107,6 +166,39 @@ export function SupportChatWidget() {
       setError(err instanceof ApiError ? err.message : 'Could not reach support — try again.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function sendAttachment(file: File) {
+    if (!ticket) return;
+    setUploading(true);
+    setError(null);
+    try {
+      // Same server-side S3 proxy the chat uses — no bucket CORS involved.
+      const contentType = file.type || 'application/octet-stream';
+      const uploadUrl =
+        `${apiBaseUrl()}/api/v1/support/tickets/${ticket.id}/attachments/upload` +
+        `?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(contentType)}`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
+        body: file,
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success: boolean; data?: { key: string }; error?: string }
+        | null;
+      if (!res.ok || !json?.success || !json.data) {
+        throw new ApiError(json?.error ?? `Upload failed (${res.status})`, res.status);
+      }
+      const fileUrl = `${apiBaseUrl()}/api/v1/messages/attachments/file?key=${encodeURIComponent(json.data.key)}`;
+      const t = await api.post<Ticket>(`/api/v1/support/tickets/${ticket.id}/messages`, {
+        text: `📎 ${file.name}: ${fileUrl}`,
+      });
+      setTicket(t);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not upload the file');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -232,7 +324,7 @@ export function SupportChatWidget() {
                         Support team
                       </p>
                     )}
-                    {m.body}
+                    <Linkified text={m.body} light={m.senderType === 'user'} />
                     <p
                       className={`mt-1 text-[9px] ${
                         m.senderType === 'user' ? 'text-white/70' : 'text-gray-400'
@@ -247,6 +339,23 @@ export function SupportChatWidget() {
                 ))}
               </div>
               <div className="flex items-center gap-2 border-t border-gray-200 bg-white p-2.5">
+                <label
+                  className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-primary hover:text-primary ${uploading ? 'animate-pulse' : ''}`}
+                  title="Attach a screenshot or document"
+                >
+                  <Paperclip size={14} />
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) void sendAttachment(f);
+                    }}
+                  />
+                </label>
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -273,10 +382,13 @@ export function SupportChatWidget() {
       ) : (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-xl transition hover:scale-105 hover:shadow-2xl"
+          className="relative flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-xl transition hover:scale-105 hover:shadow-2xl"
           aria-label="Open support chat"
         >
           <Headset size={18} /> Support
+          {hasUnseen && (
+            <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-danger" />
+          )}
         </button>
       )}
     </div>

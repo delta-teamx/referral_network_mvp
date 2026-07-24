@@ -33,6 +33,8 @@ interface Booking {
   endsAt: string;
   status: string;
   zoomUrl: string | null;
+  hostRating?: number | null;
+  guestRating?: number | null;
   createdAt: string;
   host: {
     id: string;
@@ -121,6 +123,24 @@ export default function BookingsPage() {
     }
   }
 
+  async function rate(id: string, rating: number) {
+    if (!accessToken) return;
+    try {
+      await api.post(`/api/v1/bookings/${id}/rate`, { rating }, { accessToken: accessToken ?? undefined });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === id
+            ? b.host.id === user?.id
+              ? { ...b, hostRating: rating }
+              : { ...b, guestRating: rating }
+            : b,
+        ),
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save the rating');
+    }
+  }
+
   async function respond(id: string, action: 'accept' | 'decline') {
     if (!accessToken) return;
     try {
@@ -152,6 +172,10 @@ export default function BookingsPage() {
   const upcoming = bookings
     .filter((b) => ['pending', 'confirmed'].includes(b.status) && new Date(b.endsAt) >= new Date())
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+  // Finished calls you can rate — the rating feeds the analytics rating card.
+  const past = bookings
+    .filter((b) => ['confirmed', 'completed'].includes(b.status) && new Date(b.endsAt) < new Date())
+    .sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
 
   // Month grid: leading blanks + days.
   const grid = useMemo(() => {
@@ -401,26 +425,94 @@ export default function BookingsPage() {
           </div>
         </div>
       ) : view === 'list' ? (
-        upcoming.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-            <Calendar size={32} className="mx-auto mb-3 text-gray-300" />
-            <p className="text-sm text-gray-600">
-              No upcoming calls. Book a member from their profile, or set your availability so
-              people can book you.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {upcoming.map((b) => (
-              <BookingRow key={b.id} b={b} meId={user?.id} onRespond={respond} onCancel={cancel} />
-            ))}
-          </ul>
-        )
+        <div className="space-y-8">
+          {upcoming.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
+              <Calendar size={32} className="mx-auto mb-3 text-gray-300" />
+              <p className="text-sm text-gray-600">
+                No upcoming calls. Book a member from their profile, or set your availability so
+                people can book you.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {upcoming.map((b) => (
+                <BookingRow key={b.id} b={b} meId={user?.id} onRespond={respond} onCancel={cancel} />
+              ))}
+            </ul>
+          )}
+
+          {/* Finished calls: rate the other person — feeds your analytics */}
+          {past.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Past calls — rate how it went
+              </h2>
+              <ul className="space-y-2">
+                {past.slice(0, 10).map((b) => {
+                  const peer = b.host.id === user?.id ? b.guest : b.host;
+                  const myRating = b.host.id === user?.id ? b.hostRating : b.guestRating;
+                  return (
+                    <li
+                      key={b.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {peer.firstName} {peer.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(b.startsAt).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onClick={() => void rate(b.id, star)}
+                            aria-label={`Rate ${star} stars`}
+                            className="cursor-pointer p-0.5 transition hover:scale-110"
+                          >
+                            <StarIcon filled={(myRating ?? 0) >= star} />
+                          </button>
+                        ))}
+                        {myRating ? (
+                          <span className="ml-1 text-xs font-semibold text-amber-600">{myRating}/5</span>
+                        ) : (
+                          <span className="ml-1 text-xs text-gray-400">Rate</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </div>
       ) : (
         <AvailabilityEditor accessToken={accessToken} />
       )}
     </div>
     </UpgradeGate>
+  );
+}
+
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill={filled ? '#f59e0b' : 'none'}
+      stroke={filled ? '#f59e0b' : '#d1d5db'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
   );
 }
 

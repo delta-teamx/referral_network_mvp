@@ -7,7 +7,7 @@ import {
   ArrowRight,
   Check,
   Handshake,
-  Sparkles,
+  RefreshCw,
   ThumbsDown,
   TrendingUp,
   Users,
@@ -182,13 +182,13 @@ export function AiFeed() {
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Your AI referral feed
+            Suggested introductions
           </p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900">
             People you should meet
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            The AI scans every member&rsquo;s profile - who they serve, who they want to meet, who
+            We scan every member&rsquo;s profile - who they serve, who they want to meet, who
             they can refer - and surfaces your best matches. Request an intro and we connect you.
           </p>
         </div>
@@ -218,7 +218,7 @@ export function AiFeed() {
         <div className="space-y-4">
           {scanning && (
             <p className="mb-2 flex items-center gap-2 text-sm text-primary">
-              <Sparkles size={14} className="animate-pulse" /> Scanning the network for your best matches…
+              <RefreshCw size={14} className="animate-spin" /> Scanning the network for your best matches…
             </p>
           )}
           {Array.from({ length: 3 }).map((_, i) => (
@@ -232,7 +232,7 @@ export function AiFeed() {
           animate="visible"
           className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center"
         >
-          <Sparkles size={32} className="mx-auto mb-3 text-primary" />
+          <Users size={32} className="mx-auto mb-3 text-primary" />
           {!user ? (
             <>
               <h3 className="mb-2 text-lg font-semibold text-gray-900">Log in to see your matches</h3>
@@ -265,7 +265,7 @@ export function AiFeed() {
                   onClick={() => void load()}
                   className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary"
                 >
-                  <Sparkles size={14} /> Refresh matches
+                  <RefreshCw size={14} /> Refresh matches
                 </button>
                 <Link href="/dashboard/network/invite" className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
                   Invite my network →
@@ -337,7 +337,7 @@ export function AiFeed() {
                   <div className="flex flex-col items-end gap-1">
                     {isDiscovery ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                        <Sparkles size={10} /> You might be interested
+                        You might be interested
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-semibold text-primary">
@@ -350,7 +350,6 @@ export function AiFeed() {
 
                 <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
                   <p className="flex items-start gap-2 text-sm text-blue-900">
-                    <Sparkles size={14} className="mt-0.5 flex-shrink-0 text-blue-500" />
                     {/* The badge already says "You might be interested" — strip the
                         legacy prefix from older stored suggestions. */}
                     {intro.reason.replace(/^You might be interested:\s*/i, '')}

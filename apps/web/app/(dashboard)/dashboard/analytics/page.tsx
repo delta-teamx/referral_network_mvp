@@ -45,8 +45,7 @@ const STAGE_META: Record<string, { label: string; color: string }> = {
   zoom_booked: { label: 'Zoom booked', color: '#8b5cf6' },
   follow_up: { label: 'Follow-up', color: '#f59e0b' },
   signing_contract: { label: 'Signing contract', color: '#f97316' },
-  contract_signed: { label: 'Contract signed', color: '#14b8a6' },
-  won: { label: 'Won', color: '#10b981' },
+  won: { label: 'Won · Deal signed', color: '#10b981' },
   lost: { label: 'Lost', color: '#f43f5e' },
   dead: { label: 'Dead lead', color: '#9ca3af' },
 };
@@ -186,33 +185,6 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <ChartCard
-              title="Client referrals"
-              subtitle="Received from partners, with conversions"
-              labels={data.labels}
-              series={[
-                { name: 'Received', values: data.series.referrals, color: '#f97316' },
-                { name: 'Converted', values: data.series.referralsConverted, color: '#16a34a' },
-              ]}
-            />
-            <ChartCard
-              title="Consumer leads"
-              subtitle="From the public directory, with conversions"
-              labels={data.labels}
-              series={[
-                { name: 'Received', values: data.series.leads, color: '#2563eb' },
-                { name: 'Converted', values: data.series.leadsConverted, color: '#16a34a' },
-              ]}
-            />
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <ChartCard
-              title="Reviews received"
-              subtitle="New reviews per week"
-              labels={data.labels}
-              series={[{ name: 'Reviews', values: data.series.reviews, color: '#7c3aed' }]}
-            />
             <RatingCard ratings={data.ratings} />
           </div>
         </div>

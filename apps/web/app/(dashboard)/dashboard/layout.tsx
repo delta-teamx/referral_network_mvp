@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Network,
   Search,
+  Trophy,
   UsersRound,
   Settings,
 } from 'lucide-react';
@@ -37,14 +38,15 @@ const NOTIFICATION_TAB: Record<string, string> = {
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/members', label: 'Members', icon: Search },
   { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
   { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/groups', label: 'Groups', icon: UsersRound },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 

@@ -8,10 +8,10 @@ import {
   ArrowUpRight,
   Eye,
   Inbox,
-  Sparkles,
   Star,
   TrendingUp,
   UserCheck,
+  Users,
 } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { api } from '../../../lib/api';
@@ -58,15 +58,15 @@ export default function DashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Dashboard</p>
         <h1 className="mt-1 text-2xl font-bold text-gray-900">Welcome back</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Your AI-powered referral hub - suggested introductions and business metrics in one place.
+          Suggested introductions and your business metrics in one place.
         </p>
       </header>
 
       <div className="mb-5 flex gap-2">
         <TabButton
           active={tab === 'ai'}
-          icon={Sparkles}
-          label="AI Suggestions"
+          icon={Users}
+          label="Suggestions"
           onClick={() => setTab('ai')}
         />
         <TabButton
@@ -89,7 +89,7 @@ function TabButton({
   onClick,
 }: {
   active: boolean;
-  icon: typeof Sparkles;
+  icon: typeof Users;
   label: string;
   onClick: () => void;
 }) {
@@ -153,7 +153,7 @@ function MetricsPanel() {
   }
 
   const stats = [
-    { label: 'Intro requests', value: metrics.totals.introRequests ?? 0, icon: Sparkles, color: 'text-primary' },
+    { label: 'Intro requests', value: metrics.totals.introRequests ?? 0, icon: Inbox, color: 'text-primary' },
     { label: 'Calls booked', value: metrics.totals.callsBooked ?? 0, icon: UserCheck, color: 'text-blue-600' },
     { label: 'Messages', value: metrics.totals.messages ?? 0, icon: Inbox, color: 'text-cyan-600' },
     { label: 'Leads received', value: metrics.totals.leadsTotal, icon: Inbox, color: 'text-emerald-600' },

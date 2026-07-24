@@ -345,3 +345,23 @@ const bookingSelect = {
     },
   },
 } as const;
+
+/** Rate a finished (or confirmed) call 1-5. Host and guest each rate once;
+ *  the rating you RECEIVE is what shows on your analytics rating card. */
+export async function rateBooking(bookingId: string, userId: string, rating: number) {
+  const booking = await prisma.bookingCall.findFirst({
+    where: {
+      id: bookingId,
+      OR: [{ hostId: userId }, { guestId: userId }],
+      status: { in: ['confirmed', 'completed'] },
+    },
+    select: { id: true, hostId: true },
+  });
+  if (!booking) throw AppError.notFound('Booking not found or not ratable yet');
+  const isHost = booking.hostId === userId;
+  return prisma.bookingCall.update({
+    where: { id: booking.id },
+    data: isHost ? { hostRating: rating } : { guestRating: rating },
+    select: { id: true, hostRating: true, guestRating: true, status: true },
+  });
+}

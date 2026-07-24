@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileSignature, Mail, MessageCircle, PenLine } from 'lucide-react';
+import { Download, FileSignature, Mail, MessageCircle, PenLine } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
 
 interface Invitation {
@@ -29,10 +29,12 @@ interface Contract {
   receiver: { id: string; firstName: string; lastName: string; email: string };
 }
 
-interface MemberOption {
-  userId: string;
-  businessName: string;
-  user: { id: string; firstName: string; lastName: string };
+/** People you can send a contract to: only leads you actually talk to —
+ *  conversation partners and pipeline contacts, never the whole member list. */
+interface ContactOption {
+  id: string;
+  name: string;
+  detail: string;
 }
 
 const CONTRACT_TEMPLATE = `REFERRAL COLLABORATION AGREEMENT
@@ -75,7 +77,7 @@ export function InvitationsAndContracts({
   const [sentInvites, setSentInvites] = useState<Invitation[]>([]);
   const [receivedInvites, setReceivedInvites] = useState<Invitation[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [members, setMembers] = useState<MemberOption[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -116,16 +118,47 @@ export function InvitationsAndContracts({
   async function loadAll() {
     if (!accessToken) return;
     const opts = { accessToken: accessToken ?? undefined };
-    const [snt, rcv, cts, mem] = await Promise.all([
+    const [snt, rcv, cts, convos, pipeline] = await Promise.all([
       api.get<Invitation[]>('/api/v1/invitations/sent', opts).catch(() => []),
       api.get<Invitation[]>('/api/v1/invitations/received', opts).catch(() => []),
       api.get<Contract[]>('/api/v1/contracts/mine', opts).catch(() => []),
-      api.get<MemberOption[]>('/api/v1/profiles/search', { ...opts, query: { limit: 50 } }).catch(() => []),
+      api
+        .get<Array<{ otherUser: { id: string; firstName: string; lastName: string } | null; lastMessage: unknown }>>(
+          '/api/v1/messages',
+          opts,
+        )
+        .catch(() => []),
+      api
+        .get<Array<{ contactUserId: string | null; name: string; stage: string; contact: { id: string; firstName: string; lastName: string; memberProfile: { businessName: string } | null } | null }>>(
+          '/api/v1/pipeline',
+          opts,
+        )
+        .catch(() => []),
     ]);
     setSentInvites(snt);
     setReceivedInvites(rcv);
     setContracts(cts);
-    setMembers(mem.filter((m) => m.user.id !== meId));
+    // Only real leads: people you have a conversation with or on your pipeline.
+    const byId = new Map<string, ContactOption>();
+    for (const c of convos) {
+      if (c.otherUser && c.lastMessage && c.otherUser.id !== meId) {
+        byId.set(c.otherUser.id, {
+          id: c.otherUser.id,
+          name: `${c.otherUser.firstName} ${c.otherUser.lastName}`,
+          detail: 'In your messages',
+        });
+      }
+    }
+    for (const card of pipeline) {
+      if (card.contactUserId && card.contact && card.contactUserId !== meId) {
+        byId.set(card.contactUserId, {
+          id: card.contactUserId,
+          name: `${card.contact.firstName} ${card.contact.lastName}`,
+          detail: card.contact.memberProfile?.businessName ?? `Pipeline: ${card.stage.replace(/_/g, ' ')}`,
+        });
+      }
+    }
+    setContacts([...byId.values()].sort((a, b) => a.name.localeCompare(b.name)));
   }
 
   useEffect(() => {
@@ -201,7 +234,7 @@ export function InvitationsAndContracts({
         { signature: String(form.get('signature') ?? '').trim() },
         { accessToken: accessToken ?? undefined },
       );
-      setNotice('Contract signed ✅ — both parties and the admins have been emailed.');
+      setNotice('Contract signed ✅ — the deal moves to Won · Deal signed on your Pipeline. Both parties and the admins have been emailed.');
       setSigningId(null);
       await loadAll();
     } catch (err) {
@@ -209,6 +242,68 @@ export function InvitationsAndContracts({
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Signed contract → downloadable PDF (both parties + admin keep copies). */
+  async function downloadPdf(contract: Contract) {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 48;
+    const width = doc.internal.pageSize.getWidth() - margin * 2;
+    let y = margin;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(contract.title, margin, y);
+    y += 22;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+      `Executed on the Referral Nova platform · ${new Date(contract.createdAt).toLocaleDateString()} · Status: ${contract.status.toUpperCase()}`,
+      margin,
+      y,
+    );
+    y += 24;
+
+    doc.setTextColor(30);
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(contract.body, width) as string[];
+    for (const line of lines) {
+      if (y > doc.internal.pageSize.getHeight() - margin - 90) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += 14;
+    }
+
+    y += 24;
+    if (y > doc.internal.pageSize.getHeight() - margin - 70) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.setDrawColor(180);
+    doc.line(margin, y, margin + width, y);
+    y += 20;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Signatures', margin, y);
+    y += 16;
+    doc.setFont('helvetica', 'italic');
+    doc.text(
+      `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" — ${new Date(contract.senderSignedAt).toLocaleString()}`,
+      margin,
+      y,
+    );
+    y += 14;
+    if (contract.receiverSignature && contract.receiverSignedAt) {
+      doc.text(
+        `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" — ${new Date(contract.receiverSignedAt).toLocaleString()}`,
+        margin,
+        y,
+      );
+    }
+    doc.save(`${contract.title.replace(/[^a-zA-Z0-9 _-]/g, '')}.pdf`);
   }
 
   async function decline(contractId: string) {
@@ -258,21 +353,28 @@ export function InvitationsAndContracts({
             <p className="text-sm font-semibold text-gray-900">
               Send the platform contract for signature
             </p>
-            <select
-              name="receiverUserId"
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Choose the member you&apos;re contracting with…
-              </option>
-              {members.map((m) => (
-                <option key={m.user.id} value={m.user.id}>
-                  {m.user.firstName} {m.user.lastName} — {m.businessName}
+            {contacts.length === 0 ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                No leads yet — contracts go to people you&apos;re already talking to. Start a
+                conversation or add them to your Pipeline first.
+              </p>
+            ) : (
+              <select
+                name="receiverUserId"
+                required
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Choose one of your leads… (from your messages &amp; pipeline)
                 </option>
-              ))}
-            </select>
+                {contacts.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} — {m.detail}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               name="title"
               required
@@ -353,6 +455,14 @@ export function InvitationsAndContracts({
                         <MessageCircle size={11} />
                         {sharingId === c.id ? 'Sharing…' : 'Share in chat'}
                       </button>
+                      {c.status === 'signed' && (
+                        <button
+                          onClick={() => void downloadPdf(c)}
+                          className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-700"
+                        >
+                          <Download size={11} /> Download PDF
+                        </button>
+                      )}
                       {iAmReceiver && c.status === 'sent' && (
                         <>
                           <button

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Headset, Send } from 'lucide-react';
-import { api, ApiError } from '../../../../lib/api';
+import { Headset, Paperclip, Send } from 'lucide-react';
+import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
 /**
@@ -34,6 +34,24 @@ interface TicketDetail extends Omit<TicketSummary, 'messages'> {
   messages: TicketMessage[];
 }
 
+/** Message text with URLs rendered as friendly links (attachments etc.). */
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noreferrer" className="underline">
+            {part.includes('/attachments/file') ? 'Open attachment →' : part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 const STATUS_TONE: Record<string, string> = {
   open: 'bg-rose-500/15 text-rose-400',
   pending: 'bg-amber-500/15 text-amber-400',
@@ -47,6 +65,7 @@ export default function AdminSupportPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<TicketDetail | null>(null);
   const [draft, setDraft] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -106,6 +125,41 @@ export default function AdminSupportPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Reply failed');
       setDraft(text);
+    }
+  }
+
+  async function sendAttachment(file: File) {
+    if (!accessToken || !activeId) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const contentType = file.type || 'application/octet-stream';
+      const uploadUrl =
+        `${apiBaseUrl()}/api/v1/support/tickets/${activeId}/attachments/upload` +
+        `?filename=${encodeURIComponent(file.name)}&contentType=${encodeURIComponent(contentType)}`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': contentType },
+        body: file,
+        credentials: 'include',
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success: boolean; data?: { key: string }; error?: string }
+        | null;
+      if (!res.ok || !json?.success || !json.data) {
+        throw new ApiError(json?.error ?? `Upload failed (${res.status})`, res.status);
+      }
+      const fileUrl = `${apiBaseUrl()}/api/v1/messages/attachments/file?key=${encodeURIComponent(json.data.key)}`;
+      const t = await api.post<TicketDetail>(
+        `/api/v1/support/admin/tickets/${activeId}/reply`,
+        { text: `📎 ${file.name}: ${fileUrl}` },
+        { accessToken },
+      );
+      setActive(t);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not upload the file');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -249,7 +303,7 @@ export default function AdminSupportPage() {
                           : 'rounded-bl-sm bg-gray-800 text-gray-100'
                     }`}
                   >
-                    {m.body}
+                    <Linkified text={m.body} />
                     <p
                       className={`mt-1 text-[9px] ${
                         m.senderType === 'agent' ? 'text-gray-800' : 'text-gray-500'
@@ -262,6 +316,23 @@ export default function AdminSupportPage() {
               </div>
 
               <div className="flex items-center gap-2 border-t border-gray-800 p-3">
+                <label
+                  className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-700 text-gray-400 transition hover:border-amber-500 hover:text-amber-400 ${uploading ? 'animate-pulse' : ''}`}
+                  title="Attach a file for the visitor"
+                >
+                  <Paperclip size={14} />
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) void sendAttachment(f);
+                    }}
+                  />
+                </label>
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}

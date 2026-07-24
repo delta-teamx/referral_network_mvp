@@ -4,20 +4,19 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { AlertTriangle, Calendar, FileSignature, Headset, LayoutDashboard, Shield, Sparkles, Store, Users, UsersRound, Video } from 'lucide-react';
+import { Calendar, FileSignature, Headset, LayoutDashboard, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/listings', label: 'Listings', icon: Store },
-  { href: '/admin/moderation', label: 'Moderation queue', icon: AlertTriangle },
   { href: '/admin/events', label: 'Zoom events', icon: Video },
-  { href: '/admin/pods', label: 'AI Pods', icon: Sparkles },
+  { href: '/admin/pods', label: 'Matchmaking pods', icon: UsersRound },
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
   { href: '/admin/support', label: 'Support tickets', icon: Headset },
+  { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

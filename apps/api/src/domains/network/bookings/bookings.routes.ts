@@ -12,6 +12,7 @@ import {
   getAvailableSlots,
   listAvailability,
   listMyBookings,
+  rateBooking,
   respondToBooking,
   setAvailability,
 } from './bookings.service.js';
@@ -119,6 +120,19 @@ bookingsRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const booking = await cancelBooking(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof booking> = { success: true, data: booking };
+    res.json(body);
+  }),
+);
+
+// Rate a finished call (1-5). Feeds the analytics rating card.
+const rateSchema = z.object({ rating: z.number().int().min(1).max(5) });
+bookingsRouter.post(
+  '/:id/rate',
+  validate(rateSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const booking = await rateBooking(req.params.id ?? '', req.user.id, req.body.rating);
     const body: ApiResponse<typeof booking> = { success: true, data: booking };
     res.json(body);
   }),

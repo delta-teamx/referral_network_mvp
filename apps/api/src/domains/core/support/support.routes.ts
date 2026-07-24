@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import express from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
+import { uploadAttachmentObject } from '../../network/messaging/messaging.service.js';
 import { authenticate, optionalAuthenticate } from '../../../middleware/authenticate.js';
 import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
@@ -53,6 +55,31 @@ supportRouter.get(
     const ticket = await getTicket(req.params.id ?? '');
     const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
     res.json(body);
+  }),
+);
+
+// Attachment upload — same server-side S3 proxy the chat uses (no bucket
+// CORS involved). Works for the visitor widget AND the admin console; the
+// resulting key is served by the existing public attachment proxy.
+supportRouter.post(
+  '/tickets/:id/attachments/upload',
+  express.raw({ type: '*/*', limit: '16mb' }),
+  asyncHandler(async (req, res) => {
+    const filename = typeof req.query.filename === 'string' ? req.query.filename : 'file';
+    const contentType =
+      typeof req.query.contentType === 'string'
+        ? req.query.contentType
+        : (req.headers['content-type'] ?? 'application/octet-stream');
+    const data = Buffer.isBuffer(req.body) ? req.body : Buffer.from([]);
+    const result = await uploadAttachmentObject(
+      'support',
+      req.params.id ?? 'unknown',
+      filename,
+      contentType,
+      data,
+    );
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.status(201).json(body);
   }),
 );
 

@@ -84,6 +84,21 @@ export async function getAnalytics(userId: string) {
     }).catch(() => [] as Array<{ stageUpdatedAt: Date }>),
   ]);
 
+  // Ratings RECEIVED from call peers (host is rated by guestRating and vice
+  // versa) — combined with listing reviews below.
+  const ratedCalls = await prisma.bookingCall
+    .findMany({
+      where: {
+        OR: [{ hostId: userId }, { guestId: userId }],
+        status: { in: ['confirmed', 'completed'] },
+      },
+      select: { hostId: true, hostRating: true, guestRating: true },
+    })
+    .catch(() => [] as Array<{ hostId: string; hostRating: number | null; guestRating: number | null }>);
+  const callRatingsReceived = ratedCalls
+    .map((b) => (b.hostId === userId ? b.guestRating : b.hostRating))
+    .filter((r): r is number => typeof r === 'number');
+
   function bucketize<T extends { createdAt: Date }>(rows: T[], filter?: (r: T) => boolean) {
     const counts = buckets.map(() => 0);
     for (const row of rows) {
@@ -114,17 +129,17 @@ export async function getAnalytics(userId: string) {
       ),
     },
     pipeline,
-    ratings: {
-      avg:
-        reviews.length === 0
-          ? 0
-          : reviews.reduce((a, r) => a + r.rating, 0) / reviews.length,
-      count: reviews.length,
-      distribution: [1, 2, 3, 4, 5].map((star) => ({
-        star,
-        count: reviews.filter((r) => r.rating === star).length,
-      })),
-    },
+    ratings: (() => {
+      const all = [...reviews.map((r) => r.rating), ...callRatingsReceived];
+      return {
+        avg: all.length === 0 ? 0 : all.reduce((a, r) => a + r, 0) / all.length,
+        count: all.length,
+        distribution: [1, 2, 3, 4, 5].map((star) => ({
+          star,
+          count: all.filter((r) => r === star).length,
+        })),
+      };
+    })(),
   };
 }
 

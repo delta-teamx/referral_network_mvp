@@ -22,8 +22,7 @@ export const PIPELINE_STAGES = [
   'zoom_booked',
   'follow_up',
   'signing_contract',
-  'contract_signed',
-  'won',
+  'won', // "Won — deal signed": a signed contract IS a won deal
   'lost',
   'dead',
 ] as const;
@@ -89,6 +88,17 @@ async function advanceCard(cardId: string, currentStage: string, to: PipelineSta
 
 /** Idempotent sync: turn real platform activity into pipeline cards. */
 export async function syncPipeline(ownerId: string): Promise<void> {
+  // Legacy stage merge: contract_signed and won are now ONE stage
+  // ("Won — deal signed") — a signed contract is a won deal.
+  await prisma.pipelineCard
+    .updateMany({ where: { ownerId, stage: 'contract_signed' }, data: { stage: 'won' } })
+    .catch(() => undefined);
+
+  // Peers this member has ACTUALLY engaged with — used at the end to
+  // auto-resolve stale intro requests (the system stays interconnected:
+  // once you've messaged / met / contracted, an intro request is moot).
+  const engagedPeerIds = new Set<string>();
+
   // 1. Every conversation with at least one message → a card for the peer.
   const conversations = await prisma.conversation.findMany({
     where: { participants: { some: { userId: ownerId } } },
@@ -107,6 +117,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
     if (c.messages.length === 0) continue;
     const peer = c.participants.map((p) => p.user).find((u) => u.id !== ownerId);
     if (!peer) continue;
+    engagedPeerIds.add(peer.id);
     await ensureContactCard(ownerId, peer, 'message');
   }
 
@@ -205,6 +216,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
   });
   for (const b of bookings) {
     const peer = b.hostId === ownerId ? b.guest : b.host;
+    engagedPeerIds.add(peer.id);
     const card = await ensureContactCard(ownerId, peer, 'booking');
     await advanceCard(card.id, card.stage, 'zoom_booked');
   }
@@ -223,9 +235,43 @@ export async function syncPipeline(ownerId: string): Promise<void> {
   });
   for (const c of contracts) {
     const peer = c.senderId === ownerId ? c.receiver : c.sender;
+    engagedPeerIds.add(peer.id);
     const card = await ensureContactCard(ownerId, peer, 'contract');
-    if (c.status === 'signed') await advanceCard(card.id, card.stage, 'contract_signed');
+    // A signed contract IS a won deal.
+    if (c.status === 'signed') await advanceCard(card.id, card.stage, 'won');
     else if (c.status === 'sent') await advanceCard(card.id, card.stage, 'signing_contract');
+  }
+
+  // 7. Accepted connections also count as engagement.
+  const acceptedConnections = await prisma.businessConnection.findMany({
+    where: {
+      status: 'accepted',
+      OR: [{ initiatorId: ownerId }, { targetId: ownerId }],
+    },
+    select: { initiatorId: true, targetId: true },
+    take: 500,
+  });
+  for (const c of acceptedConnections) {
+    engagedPeerIds.add(c.initiatorId === ownerId ? c.targetId : c.initiatorId);
+  }
+
+  // 8. INTERCONNECTION HEAL: an intro request between two people who already
+  //    message / met on Zoom / signed a contract / are connected is stale —
+  //    resolve it so it stops resurfacing as "waiting for response".
+  if (engagedPeerIds.size > 0) {
+    const peers = [...engagedPeerIds];
+    await prisma.introduction
+      .updateMany({
+        where: {
+          status: { in: ['suggested', 'requested'] },
+          OR: [
+            { senderId: ownerId, targetId: { in: peers } },
+            { targetId: ownerId, senderId: { in: peers } },
+          ],
+        },
+        data: { status: 'accepted', acceptedAt: new Date() },
+      })
+      .catch(() => undefined);
   }
 }
 

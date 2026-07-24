@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileSignature } from 'lucide-react';
+import { Download, FileSignature } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -17,6 +17,64 @@ interface Contract {
   createdAt: string;
   sender: { id: string; firstName: string; lastName: string; email: string };
   receiver: { id: string; firstName: string; lastName: string; email: string };
+}
+
+async function downloadPdf(contract: Contract) {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const margin = 48;
+  const width = doc.internal.pageSize.getWidth() - margin * 2;
+  let y = margin;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(contract.title, margin, y);
+  y += 22;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(
+    `Executed on the Referral Nova platform · ${new Date(contract.createdAt).toLocaleDateString()} · Status: ${contract.status.toUpperCase()}`,
+    margin,
+    y,
+  );
+  y += 24;
+  doc.setTextColor(30);
+  doc.setFontSize(10);
+  const lines = doc.splitTextToSize(contract.body, width) as string[];
+  for (const line of lines) {
+    if (y > doc.internal.pageSize.getHeight() - margin - 90) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, margin, y);
+    y += 14;
+  }
+  y += 24;
+  if (y > doc.internal.pageSize.getHeight() - margin - 70) {
+    doc.addPage();
+    y = margin;
+  }
+  doc.setDrawColor(180);
+  doc.line(margin, y, margin + width, y);
+  y += 20;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Signatures', margin, y);
+  y += 16;
+  doc.setFont('helvetica', 'italic');
+  doc.text(
+    `${contract.sender.firstName} ${contract.sender.lastName}: "${contract.senderSignature}" — ${new Date(contract.senderSignedAt).toLocaleString()}`,
+    margin,
+    y,
+  );
+  y += 14;
+  if (contract.receiverSignature && contract.receiverSignedAt) {
+    doc.text(
+      `${contract.receiver.firstName} ${contract.receiver.lastName}: "${contract.receiverSignature}" — ${new Date(contract.receiverSignedAt).toLocaleString()}`,
+      margin,
+      y,
+    );
+  }
+  doc.save(`${contract.title.replace(/[^a-zA-Z0-9 _-]/g, '')}.pdf`);
 }
 
 export default function AdminContractsPage() {
@@ -103,12 +161,22 @@ export default function AdminContractsPage() {
                     {new Date(c.createdAt).toLocaleString()}
                   </p>
                 </div>
-                <button
-                  onClick={() => setExpanded(expanded === c.id ? null : c.id)}
-                  className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700"
-                >
-                  {expanded === c.id ? 'Hide terms' : 'View terms'}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                    className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700"
+                  >
+                    {expanded === c.id ? 'Hide terms' : 'View terms'}
+                  </button>
+                  {c.status === 'signed' && (
+                    <button
+                      onClick={() => void downloadPdf(c)}
+                      className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-gray-950 hover:bg-amber-400"
+                    >
+                      <Download size={12} /> PDF
+                    </button>
+                  )}
+                </div>
               </div>
               {expanded === c.id && (
                 <pre className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl bg-gray-950 p-4 font-mono text-xs leading-relaxed text-gray-300">

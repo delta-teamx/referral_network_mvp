@@ -310,7 +310,42 @@ export async function uploadChatAttachment(
 
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
   const key = `chat/${conversationId}/${crypto.randomUUID()}-${safeName}`;
+  await putObjectWithRegionHeal(key, contentType, data);
+  return { key };
+}
 
+/**
+ * Reusable server-side S3 upload with the region self-heal — the exact path
+ * chat attachments use. Support-chat attachments (and anything else) go
+ * through here so upload behavior is identical everywhere.
+ */
+export async function uploadAttachmentObject(
+  keyPrefix: 'chat' | 'support',
+  scopeId: string,
+  filename: string,
+  contentType: string,
+  data: Buffer,
+): Promise<{ key: string }> {
+  if (!ATTACHMENT_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported file type. Use PDF, Word, Excel, image or text.');
+  }
+  if (data.length > MAX_ATTACHMENT_BYTES) {
+    throw AppError.badRequest('File too large. Max 15MB.');
+  }
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
+    throw AppError.badRequest('File uploads are not configured yet.');
+  }
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+  const key = `${keyPrefix}/${scopeId}/${crypto.randomUUID()}-${safeName}`;
+  await putObjectWithRegionHeal(key, contentType, data);
+  return { key };
+}
+
+async function putObjectWithRegionHeal(
+  key: string,
+  contentType: string,
+  data: Buffer,
+): Promise<void> {
   const { PutObjectCommand } = await import('@aws-sdk/client-s3');
   const put = () =>
     new PutObjectCommand({
@@ -335,7 +370,7 @@ export async function uploadChatAttachment(
         console.log(`[chat-upload] bucket region resolved to ${region}; retrying`);
         const s3 = await makeS3(region);
         await s3.send(put());
-        return { key };
+        return;
       }
     }
     // eslint-disable-next-line no-console
@@ -344,7 +379,6 @@ export async function uploadChatAttachment(
       `Storage rejected the upload: ${name}. Check the S3 bucket "${env.AWS_S3_BUCKET}" exists and the AWS key has s3:PutObject permission.`,
     );
   }
-  return { key };
 }
 
 /** Stream an attachment back through the API (keys are unguessable UUIDs). */
@@ -353,7 +387,7 @@ export async function getChatAttachmentStream(key: string): Promise<{
   contentType: string;
   contentLength?: number;
 }> {
-  if (!key.startsWith('chat/') || key.includes('..')) {
+  if (!(key.startsWith('chat/') || key.startsWith('support/')) || key.includes('..')) {
     throw AppError.badRequest('Invalid attachment key');
   }
   if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {

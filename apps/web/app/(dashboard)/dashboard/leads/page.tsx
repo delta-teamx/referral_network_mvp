@@ -27,8 +27,7 @@ const STAGES = [
   { key: 'zoom_booked', label: 'Zoom booked', dot: 'bg-violet-500', ring: 'border-violet-200' },
   { key: 'follow_up', label: 'Follow-up', dot: 'bg-amber-500', ring: 'border-amber-200' },
   { key: 'signing_contract', label: 'Signing contract', dot: 'bg-orange-500', ring: 'border-orange-200' },
-  { key: 'contract_signed', label: 'Contract signed', dot: 'bg-teal-500', ring: 'border-teal-200' },
-  { key: 'won', label: 'Won 🏆', dot: 'bg-emerald-500', ring: 'border-emerald-200' },
+  { key: 'won', label: 'Won · Deal signed 🏆', dot: 'bg-emerald-500', ring: 'border-emerald-200' },
   { key: 'lost', label: 'Lost', dot: 'bg-rose-500', ring: 'border-rose-200' },
   { key: 'dead', label: 'Dead lead', dot: 'bg-gray-400', ring: 'border-gray-200' },
 ] as const;

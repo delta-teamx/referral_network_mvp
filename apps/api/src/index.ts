@@ -309,6 +309,29 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE INDEX IF NOT EXISTS "SupportMessage_ticketId_createdAt_idx" ON "SupportMessage" ("ticketId", "createdAt");`,
       `DO $$ BEGIN ALTER TABLE "SupportMessage" ADD CONSTRAINT "SupportMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+      // Post-call peer ratings (no listing required) — feed the analytics
+      // rating card for members without a directory listing.
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "hostRating" INTEGER;`,
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestRating" INTEGER;`,
+      // STAGE MERGE: contract_signed and won are one stage now.
+      `DO $$ BEGIN UPDATE "PipelineCard" SET "stage"='won' WHERE "stage"='contract_signed'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // INTERCONNECTION HEAL: intro requests between people who already met
+      // on Zoom, signed a contract, or are connected must not keep showing
+      // as "waiting for response".
+      `DO $$ BEGIN
+         UPDATE "Introduction" i SET "status"='accepted', "acceptedAt"=COALESCE(i."acceptedAt", NOW())
+         WHERE i."status" IN ('suggested','requested') AND (
+           EXISTS (SELECT 1 FROM "BookingCall" b WHERE b."status" IN ('confirmed','completed')
+                   AND ((b."hostId"=i."senderId" AND b."guestId"=i."targetId")
+                     OR (b."hostId"=i."targetId" AND b."guestId"=i."senderId")))
+           OR EXISTS (SELECT 1 FROM "Contract" c
+                   WHERE (c."senderId"=i."senderId" AND c."receiverId"=i."targetId")
+                      OR (c."senderId"=i."targetId" AND c."receiverId"=i."senderId"))
+           OR EXISTS (SELECT 1 FROM "BusinessConnection" bc WHERE bc."status"='accepted'
+                   AND ((bc."initiatorId"=i."senderId" AND bc."targetId"=i."targetId")
+                     OR (bc."initiatorId"=i."targetId" AND bc."targetId"=i."senderId")))
+         );
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }
