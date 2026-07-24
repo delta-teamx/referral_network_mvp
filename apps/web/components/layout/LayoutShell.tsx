@@ -23,8 +23,11 @@ export function LayoutShell({ children }: { children: ReactNode }) {
 
   const hideShell = onAppHost || ALWAYS_HIDE.some((p) => pathname.startsWith(p));
   // Support chat floats on the marketing site and the member dashboard -
-  // everywhere except the admin console (agents answer from there).
-  const showSupport = !pathname.startsWith('/admin');
+  // except the admin console (agents answer from there) and the Messages
+  // tab, where the floating bubble would sit on top of the chat's own
+  // Send button.
+  const showSupport =
+    !pathname.startsWith('/admin') && !pathname.startsWith('/dashboard/messages');
 
   if (hideShell) {
     return (

@@ -497,7 +497,7 @@ export function InvitationsAndContracts({
                         name="signature"
                         required
                         placeholder="Type your full legal name to sign"
-                        className="min-w-64 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm italic"
+                        className="min-w-0 flex-1 basis-64 rounded-md border border-gray-300 px-3 py-2 text-sm italic"
                       />
                       <button
                         type="submit"
@@ -539,12 +539,12 @@ export function InvitationsAndContracts({
               type="email"
               required
               placeholder="their@email.com"
-              className="min-w-56 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 basis-56 rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
             <input
               name="message"
               placeholder="Personal note (optional)"
-              className="min-w-56 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 basis-56 rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
             <button
               type="submit"

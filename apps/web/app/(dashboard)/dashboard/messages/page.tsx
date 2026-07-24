@@ -311,7 +311,9 @@ function MessagesInner() {
 
   return (
     <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
-    <div className="flex h-[calc(100vh-3rem)] overflow-hidden">
+    {/* On phones the fixed bottom tab bar (~3.5rem) would cover the composer's
+        Send button - subtract it from the chat height below md. */}
+    <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden md:h-[calc(100vh-3rem)]">
       {/* Left panel - conversation list (on phones: hidden while a thread is open) */}
       <aside
         className={`w-full shrink-0 overflow-y-auto border-r border-gray-200 bg-white md:block md:w-80 ${

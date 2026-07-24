@@ -202,8 +202,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        {/* Slim top bar: notifications on every dashboard page */}
-        <div className="sticky top-0 z-40 flex h-12 items-center justify-end border-b border-gray-200 bg-white px-4">
+        {/* Slim top bar: brand on phones (no sidebar there) + notifications */}
+        <div className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-gray-200 bg-white px-4">
+          <Link href="/dashboard" className="text-sm font-bold text-primary md:invisible">
+            Referral Nova
+          </Link>
           <NotificationBell />
         </div>
         {user.role === 'ADMIN' && (

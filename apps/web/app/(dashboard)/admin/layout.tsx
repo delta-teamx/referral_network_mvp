@@ -90,7 +90,27 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </Link>
         </nav>
       </aside>
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1">
+        {/* Phones/tablets in portrait: the sidebar is hidden, so give the
+            console a scrollable tab strip on top. */}
+        <div className="flex gap-2 overflow-x-auto border-b border-gray-800 bg-gray-900 px-3 py-2 md:hidden">
+          {NAV.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  active ? 'bg-amber-500 text-gray-950' : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
