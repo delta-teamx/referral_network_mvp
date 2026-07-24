@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../../config/prisma.js';
 import { env } from '../../config/env.js';
 import { eventBus } from '../core/events/index.js';
+import { createNotification } from '../core/notifications/notifications.service.js';
 
 /**
  * Stripe webhook handler. Mounted at `POST /api/v1/billing/webhook` using
@@ -158,6 +159,42 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         break;
       }
       case 'invoice.payment_failed': {
+        // Month-2+ renewal failed: PAUSE the plan (drop to FREE access, the
+        // paid tier stays on the Stripe subscription) and alert the member
+        // with a direct link to pay the dues. Paying the invoice fires
+        // customer.subscription.updated (status active), which restores the
+        // tier automatically - resume needs no manual step.
+        const inv = event.data.object as {
+          customer?: string;
+          hosted_invoice_url?: string;
+        };
+        const customerId = inv.customer as string | undefined;
+        if (!customerId) break;
+        const user = await prisma.user.findFirst({
+          where: { stripeCustomerId: customerId },
+          select: { id: true, subscriptionTier: true },
+        });
+        if (user) {
+          if (user.subscriptionTier !== 'FREE') {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { subscriptionTier: 'FREE' },
+            });
+          }
+          await createNotification({
+            userId: user.id,
+            type: 'billing_past_due',
+            title: 'Payment failed - your subscription is paused ⚠️',
+            body: 'Your plan renewal did not go through, so paid features are paused. Open Billing to pay the dues and everything resumes instantly.',
+            data: { hostedInvoiceUrl: inv.hosted_invoice_url ?? null },
+          }).catch(() => undefined);
+          await eventBus.publish('subscription.payment_failed', { userId: user.id });
+        }
+        break;
+      }
+      case 'invoice.paid': {
+        // Dues settled: confirm the resume in the bell (tier restore happens
+        // via customer.subscription.updated).
         const inv = event.data.object as { customer?: string };
         const customerId = inv.customer as string | undefined;
         if (!customerId) break;
@@ -166,7 +203,12 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
           select: { id: true },
         });
         if (user) {
-          await eventBus.publish('subscription.payment_failed', { userId: user.id });
+          await prisma.notification
+            .updateMany({
+              where: { userId: user.id, type: 'billing_past_due', isRead: false },
+              data: { isRead: true },
+            })
+            .catch(() => undefined);
         }
         break;
       }

@@ -61,6 +61,79 @@ export async function createCheckoutSession(
   return { url: session.url };
 }
 
+export interface BillingStatus {
+  tier: string;
+  pastDue: boolean;
+  pausedTier?: string;
+  payUrl?: string | null;
+}
+
+// Small cache so the dashboard banner's poll doesn't hammer Stripe.
+const statusCache = new Map<string, { at: number; data: BillingStatus }>();
+const STATUS_TTL_MS = 60_000;
+
+/**
+ * Live billing state for the signed-in member, straight from Stripe: if any
+ * of their subscriptions is past_due/unpaid the plan is PAUSED and we return
+ * the hosted-invoice link so they can pay the dues and resume instantly.
+ */
+export async function getBillingStatus(userId: string): Promise<BillingStatus> {
+  const cached = statusCache.get(userId);
+  if (cached && Date.now() - cached.at < STATUS_TTL_MS) return cached.data;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true, stripeCustomerId: true },
+  });
+  if (!user) throw AppError.notFound('User not found');
+  const base: BillingStatus = { tier: user.subscriptionTier, pastDue: false };
+
+  if (!user.stripeCustomerId || !env.STRIPE_SECRET_KEY) {
+    statusCache.set(userId, { at: Date.now(), data: base });
+    return base;
+  }
+
+  try {
+    const StripeModule = await import('stripe');
+    const stripe = new StripeModule.default(env.STRIPE_SECRET_KEY);
+    const subs = await stripe.subscriptions.list({
+      customer: user.stripeCustomerId,
+      status: 'all',
+      limit: 5,
+    });
+    const troubled = subs.data.find((s) =>
+      ['past_due', 'unpaid', 'incomplete'].includes(s.status),
+    );
+    if (!troubled) {
+      statusCache.set(userId, { at: Date.now(), data: base });
+      return base;
+    }
+
+    const priceId = troubled.items.data[0]?.price?.id;
+    const pausedTier =
+      env.STRIPE_PREMIUM_PRICE_ID && priceId === env.STRIPE_PREMIUM_PRICE_ID
+        ? 'PREMIUM'
+        : 'PRO';
+
+    let payUrl: string | null = null;
+    const invoiceId =
+      typeof troubled.latest_invoice === 'string'
+        ? troubled.latest_invoice
+        : troubled.latest_invoice?.id;
+    if (invoiceId) {
+      const inv = await stripe.invoices.retrieve(invoiceId);
+      payUrl = inv.hosted_invoice_url ?? null;
+    }
+
+    const data: BillingStatus = { tier: user.subscriptionTier, pastDue: true, pausedTier, payUrl };
+    statusCache.set(userId, { at: Date.now(), data });
+    return data;
+  } catch {
+    // Stripe hiccups must never break the dashboard - report no dues.
+    return base;
+  }
+}
+
 export async function finaliseUpgrade(userId: string, tier: Tier): Promise<void> {
   if (tier === 'FREE') return;
   await prisma.user.update({

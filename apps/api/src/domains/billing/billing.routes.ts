@@ -5,7 +5,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AppError } from '../../utils/AppError.js';
-import { createCheckoutSession, finaliseUpgrade } from './billing.service.js';
+import { createCheckoutSession, finaliseUpgrade, getBillingStatus } from './billing.service.js';
 import { canReceiveMoreLeads, TIERS, type Tier } from './billing.tiers.js';
 import { getFoundingStatus } from './founding.service.js';
 
@@ -67,6 +67,17 @@ billingRouter.post(
     if (!req.user) throw AppError.unauthorized();
     await finaliseUpgrade(req.user.id, req.body.tier as Tier);
     const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
+    res.json(body);
+  }),
+);
+
+// Live plan state incl. unpaid dues (powers the paused-subscription alert).
+billingRouter.get(
+  '/status',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const status = await getBillingStatus(req.user.id);
+    const body: ApiResponse<typeof status> = { success: true, data: status };
     res.json(body);
   }),
 );
