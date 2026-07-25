@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Headset, Paperclip, Send } from 'lucide-react';
+import { Headset, Paperclip, Send, Trash2 } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -163,6 +163,25 @@ export default function AdminSupportPage() {
     }
   }
 
+  /** Irreversible: removes the ticket, its thread and its stored files. */
+  async function deleteTicket() {
+    if (!accessToken || !activeId || !active) return;
+    if (
+      !window.confirm(
+        `PERMANENTLY delete the ticket from ${active.name}?\n\nThe whole thread and any attached files are removed from the database and storage. This cannot be undone.`,
+      )
+    )
+      return;
+    try {
+      await api.delete(`/api/v1/support/admin/tickets/${activeId}`, { accessToken });
+      setActive(null);
+      setActiveId(null);
+      void loadList();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Delete failed');
+    }
+  }
+
   async function setStatus(status: 'open' | 'pending' | 'closed') {
     if (!accessToken || !activeId) return;
     try {
@@ -274,7 +293,7 @@ export default function AdminSupportPage() {
                   </p>
                   <p className="text-xs text-gray-400">{active.topic}</p>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex items-center gap-1.5">
                   {(['open', 'pending', 'closed'] as const).map((s) => (
                     <button
                       key={s}
@@ -288,6 +307,13 @@ export default function AdminSupportPage() {
                       {s}
                     </button>
                   ))}
+                  <button
+                    onClick={() => void deleteTicket()}
+                    title="Permanently delete this ticket and its files"
+                    className="rounded-full bg-red-600 p-1.5 text-white transition hover:bg-red-500"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
               </div>
 

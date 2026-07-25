@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../notifications/notifications.service.js';
+import { deleteAttachmentPrefixes } from '../../network/messaging/messaging.service.js';
 
 /**
  * Support chat - the floating widget on the marketing site and dashboard.
@@ -183,6 +184,19 @@ export async function agentReply(ticketId: string, text: string) {
     }).catch(() => undefined);
   }
   return getTicket(ticketId);
+}
+
+/** HARD delete a ticket: thread rows go from the database, files from S3. */
+export async function deleteTicket(ticketId: string) {
+  const ticket = await prisma.supportTicket.findUnique({
+    where: { id: ticketId },
+    select: { id: true, name: true },
+  });
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  // SupportMessage rows cascade with the ticket.
+  await prisma.supportTicket.delete({ where: { id: ticket.id } });
+  void deleteAttachmentPrefixes([`support/${ticket.id}/`]);
+  return { deleted: ticket.name };
 }
 
 export async function setTicketStatus(ticketId: string, status: 'open' | 'pending' | 'closed') {

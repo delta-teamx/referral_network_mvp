@@ -382,6 +382,41 @@ async function putObjectWithRegionHeal(
 }
 
 /** Stream an attachment back through the API (keys are unguessable UUIDs). */
+/**
+ * Best-effort S3 cleanup for admin hard-deletes: when conversations or
+ * support tickets are wiped from the database, their uploaded files are
+ * removed from the bucket too - clean records AND clean storage. Never
+ * throws; a storage hiccup must not block the database deletion.
+ */
+export async function deleteAttachmentPrefixes(prefixes: string[]): Promise<void> {
+  if (prefixes.length === 0) return;
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) return;
+  try {
+    const { ListObjectsV2Command, DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
+    const s3 = await makeS3(resolvedS3Region ?? env.AWS_REGION);
+    for (const prefix of prefixes) {
+      // Only ever purge inside the attachment namespaces.
+      if (!(prefix.startsWith('chat/') || prefix.startsWith('support/'))) continue;
+      const listed = await s3.send(
+        new ListObjectsV2Command({ Bucket: env.AWS_S3_BUCKET, Prefix: prefix, MaxKeys: 500 }),
+      );
+      const keys = (listed.Contents ?? [])
+        .map((o) => o.Key)
+        .filter((k): k is string => Boolean(k));
+      if (keys.length === 0) continue;
+      await s3.send(
+        new DeleteObjectsCommand({
+          Bucket: env.AWS_S3_BUCKET,
+          Delete: { Objects: keys.map((Key) => ({ Key })) },
+        }),
+      );
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[attachments] S3 cleanup failed (records already deleted):', String(err));
+  }
+}
+
 export async function getChatAttachmentStream(key: string): Promise<{
   body: NodeJS.ReadableStream;
   contentType: string;

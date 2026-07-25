@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/AppError.js';
 import { eventBus } from '../core/events/index.js';
+import { deleteAttachmentPrefixes } from '../network/messaging/messaging.service.js';
 import { signAccessToken } from '../../utils/tokens.js';
 import { toAuthenticatedUserDto } from '../core/users/users.service.js';
 
@@ -141,6 +142,11 @@ export async function hardDeleteUser(adminId: string, userId: string) {
     await prisma.listing.findMany({ where: { userId }, select: { id: true } })
   ).map((l) => l.id);
 
+  // Their support tickets (needed for storage cleanup after the wipe).
+  const ticketIds = (
+    await prisma.supportTicket.findMany({ where: { userId }, select: { id: true } })
+  ).map((t) => t.id);
+
   await prisma.$transaction([
     // Messaging
     prisma.message.deleteMany({
@@ -210,6 +216,13 @@ export async function hardDeleteUser(adminId: string, userId: string) {
     prisma.onboardingProgress.deleteMany({ where: { userId } }),
     prisma.memberProfile.deleteMany({ where: { userId } }),
     prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  // Storage follows the records: uploaded chat/support files are purged from
+  // S3 too (best-effort - the database is already clean either way).
+  void deleteAttachmentPrefixes([
+    ...convoIds.map((id) => `chat/${id}/`),
+    ...ticketIds.map((id) => `support/${id}/`),
   ]);
 
   await eventBus.publish('admin.user_suspended', {

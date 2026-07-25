@@ -11,6 +11,7 @@ import {
   addVisitorMessage,
   agentReply,
   createTicket,
+  deleteTicket,
   getTicket,
   isSupportOnline,
   listTickets,
@@ -118,6 +119,18 @@ supportRouter.post(
     if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
     const ticket = await agentReply(req.params.id ?? '', req.body.text);
     const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
+    res.json(body);
+  }),
+);
+
+// Irreversible: remove the ticket, its thread and its stored files.
+supportRouter.delete(
+  '/admin/tickets/:id',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const result = await deleteTicket(req.params.id ?? '');
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );
