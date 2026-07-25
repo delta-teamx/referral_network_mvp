@@ -215,6 +215,22 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ OUR MISSION ═══ */}
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">
+            Our mission
+          </p>
+          <p className="text-2xl font-semibold leading-snug text-gray-900 md:text-3xl">
+            &ldquo;Referral Nova exists to help businesses thrive by creating trusted
+            relationships that lead to measurable growth.&rdquo;
+          </p>
+          <p className="mt-5 text-base font-medium text-primary">
+            Helping businesses thrive - one trusted referral at a time.
+          </p>
+        </div>
+      </section>
+
       {/* ═══ YOUR NETWORK IS YOUR GROWTH ENGINE ═══ */}
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-6">
