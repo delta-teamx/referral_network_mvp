@@ -5,6 +5,7 @@ import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../events/index.js';
 import { toAuthenticatedUserDto } from '../users/users.service.js';
+import { notifyAdminsOfSignup } from './auth.service.js';
 import { resolveSignupTier } from '../../billing/founding.service.js';
 import {
   accessTokenSeconds,
@@ -129,6 +130,9 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user:
     },
   });
 
+  // Admins get the new-signup email for OAuth accounts too (best-effort).
+  void notifyAdminsOfSignup(created).catch(() => undefined);
+
   await eventBus.publish('user.signed_up', {
     userId: created.id,
     email: created.email,
@@ -252,6 +256,9 @@ async function upsertFromFbProfile(profile: FbProfile): Promise<{ user: User; is
       emailVerified: true,
     },
   });
+
+  // Admins get the new-signup email for OAuth accounts too (best-effort).
+  void notifyAdminsOfSignup(created).catch(() => undefined);
 
   await eventBus.publish('user.signed_up', {
     userId: created.id,

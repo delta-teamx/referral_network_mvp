@@ -100,7 +100,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
  * never blocks the signup response. Delivers once an email provider
  * (SENDGRID_API_KEY) is configured; otherwise it logs to the server console.
  */
-async function notifyAdminsOfSignup(user: {
+export async function notifyAdminsOfSignup(user: {
   firstName: string;
   lastName: string;
   email: string;
