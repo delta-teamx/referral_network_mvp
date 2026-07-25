@@ -143,23 +143,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ STATS BAR ═══ */}
-      <section className="border-b border-gray-200 bg-white py-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-8 px-6 md:gap-16">
-          {[
-            { value: '500+', label: 'Active members' },
-            { value: '2,400+', label: 'AI introductions made' },
-            { value: '87%', label: 'Intro acceptance rate' },
-            { value: '$1.2M+', label: 'Deals closed through platform' },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-2xl font-bold text-gray-900 md:text-3xl">{s.value}</p>
-              <p className="text-xs text-gray-500">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ═══ THE DIFFERENCE ═══ */}
       <section className="bg-gray-50 py-20">
         <div className="mx-auto max-w-6xl px-6">
