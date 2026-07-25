@@ -9,6 +9,7 @@ import {
   adminOverview,
   approveListing,
   archiveGroup,
+  hardDeleteGroup,
   featureListing,
   impersonateUser,
   listAllGroups,
@@ -178,6 +179,17 @@ adminRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const data = await archiveGroup(req.user.id, req.params.id ?? '');
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Irreversible: wipe a group with its members, chat and events (test cleanup).
+adminRouter.delete(
+  '/groups/:id',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await hardDeleteGroup(req.user.id, req.params.id ?? '');
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

@@ -360,6 +360,24 @@ export async function listAllGroups() {
   });
 }
 
+/** HARD delete a group and everything in it (members, chat, events).
+ *  Irreversible - built for wiping test groups. */
+export async function hardDeleteGroup(adminId: string, groupId: string) {
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { id: true, name: true },
+  });
+  if (!group) throw AppError.notFound('Group not found');
+  await prisma.$transaction([
+    prisma.groupMessage.deleteMany({ where: { groupId } }),
+    prisma.groupEvent.deleteMany({ where: { groupId } }),
+    prisma.groupMember.deleteMany({ where: { groupId } }),
+    prisma.group.delete({ where: { id: groupId } }),
+  ]);
+  await eventBus.publish('admin.group_archived', { adminId, groupId });
+  return { deleted: group.name };
+}
+
 export async function archiveGroup(adminId: string, groupId: string) {
   const updated = await prisma.group.update({
     where: { id: groupId },

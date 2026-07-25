@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Archive, MapPin } from 'lucide-react';
+import { Archive, MapPin, Trash2 } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -41,6 +41,26 @@ export default function AdminGroupsPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  /** Irreversible: wipes the group with its members, chat and events. */
+  async function hardDelete(g: AdminGroup) {
+    if (!accessToken) return;
+    if (
+      !window.confirm(
+        `PERMANENTLY delete "${g.name}" (${g._count.members} members)?\n\nThis wipes the group, its member list, chat history and events. This cannot be undone.`,
+      )
+    )
+      return;
+    const typed = window.prompt(`Type DELETE to confirm wiping "${g.name}":`);
+    if (typed !== 'DELETE') return;
+    try {
+      await api.delete(`/api/v1/admin/groups/${g.id}`, { accessToken: accessToken ?? undefined });
+      setError(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Delete failed');
+    }
+  }
 
   async function archive(id: string) {
     if (!accessToken) return;
@@ -103,6 +123,13 @@ export default function AdminGroupsPage() {
                     <Archive size={12} /> Archive
                   </button>
                 )}
+                <button
+                  onClick={() => void hardDelete(g)}
+                  title="Permanently delete this group and everything in it"
+                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
               </div>
             </li>
           ))}
