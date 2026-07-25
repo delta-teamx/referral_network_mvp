@@ -54,6 +54,7 @@ export function IgorIntake() {
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const hydrate = useAuthStore((s) => s.hydrate);
+  const refreshUser = useAuthStore((s) => s.refreshUser);
 
   const [step, setStep] = useState<Step>('business');
   const [saving, setSaving] = useState(false);
@@ -138,6 +139,9 @@ export function IgorIntake() {
         // best-effort - the feed also self-refreshes when empty.
       }
     }
+    // Sync the fresh onboardingCompleted flag BEFORE entering the dashboard -
+    // with the stale cached user the dashboard would bounce right back here.
+    await refreshUser();
     router.push('/dashboard');
   }
 

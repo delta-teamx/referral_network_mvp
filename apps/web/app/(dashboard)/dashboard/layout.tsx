@@ -122,11 +122,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (status === 'unauthenticated') router.push('/login?next=/dashboard');
   }, [status, router]);
 
+  // Onboarding gate. The persisted user object can be STALE (someone who just
+  // finished step 4 still carries onboardingCompleted=false in this tab), so
+  // never bounce on the cached flag alone - re-sync from the server first and
+  // only redirect if onboarding is genuinely incomplete.
+  const refreshUser = useAuthStore((s) => s.refreshUser);
   useEffect(() => {
-    if (user && !user.onboardingCompleted && user.role !== 'ADMIN') {
-      router.push('/onboarding');
-    }
-  }, [user, router]);
+    if (!user || user.onboardingCompleted || user.role === 'ADMIN') return;
+    let cancelled = false;
+    void refreshUser().then(() => {
+      if (cancelled) return;
+      const fresh = useAuthStore.getState().user;
+      if (fresh && !fresh.onboardingCompleted && fresh.role !== 'ADMIN') {
+        router.push('/onboarding');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.onboardingCompleted, user?.role, refreshUser, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (status === 'loading' || status === 'idle') {
     return (

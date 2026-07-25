@@ -16,6 +16,9 @@ export interface AuthState {
   login: (input: LoginInput) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
+  /** Force-sync the user object from the server (fresh onboardingCompleted,
+   *  tier, role) even while the current token is still valid. */
+  refreshUser: () => Promise<void>;
   clearError: () => void;
   setAuth: (user: AuthenticatedUserDto, accessToken: string, expiresAt: number) => void;
 }
@@ -133,6 +136,15 @@ export const useAuthStore = create<AuthState>()(
       } else {
         set({ status: 'unauthenticated' });
       }
+    }
+  },
+
+  async refreshUser() {
+    try {
+      const data = await api.post<AuthSuccessDto>('/api/v1/auth/refresh');
+      applyAuthSuccess(data, set);
+    } catch {
+      // Freshness sync only - never log out or block on failure.
     }
   },
 
