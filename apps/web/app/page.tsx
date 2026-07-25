@@ -222,8 +222,8 @@ export default function HomePage() {
             Our mission
           </p>
           <p className="text-2xl font-semibold leading-snug text-gray-900 md:text-3xl">
-            &ldquo;Referral Nova exists to help businesses thrive by creating trusted
-            relationships that lead to measurable growth.&rdquo;
+            Referral Nova exists to help businesses thrive by creating trusted
+            relationships that lead to measurable growth.
           </p>
           <p className="mt-5 text-base font-medium text-primary">
             Helping businesses thrive - one trusted referral at a time.
