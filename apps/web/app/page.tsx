@@ -117,7 +117,7 @@ export default function HomePage() {
               <motion.div variants={fadeInUp} className="mt-10 flex flex-wrap gap-6 text-sm text-gray-400">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-primary" />
-                  First 200 members: Premium free
+                  First 200 members: lifetime Premium, free forever
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-primary" />
@@ -747,7 +747,7 @@ export default function HomePage() {
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-gray-300">
             Stop waiting for referrals to happen. Build the engine that makes them happen - and
-            claim one of the first 200 founding spots with every Premium feature free.
+            claim one of the first 200 founding spots and keep Premium free for life.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
