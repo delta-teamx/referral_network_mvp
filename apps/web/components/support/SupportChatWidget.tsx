@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import { Headset, Paperclip, Send, X } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
@@ -61,7 +62,22 @@ function Linkified({ text, light }: { text: string; light: boolean }) {
 export function SupportChatWidget() {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // Friendly one-time teaser next to the bubble. Dismissing it (click or the
+  // small x) hides ONLY the message - the Support button always stays. The
+  // dismissal is remembered per surface so it doesn't nag on every page.
+  const inDashboard = pathname.startsWith('/dashboard');
+  const teaserKey = `rn-support-teaser:${inDashboard ? 'app' : 'site'}`;
+  const [showTeaser, setShowTeaser] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setShowTeaser(window.localStorage.getItem(teaserKey) !== 'dismissed');
+  }, [teaserKey]);
+  function dismissTeaser() {
+    setShowTeaser(false);
+    if (typeof window !== 'undefined') window.localStorage.setItem(teaserKey, 'dismissed');
+  }
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
   const [draft, setDraft] = useState('');
@@ -403,16 +419,68 @@ export function SupportChatWidget() {
           )}
         </div>
       ) : (
-        <button
-          onClick={() => setOpen(true)}
-          className="relative flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-xl transition hover:scale-105 hover:shadow-2xl"
-          aria-label="Open support chat"
-        >
-          <Headset size={18} /> Support
-          {hasUnseen && (
-            <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-danger" />
-          )}
-        </button>
+        <div className="flex flex-col items-end gap-2.5">
+          {showTeaser &&
+            (inDashboard ? (
+              /* Dashboard: support theme */
+              <div className="relative w-64 rounded-2xl rounded-br-sm border border-primary/20 bg-white p-3.5 pr-8 shadow-xl">
+                <button
+                  onClick={dismissTeaser}
+                  aria-label="Dismiss message"
+                  className="absolute right-2 top-2 rounded-full p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+                <button
+                  onClick={() => {
+                    dismissTeaser();
+                    setOpen(true);
+                  }}
+                  className="text-left"
+                >
+                  <p className="text-xs font-bold text-primary">A message from the support team 💬</p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                    We&rsquo;re here to help! Any confusion or questions about your dashboard -
+                    just ask us right here.
+                  </p>
+                </button>
+              </div>
+            ) : (
+              /* Website: sale theme */
+              <div className="relative w-64 rounded-2xl rounded-br-sm bg-gradient-to-br from-primary to-blue-600 p-3.5 pr-8 text-white shadow-xl">
+                <button
+                  onClick={dismissTeaser}
+                  aria-label="Dismiss message"
+                  className="absolute right-2 top-2 rounded-full p-0.5 text-white/70 transition hover:bg-white/20 hover:text-white"
+                >
+                  <X size={13} />
+                </button>
+                <button
+                  onClick={() => {
+                    dismissTeaser();
+                    setOpen(true);
+                  }}
+                  className="text-left"
+                >
+                  <p className="text-xs font-bold">👋 Thinking about joining?</p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/90">
+                    Our team is here to help you grab your founding spot - any questions, ask us
+                    right here!
+                  </p>
+                </button>
+              </div>
+            ))}
+          <button
+            onClick={() => setOpen(true)}
+            className="relative flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-xl transition hover:scale-105 hover:shadow-2xl"
+            aria-label="Open support chat"
+          >
+            <Headset size={18} /> Support
+            {hasUnseen && (
+              <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-danger" />
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
