@@ -78,6 +78,7 @@ export interface DomainEventMap {
 
   // Admin moderation
   'admin.user_role_changed': { adminId: string; userId: string; role: string };
+  'admin.user_tier_changed': { adminId: string; userId: string; tier: string };
   'admin.user_suspended': { adminId: string; userId: string; reason: string };
   'admin.listing_approved': { adminId: string; listingId: string };
   'admin.listing_rejected': { adminId: string; listingId: string; reason: string };

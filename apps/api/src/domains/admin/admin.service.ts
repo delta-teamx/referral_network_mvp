@@ -92,6 +92,17 @@ export async function setUserRole(
   return updated;
 }
 
+/** Comp or change a member's plan (e.g. founding-200 lifetime Premium grants). */
+export async function setUserTier(adminId: string, userId: string, tier: 'FREE' | 'PRO' | 'PREMIUM') {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { subscriptionTier: tier },
+    select: { id: true, email: true, subscriptionTier: true },
+  });
+  await eventBus.publish('admin.user_tier_changed', { adminId, userId, tier });
+  return updated;
+}
+
 export async function suspendUser(adminId: string, userId: string, reason: string) {
   const existing = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },

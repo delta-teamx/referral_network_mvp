@@ -76,6 +76,19 @@ export default function AdminUsersPage() {
     }
   }
 
+  /** Comp or change a member's plan (founding-200 grants, refunds, etc.). */
+  async function setTier(u: AdminUser, tier: string) {
+    if (!accessToken || tier === u.subscriptionTier) return;
+    if (!window.confirm(`Change ${u.email}'s plan to ${tier}?`)) return;
+    try {
+      await api.post(`/api/v1/admin/users/${u.id}/tier`, { tier }, { accessToken: accessToken ?? undefined });
+      setError(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Plan change failed');
+    }
+  }
+
   async function suspend(id: string) {
     if (!accessToken) return;
     const reason = window.prompt('Suspension reason? (required)');
@@ -294,17 +307,24 @@ export default function AdminUsersPage() {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    <select
+                      value={u.subscriptionTier}
+                      onChange={(e) => void setTier(u, e.target.value)}
+                      title="Change this member's plan"
+                      className={`rounded-md border border-gray-700 px-2 py-1 text-xs font-semibold ${
                         u.subscriptionTier === 'PREMIUM'
                           ? 'bg-amber-500/20 text-amber-300'
                           : u.subscriptionTier === 'PRO'
                             ? 'bg-blue-500/20 text-blue-300'
-                            : 'bg-gray-700 text-gray-300'
+                            : 'bg-gray-800 text-gray-300'
                       }`}
                     >
-                      {u.subscriptionTier}
-                    </span>
+                      {['FREE', 'PRO', 'PREMIUM'].map((t) => (
+                        <option key={t} value={t} className="bg-gray-800 text-gray-100">
+                          {t}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-gray-300">{u._count.listings}</td>
                   <td className="px-4 py-3 text-gray-400">

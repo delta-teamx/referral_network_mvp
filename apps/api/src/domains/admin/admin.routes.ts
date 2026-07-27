@@ -18,6 +18,7 @@ import {
   listPendingListings,
   rejectListing,
   setUserRole,
+  setUserTier,
   hardDeleteUser,
   suspendUser,
 } from './admin.service.js';
@@ -66,6 +67,18 @@ adminRouter.post(
       throw AppError.badRequest('You cannot change your own role.');
     }
     const data = await setUserRole(req.user.id, req.params.id ?? '', req.body.role);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const tierSchema = z.object({ tier: z.enum(['FREE', 'PRO', 'PREMIUM']) });
+adminRouter.post(
+  '/users/:id/tier',
+  validate(tierSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await setUserTier(req.user.id, req.params.id ?? '', req.body.tier);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
