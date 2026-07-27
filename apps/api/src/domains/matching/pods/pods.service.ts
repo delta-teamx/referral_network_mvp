@@ -27,7 +27,23 @@ interface MemberProfile {
  * Core matchmaking: scan active members, form pods of 15-20 people with
  * complementary ICPs, create Zoom meetings, send invitations.
  */
+// LAUNCH GATE: no Zoom pods until the community is big enough for them to be
+// worth joining. Pods (scheduler AND the admin manual trigger) stay paused
+// until the platform has this many active members, then resume automatically.
+const MIN_MEMBERS_FOR_PODS = 30;
+
 export async function runDailyMatchmaking(): Promise<{ podsCreated: number; membersMatched: number }> {
+  const activeMembers = await prisma.user.count({
+    where: { deletedAt: null, role: { not: 'ADMIN' } },
+  });
+  if (activeMembers < MIN_MEMBERS_FOR_PODS) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[matchmaking] pods paused: ${activeMembers}/${MIN_MEMBERS_FOR_PODS} active members - resumes automatically at ${MIN_MEMBERS_FOR_PODS}`,
+    );
+    return { podsCreated: 0, membersMatched: 0 };
+  }
+
   // eslint-disable-next-line no-console
   console.log('[matchmaking] starting daily pod formation...');
 
