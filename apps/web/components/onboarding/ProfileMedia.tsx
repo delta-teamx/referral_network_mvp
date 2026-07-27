@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, CircleStop, Image as ImageIcon, RefreshCw, Upload, Video } from 'lucide-react';
+import { Camera, CircleStop, Image as ImageIcon, RefreshCw, TrendingUp, Upload, Video } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
 
 interface PresignResult {
@@ -188,7 +188,13 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
       <div>
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
           <ImageIcon size={16} className="text-primary" /> Profile photo
+          <span className="rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-danger">
+            Required
+          </span>
         </div>
+        <p className="mb-3 text-xs text-gray-500">
+          Members connect with faces they can see. A real photo of you is required to join the network.
+        </p>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
             {photoUrl ? (
@@ -224,6 +230,16 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
           <Video size={16} className="text-primary" /> 60-second intro video
         </div>
+
+        {!videoUrl && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/85 px-4 py-3 text-white shadow-sm">
+            <TrendingUp size={18} className="mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-semibold">
+              Recording a quick intro video maximizes your chances of receiving leads and
+              introductions. Members send far more referrals to people they have seen and heard.
+            </p>
+          </div>
+        )}
 
         {videoUrl && !recording ? (
           <div className="space-y-2">

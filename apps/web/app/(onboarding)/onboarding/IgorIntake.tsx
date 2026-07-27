@@ -93,6 +93,26 @@ export function IgorIntake() {
     if (status === 'unauthenticated') router.push('/login?next=/onboarding');
   }, [status, router]);
 
+  // Prefill media already on file (e.g. a member re-running onboarding after a
+  // failed save) so the required photo doesn't have to be uploaded twice.
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    void api
+      .get<{ photoUrl?: string | null; videoUrl?: string | null } | null>('/api/v1/profiles/me', {
+        accessToken,
+      })
+      .then((p) => {
+        if (cancelled || !p) return;
+        if (p.photoUrl) setPhotoUrl(p.photoUrl);
+        if (p.videoUrl) setVideoUrl(p.videoUrl);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
   async function saveProfile() {
     if (!accessToken) return;
     setSaving(true);
@@ -410,7 +430,7 @@ export function IgorIntake() {
           <StepCard
             icon={<Video size={20} />}
             title="Add your photo & intro video"
-            subtitle="Profiles with a photo and a short video get far more accepted intros. You can record right now, upload files, or skip and add them later from your dashboard."
+            subtitle="Your profile photo is required - it's how members recognize and trust you. The intro video is optional but strongly recommended. You can update both anytime from your dashboard."
           >
             <ProfileMedia
               accessToken={accessToken ?? undefined}
@@ -448,15 +468,13 @@ export function IgorIntake() {
               ← Back
             </button>
             {step === 'media' ? (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStep('done')}
-                  className="text-sm font-medium text-gray-500 hover:text-primary"
-                >
-                  Skip for now
-                </button>
-                <Button onClick={() => setStep('done')}>Finish →</Button>
+              <div className="flex flex-col items-end gap-1.5">
+                <Button onClick={() => setStep('done')} disabled={!photoUrl}>
+                  Finish →
+                </Button>
+                {!photoUrl && (
+                  <p className="text-xs text-gray-500">Upload your profile photo to finish.</p>
+                )}
               </div>
             ) : (
               <Button
