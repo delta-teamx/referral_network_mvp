@@ -97,34 +97,48 @@ export function IgorIntake() {
     if (!accessToken) return;
     setSaving(true);
     setError(null);
+    // Clamp everything to what the API accepts BEFORE sending - a member's
+    // profile save must never bounce because a paragraph ran long or they
+    // picked a lot of industries (the server clamps too; this keeps what
+    // they see consistent with what gets stored).
+    const splitList = (raw: string, sep: string | RegExp, itemMax: number, listMax: number) =>
+      raw
+        .split(sep)
+        .map((v) => v.trim().slice(0, itemMax))
+        .filter(Boolean)
+        .slice(0, listMax);
+    const yearsNum = years ? Math.round(Number(years)) : undefined;
     try {
       await api.post(
         '/api/v1/profiles',
         {
-          businessName,
+          businessName: businessName.trim().slice(0, 150),
           industry,
-          headline: headline || undefined,
-          bio: bio || undefined,
-          keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
-          servicesOffered: services.split(',').map((s) => s.trim()).filter(Boolean),
-          yearsInBusiness: years ? Number(years) : undefined,
+          headline: headline.trim().slice(0, 200) || undefined,
+          bio: bio.trim().slice(0, 2000) || undefined,
+          keywords: splitList(keywords, ',', 50, 20),
+          servicesOffered: splitList(services, ',', 100, 15),
+          yearsInBusiness:
+            yearsNum !== undefined && Number.isFinite(yearsNum)
+              ? Math.min(150, Math.max(0, yearsNum))
+              : undefined,
           serviceArea,
-          icpIndustries,
-          icpRoles: icpRoles.split(',').map((r) => r.trim()).filter(Boolean),
-          icpProblems: icpProblems.split('\n').map((p) => p.trim()).filter(Boolean),
-          icpDealSize: icpDealSize || undefined,
-          canReferIndustries,
-          canReferTypes: canReferTypes.split('\n').map((t) => t.trim()).filter(Boolean),
+          icpIndustries: icpIndustries.slice(0, 40),
+          icpRoles: splitList(icpRoles, ',', 60, 15),
+          icpProblems: splitList(icpProblems, '\n', 300, 15),
+          icpDealSize: icpDealSize.trim().slice(0, 40) || undefined,
+          canReferIndustries: canReferIndustries.slice(0, 40),
+          canReferTypes: splitList(canReferTypes, '\n', 300, 15),
           openToBarter,
-          city: city || undefined,
-          state: state || undefined,
-          zipCode: zipCode || undefined,
+          city: city.trim().slice(0, 80) || undefined,
+          state: state.trim().slice(0, 2) || undefined,
+          zipCode: zipCode.trim().slice(0, 10) || undefined,
         },
         { accessToken: accessToken ?? undefined },
       );
       setStep('media');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Save failed');
+      setError(err instanceof ApiError ? err.message : 'Save failed. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -200,6 +214,7 @@ export function IgorIntake() {
               label="Business name"
               name="businessName"
               required
+              maxLength={150}
               placeholder="Johnson Realty Group"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
@@ -224,6 +239,7 @@ export function IgorIntake() {
             <FormField
               label="Headline"
               name="headline"
+              maxLength={200}
               placeholder="5th-generation realtor serving the St. Louis metro"
               hint="One sentence: what you do + where"
               value={headline}
@@ -233,6 +249,7 @@ export function IgorIntake() {
               <label className="mb-1 block text-sm font-medium text-gray-900">About your business</label>
               <textarea
                 rows={4}
+                maxLength={2000}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
@@ -284,9 +301,9 @@ export function IgorIntake() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <FormField label="City" name="city" placeholder="Albany" value={city} onChange={(e) => setCity(e.target.value)} />
+              <FormField label="City" name="city" placeholder="Albany" maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} />
               <FormField label="State" name="state" placeholder="NY" maxLength={2} value={state} onChange={(e) => setState(e.target.value.toUpperCase())} />
-              <FormField label="ZIP" name="zipCode" placeholder="12207" value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
+              <FormField label="ZIP" name="zipCode" placeholder="12207" maxLength={10} value={zipCode} onChange={(e) => setZipCode(e.target.value)} />
             </div>
             <FormField
               label="Years of experience"
@@ -324,6 +341,7 @@ export function IgorIntake() {
               <label className="mb-1 block text-sm font-medium text-gray-900">Problems they solve for YOUR clients</label>
               <textarea
                 rows={3}
+                maxLength={2000}
                 value={icpProblems}
                 onChange={(e) => setIcpProblems(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
@@ -333,6 +351,7 @@ export function IgorIntake() {
             <FormField
               label="Typical deal size"
               name="icpDealSize"
+              maxLength={40}
               placeholder="$5K-$25K"
               hint="Optional - helps rank the strongest matches."
               value={icpDealSize}
@@ -358,6 +377,7 @@ export function IgorIntake() {
               <label className="mb-1 block text-sm font-medium text-gray-900">What clients do you usually refer?</label>
               <textarea
                 rows={3}
+                maxLength={2000}
                 value={canReferTypes}
                 onChange={(e) => setCanReferTypes(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"

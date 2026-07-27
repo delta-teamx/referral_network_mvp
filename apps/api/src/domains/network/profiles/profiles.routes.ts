@@ -48,30 +48,49 @@ profilesRouter.get(
 
 profilesRouter.use(authenticate);
 
+// Profile data is matching input, not a legal form: a save must never fail
+// because a member typed a long paragraph or picked "too many" industries.
+// Real onboarding users were dead-ending on step 3 with a bare "Validation
+// failed" (e.g. >10 industries selected, or a 200+ char line in a textarea),
+// so everything here CLAMPS - strings truncate, lists slice - instead of
+// rejecting. Only genuinely required fields (business name, industry) and
+// structural types can still fail.
+const clip = (max: number) => z.string().trim().transform((s) => s.slice(0, max));
+const clipList = (itemMax: number, listMax: number) =>
+  z
+    .array(z.string().trim().transform((s) => s.slice(0, itemMax)))
+    .transform((list) => list.filter(Boolean).slice(0, listMax));
+const roundedNumber = (min: number, max: number) =>
+  z
+    .number()
+    .finite()
+    .transform((n) => Math.min(max, Math.max(min, Math.round(n))));
+
 const upsertSchema = z.object({
-  businessName: z.string().trim().min(1).max(150),
-  industry: z.string().trim().min(1).max(80),
-  headline: z.string().trim().max(200).optional(),
-  bio: z.string().trim().max(2000).optional(),
+  businessName: z.string().trim().min(1, 'Business name is required').transform((s) => s.slice(0, 150)),
+  industry: z.string().trim().min(1, 'Industry is required').transform((s) => s.slice(0, 80)),
+  headline: clip(200).optional(),
+  bio: clip(2000).optional(),
   photoUrl: z.string().url().optional(),
-  keywords: z.array(z.string().trim().max(50)).max(20).optional(),
-  servicesOffered: z.array(z.string().trim().max(100)).max(15).optional(),
-  yearsInBusiness: z.number().int().min(0).max(150).optional(),
-  icpIndustries: z.array(z.string().trim().max(80)).max(10).optional(),
-  icpRoles: z.array(z.string().trim().max(60)).max(10).optional(),
-  icpProblems: z.array(z.string().trim().max(200)).max(10).optional(),
-  icpDealSize: z.string().trim().max(40).optional(),
-  canReferIndustries: z.array(z.string().trim().max(80)).max(10).optional(),
-  canReferTypes: z.array(z.string().trim().max(200)).max(10).optional(),
-  city: z.string().trim().max(80).optional(),
-  state: z.string().trim().max(2).optional(),
-  zipCode: z.string().trim().max(10).optional(),
+  keywords: clipList(50, 20).optional(),
+  servicesOffered: clipList(100, 15).optional(),
+  yearsInBusiness: roundedNumber(0, 150).optional(),
+  // The industry pickers offer ~31 options and members may select them all.
+  icpIndustries: clipList(80, 40).optional(),
+  icpRoles: clipList(60, 15).optional(),
+  icpProblems: clipList(300, 15).optional(),
+  icpDealSize: clip(40).optional(),
+  canReferIndustries: clipList(80, 40).optional(),
+  canReferTypes: clipList(300, 15).optional(),
+  city: clip(80).optional(),
+  state: clip(2).optional(),
+  zipCode: clip(10).optional(),
   serviceArea: z.enum(['local', 'remote', 'international']).optional(),
-  serviceRadius: z.number().int().min(1).max(500).optional(),
+  serviceRadius: roundedNumber(1, 500).optional(),
   openToBarter: z.boolean().optional(),
-  barterOfferings: z.array(z.string().trim().max(100)).max(10).optional(),
-  barterWants: z.array(z.string().trim().max(100)).max(10).optional(),
-  barterNotes: z.string().trim().max(500).optional(),
+  barterOfferings: clipList(100, 10).optional(),
+  barterWants: clipList(100, 10).optional(),
+  barterNotes: clip(500).optional(),
 });
 
 profilesRouter.post(

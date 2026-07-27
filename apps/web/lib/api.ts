@@ -23,6 +23,14 @@ export const isDemoMode = (): boolean => !DEFAULT_API_BASE;
 /** The resolved API origin, for callers that need to build raw URLs (uploads, file links). */
 export const apiBaseUrl = (): string => apiBase();
 
+/** "icpIndustries" reads as "icp industries" in an error message. */
+function humanizeField(field: string): string {
+  return field
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[._]/g, ' ')
+    .toLowerCase();
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -98,11 +106,18 @@ export async function apiRequest<T>(
     }
 
     if (!res.ok || envelope.success === false) {
-      throw new ApiError(
-        envelope.error ?? `Request failed (${res.status})`,
-        res.status,
-        envelope.details,
-      );
+      let message = envelope.error ?? `Request failed (${res.status})`;
+      // A bare "Validation failed" is useless to the person reading it - the
+      // API attaches per-field details, so fold them into the message
+      // (real onboarding users were stuck with no clue which field to fix).
+      const details = envelope.details;
+      if (/^validation failed$/i.test(message) && Array.isArray(details) && details.length > 0) {
+        const parts = details
+          .map((d) => (d.field ? `${humanizeField(d.field)}: ${d.message}` : d.message))
+          .filter(Boolean);
+        if (parts.length > 0) message = parts.join('. ');
+      }
+      throw new ApiError(message, res.status, envelope.details);
     }
     return envelope.data as T;
   };
