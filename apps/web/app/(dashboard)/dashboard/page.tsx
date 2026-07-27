@@ -6,8 +6,11 @@ import { motion } from 'framer-motion';
 import {
   Activity,
   ArrowUpRight,
+  Check,
+  Copy,
   Eye,
   Inbox,
+  Send,
   Star,
   TrendingUp,
   UserCheck,
@@ -78,6 +81,58 @@ export default function DashboardPage() {
       </div>
 
       {tab === 'ai' ? <AiFeed /> : <MetricsPanel />}
+
+      <InviteCard />
+    </div>
+  );
+}
+
+/** Compact invite-and-earn banner - the full program lives on the Leaderboard tab. */
+function InviteCard() {
+  const user = useAuthStore((s) => s.user);
+  const [copied, setCopied] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState('');
+
+  useEffect(() => {
+    if (user?.id) setInviteUrl(`${window.location.origin}/signup?ref=${user.id}`);
+  }, [user?.id]);
+
+  if (!inviteUrl) return null;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable - link is visible to select manually */
+    }
+  }
+
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-5 py-4 text-white shadow-sm">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-sm font-bold">
+          <Send size={14} /> Invite businesses you trust - earn rewards
+        </p>
+        <p className="mt-0.5 truncate text-xs text-white/80">{inviteUrl}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary transition hover:bg-white/90"
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? 'Copied!' : 'Copy invite link'}
+        </button>
+        <Link
+          href="/dashboard/leaderboard"
+          className="rounded-lg border border-white/40 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
+        >
+          Leaderboard →
+        </Link>
+      </div>
     </div>
   );
 }

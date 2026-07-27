@@ -1,8 +1,31 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
+import { env } from '../../../config/env.js';
 import { eventBus } from '../../core/events/index.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
 
 const REWARD_MONTHS_PER_PAID_REFERRAL = 1;
+
+// Invite-and-earn program. Points reward the behaviors that make the network
+// valuable; an invite only counts once the invitee completes onboarding (the
+// fraud guard: a signed-up-but-empty account earns nothing).
+export const LEADERBOARD_POINTS = {
+  inviteOnboarded: 50,
+  dealWon: 30,
+  contractSigned: 20,
+  referralSent: 10,
+  callHeld: 5,
+} as const;
+
+/** The first N members are founding members (lifetime Premium promo). */
+const FOUNDING_MEMBER_LIMIT = 200;
+
+/** Post-200 reward ladder: 1 free Premium month per 2 successful invites... */
+const INVITES_PER_FREE_MONTH = 2;
+/** ...a bonus month at 10 invites... */
+const AMBASSADOR_INVITES = 10;
+/** ...and lifetime Premium at 25. */
+const LIFETIME_PREMIUM_INVITES = 25;
 
 /**
  * Track a referral from a member to a non-member.
@@ -60,13 +83,132 @@ export async function linkReferralOnSignup(userId: string, email: string): Promi
 }
 
 /**
- * When a referred user completes onboarding, update status.
+ * A signup that arrived through someone's personal invite link (?ref=userId).
+ * Attributes it even when the referrer never pre-tracked the email.
+ */
+export async function attributeSignupToReferrer(
+  inviteeUserId: string,
+  inviteeEmail: string,
+  refUserId: string,
+): Promise<void> {
+  if (!refUserId || refUserId === inviteeUserId) return;
+  const referrer = await prisma.user.findFirst({
+    where: { id: refUserId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!referrer) return;
+
+  const email = inviteeEmail.toLowerCase().trim();
+  const existing = await prisma.referralTracking.findUnique({
+    where: { referrerUserId_inviteeEmail: { referrerUserId: refUserId, inviteeEmail: email } },
+  });
+  if (!existing) {
+    await prisma.referralTracking.create({
+      data: {
+        referrerUserId: refUserId,
+        inviteeEmail: email,
+        source: 'link',
+        status: 'signed_up',
+        inviteeUserId,
+        inviteeJoinedAt: new Date(),
+      },
+    });
+  } else if (!existing.inviteeUserId) {
+    await prisma.referralTracking.update({
+      where: { id: existing.id },
+      data: { inviteeUserId, status: 'signed_up', inviteeJoinedAt: new Date() },
+    });
+  }
+
+  await prisma.user.update({
+    where: { id: inviteeUserId },
+    data: { referredByUserId: refUserId },
+  });
+
+  await eventBus.publish('referral_tracking.signup', {
+    referrerUserId: refUserId,
+    inviteeUserId,
+  });
+}
+
+/**
+ * When a referred user completes onboarding, the invite starts counting:
+ * status flips to onboarded, the referrer gets an in-app notification, and
+ * the reward ladder is applied.
  */
 export async function markReferralOnboarded(userId: string): Promise<void> {
-  await prisma.referralTracking.updateMany({
+  const trackings = await prisma.referralTracking.findMany({
     where: { inviteeUserId: userId, status: 'signed_up' },
+    include: { invitee: { select: { firstName: true, lastName: true } } },
+  });
+  if (trackings.length === 0) return;
+
+  await prisma.referralTracking.updateMany({
+    where: { id: { in: trackings.map((t) => t.id) } },
     data: { status: 'onboarded' },
   });
+
+  for (const t of trackings) {
+    const inviteeName = t.invitee ? `${t.invitee.firstName} ${t.invitee.lastName}` : 'Your invite';
+    await applyInviteRewards(t.referrerUserId, inviteeName);
+  }
+}
+
+/**
+ * Reward ladder, applied each time one of a member's invites completes
+ * onboarding. Founding members already hold lifetime Premium, so their track
+ * is status badges (computed from counts in the leaderboard). Members after
+ * the founding 200 earn: 1 free Premium month per 2 successful invites, a
+ * bonus month at 10, lifetime Premium at 25.
+ */
+async function applyInviteRewards(referrerUserId: string, inviteeName: string): Promise<void> {
+  try {
+    const count = await prisma.referralTracking.count({
+      where: { referrerUserId, status: { in: ['onboarded', 'paid'] } },
+    });
+
+    const founding = await isFoundingMember(referrerUserId);
+    if (!founding) {
+      let bonusMonths = 0;
+      if (count % INVITES_PER_FREE_MONTH === 0) bonusMonths += 1;
+      if (count === AMBASSADOR_INVITES) bonusMonths += 1;
+      if (bonusMonths > 0) {
+        await prisma.user.update({
+          where: { id: referrerUserId },
+          data: { referralRewardMonths: { increment: bonusMonths } },
+        });
+      }
+      if (count >= LIFETIME_PREMIUM_INVITES) {
+        await prisma.user.update({
+          where: { id: referrerUserId },
+          data: { subscriptionTier: 'PREMIUM' },
+        });
+      }
+    }
+
+    await createNotification({
+      userId: referrerUserId,
+      type: 'referral',
+      title: 'Your invite joined Referral Nova',
+      body: `${inviteeName} completed onboarding through your invite link. That's ${count} successful ${
+        count === 1 ? 'invite' : 'invites'
+      } (+${LEADERBOARD_POINTS.inviteOnboarded} leaderboard points).`,
+      data: { kind: 'invite_onboarded', count },
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[referral-tracking] applyInviteRewards failed:', err);
+  }
+}
+
+/** Founding member = among the first 200 (non-admin) accounts ever created. */
+async function isFoundingMember(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } });
+  if (!user) return false;
+  const earlier = await prisma.user.count({
+    where: { deletedAt: null, role: { not: 'ADMIN' }, createdAt: { lt: user.createdAt } },
+  });
+  return earlier < FOUNDING_MEMBER_LIMIT;
 }
 
 /**
@@ -157,6 +299,128 @@ export async function getReferralStats(userId: string) {
     earnedMonths: totalRewardMonths?.referralRewardMonths ?? 0,
     recentReferrals,
   };
+}
+
+/**
+ * Member-facing community leaderboard: every active member ranked by activity
+ * points (successful invites, deals won, contracts signed, referrals sent,
+ * calls held), plus the viewer's own stats, badges and invite link.
+ */
+export async function getCommunityLeaderboard(viewerId: string) {
+  const users = await prisma.user.findMany({
+    where: { deletedAt: null, role: { not: 'ADMIN' } },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      memberProfile: { select: { businessName: true, industry: true, photoUrl: true } },
+    },
+  });
+
+  const now = new Date();
+  const [invites, deals, contracts, referrals, hostCalls, guestCalls] = await Promise.all([
+    prisma.referralTracking.groupBy({
+      by: ['referrerUserId'],
+      where: { status: { in: ['onboarded', 'paid'] } },
+      _count: { _all: true },
+    }),
+    prisma.pipelineCard.groupBy({
+      by: ['ownerId'],
+      where: { stage: 'won' },
+      _count: { _all: true },
+    }),
+    prisma.contract.groupBy({
+      by: ['senderId'],
+      where: { status: 'signed' },
+      _count: { _all: true },
+    }),
+    prisma.referral.groupBy({ by: ['senderId'], _count: { _all: true } }),
+    prisma.bookingCall.groupBy({
+      by: ['hostId'],
+      where: { status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      _count: { _all: true },
+    }),
+    prisma.bookingCall.groupBy({
+      by: ['guestId'],
+      where: { status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const inviteMap = new Map(invites.map((r) => [r.referrerUserId, r._count._all]));
+  const dealMap = new Map(deals.map((r) => [r.ownerId, r._count._all]));
+  const contractMap = new Map(contracts.map((r) => [r.senderId, r._count._all]));
+  const referralMap = new Map(referrals.map((r) => [r.senderId, r._count._all]));
+  const hostCallMap = new Map(hostCalls.map((r) => [r.hostId, r._count._all]));
+  const guestCallMap = new Map(guestCalls.map((r) => [r.guestId, r._count._all]));
+
+  const rows = users.map((u, idx) => {
+    const invitesOnboarded = inviteMap.get(u.id) ?? 0;
+    const dealsWon = dealMap.get(u.id) ?? 0;
+    const contractsSigned = contractMap.get(u.id) ?? 0;
+    const referralsSent = referralMap.get(u.id) ?? 0;
+    const callsHeld = (hostCallMap.get(u.id) ?? 0) + (guestCallMap.get(u.id) ?? 0);
+    const points =
+      invitesOnboarded * LEADERBOARD_POINTS.inviteOnboarded +
+      dealsWon * LEADERBOARD_POINTS.dealWon +
+      contractsSigned * LEADERBOARD_POINTS.contractSigned +
+      referralsSent * LEADERBOARD_POINTS.referralSent +
+      callsHeld * LEADERBOARD_POINTS.callHeld;
+    const isFounding = idx < FOUNDING_MEMBER_LIMIT;
+    return {
+      userId: u.id,
+      name: `${u.firstName} ${u.lastName}`,
+      businessName: u.memberProfile?.businessName ?? null,
+      industry: u.memberProfile?.industry ?? null,
+      photoUrl: u.memberProfile?.photoUrl ?? null,
+      isFounding,
+      invitesOnboarded,
+      dealsWon,
+      contractsSigned,
+      referralsSent,
+      callsHeld,
+      points,
+      badges: badgesFor(invitesOnboarded, isFounding),
+    };
+  });
+
+  rows.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+  const ranked = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+
+  const me = ranked.find((r) => r.userId === viewerId) ?? null;
+  const [pendingInvites, viewer] = await Promise.all([
+    prisma.referralTracking.count({
+      where: { referrerUserId: viewerId, status: { in: ['invited', 'signed_up'] } },
+    }),
+    prisma.user.findUnique({ where: { id: viewerId }, select: { referralRewardMonths: true } }),
+  ]);
+  const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
+
+  return {
+    members: ranked.slice(0, 50),
+    totalMembers: ranked.length,
+    points: LEADERBOARD_POINTS,
+    me: me
+      ? {
+          ...me,
+          invitesPending: pendingInvites,
+          rewardMonths: viewer?.referralRewardMonths ?? 0,
+          inviteUrl: `${origin}/signup?ref=${viewerId}`,
+        }
+      : null,
+  };
+}
+
+/** Badge ladder driven by successful (onboarded) invites. */
+function badgesFor(invitesOnboarded: number, founding: boolean): string[] {
+  const badges: string[] = [];
+  if (founding) badges.push('Founding member');
+  if (invitesOnboarded >= 1) badges.push('Connector');
+  if (invitesOnboarded >= 3) badges.push('Priority matching');
+  if (invitesOnboarded >= 5) badges.push('Ambassador');
+  if (invitesOnboarded >= 10 && founding) badges.push('Founding Ambassador');
+  return badges;
 }
 
 /**

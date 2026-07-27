@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { signupSchema } from '@refnet/shared';
 import type { SignupInput } from '@refnet/shared';
@@ -25,6 +25,23 @@ export default function SignupPage() {
   const status = useAuthStore((s) => s.status);
   const globalError = useAuthStore((s) => s.error);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [inviteRef, setInviteRef] = useState<string | null>(null);
+
+  // Invite-link attribution: /signup?ref=<memberId>. Remember it locally so
+  // the credit survives navigating around before actually signing up.
+  useEffect(() => {
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get('ref');
+      if (fromUrl) {
+        localStorage.setItem('rn-invite-ref', fromUrl);
+        setInviteRef(fromUrl);
+      } else {
+        setInviteRef(localStorage.getItem('rn-invite-ref'));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +53,7 @@ export default function SignupPage() {
       firstName: String(form.get('firstName') ?? ''),
       lastName: String(form.get('lastName') ?? ''),
       role: String(form.get('role') ?? 'CONSUMER') as SignupInput['role'],
+      ref: inviteRef ?? undefined,
     };
     const parsed = signupSchema.safeParse(input);
     if (!parsed.success) {
@@ -52,6 +70,13 @@ export default function SignupPage() {
     } catch {
       // globalError is already set by the store
       return;
+    }
+    // Attribution is recorded server-side now - clear the stored ref so a
+    // second account on this browser isn't mis-credited to the same inviter.
+    try {
+      localStorage.removeItem('rn-invite-ref');
+    } catch {
+      /* ignore */
     }
     // Account is active immediately - send them straight into onboarding so
     // they can build their profile and start getting matched right away.

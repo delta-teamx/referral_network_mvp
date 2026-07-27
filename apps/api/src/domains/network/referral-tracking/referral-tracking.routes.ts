@@ -6,6 +6,7 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
+  getCommunityLeaderboard,
   getReferralStats,
   getTopReferrers,
   trackReferral,
@@ -42,6 +43,17 @@ referralTrackingRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const stats = await getReferralStats(req.user.id);
     const body: ApiResponse<typeof stats> = { success: true, data: stats };
+    res.json(body);
+  }),
+);
+
+// Member-facing community leaderboard (rankings, own stats, invite link).
+referralTrackingRouter.get(
+  '/community',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getCommunityLeaderboard(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );

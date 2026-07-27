@@ -40,7 +40,7 @@ const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; ta
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/members', label: 'Members', icon: Search },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy, tag: 'Upcoming' },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },

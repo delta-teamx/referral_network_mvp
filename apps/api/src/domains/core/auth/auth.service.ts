@@ -22,6 +22,7 @@ import { sendEmail } from '../notifications/email.service.js';
 import { env } from '../../../config/env.js';
 import { assertEmailIsCredible } from './email.credibility.js';
 import { resolveSignupTier } from '../../billing/founding.service.js';
+import { attributeSignupToReferrer } from '../../network/referral-tracking/referral-tracking.service.js';
 
 /**
  * Internal service return - carries the refresh token that the route
@@ -84,6 +85,11 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
       email: user.email,
       role: user.role,
     });
+    // Invite-link attribution (?ref=userId on the signup URL). The invite
+    // only earns rewards later, once this account completes onboarding.
+    if (input.ref) {
+      await attributeSignupToReferrer(user.id, user.email, input.ref);
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[signup] post-signup side effects failed (account still created)', err);

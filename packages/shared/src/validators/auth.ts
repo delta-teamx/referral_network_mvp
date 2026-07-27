@@ -28,6 +28,8 @@ export const signupSchema = z.object({
    * city-captain roles are only granted through admin action.
    */
   role: z.enum(['CONSUMER', 'BUSINESS_OWNER']).default('CONSUMER'),
+  /** Referrer user id from a personal invite link (/signup?ref=...). */
+  ref: z.string().trim().max(64).optional(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
