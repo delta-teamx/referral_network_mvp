@@ -67,6 +67,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
 
+  // The persisted user object can be days old (tokens last 7 days), so admin
+  // changes like a plan upgrade never showed until re-login. Re-sync the user
+  // from the server once per dashboard mount.
+  const refreshUserOnMount = useAuthStore((s) => s.refreshUser);
+  useEffect(() => {
+    if (accessToken) void refreshUserOnMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Opening a tab clears its red dot - the dot means "unseen", so seeing the
   // tab marks its notification types read (server + local + bell count).
   useEffect(() => {

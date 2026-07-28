@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Briefcase, Camera, Check, Edit3, Globe, Handshake, MapPin,
+  Briefcase, Camera, Check, Edit3, Globe, Handshake, Linkedin, MapPin,
   Save, Target, Video, X,
 } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
@@ -22,6 +22,7 @@ interface Profile {
   headline: string | null;
   bio: string | null;
   photoUrl: string | null;
+  linkedinUrl: string | null;
   keywords: string[];
   servicesOffered: string[];
   yearsInBusiness: number | null;
@@ -126,6 +127,8 @@ export default function SettingsPage() {
         businessName: String(form.get('businessName') ?? ''),
         industry: String(form.get('industry') ?? ''),
         headline: String(form.get('headline') ?? '') || undefined,
+        // '' clears the stored link server-side; undefined would leave it.
+        linkedinUrl: String(form.get('linkedinUrl') ?? '').trim(),
         bio: String(form.get('bio') ?? '') || undefined,
         keywords: String(form.get('keywords') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
         servicesOffered: String(form.get('servicesOffered') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
@@ -202,6 +205,16 @@ export default function SettingsPage() {
                 <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                   <MapPin size={12} /> {[profile.city, profile.state, profile.zipCode].filter(Boolean).join(', ')}
                 </p>
+              )}
+              {profile.linkedinUrl && (
+                <a
+                  href={profile.linkedinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                >
+                  <Linkedin size={12} /> LinkedIn profile
+                </a>
               )}
             </div>
           </div>
@@ -281,6 +294,13 @@ export default function SettingsPage() {
               <FormField label="Business name *" name="businessName" defaultValue={profile.businessName} required />
               <FormField label="Industry *" name="industry" defaultValue={profile.industry} required />
               <FormField label="Headline" name="headline" defaultValue={profile.headline ?? ''} />
+              <FormField
+                label="LinkedIn profile"
+                name="linkedinUrl"
+                placeholder="linkedin.com/in/yourname"
+                hint="Optional - shown on your public profile."
+                defaultValue={profile.linkedinUrl ?? ''}
+              />
               <div><label className="mb-1 block text-sm font-medium text-gray-900">Bio</label><textarea name="bio" defaultValue={profile.bio ?? ''} rows={4} maxLength={2000} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></div>
               <FormField label="Services (comma-separated)" name="servicesOffered" defaultValue={profile.servicesOffered.join(', ')} />
               <FormField label="Keywords (comma-separated)" name="keywords" defaultValue={profile.keywords.join(', ')} />

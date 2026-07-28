@@ -155,6 +155,7 @@ model MemberProfile {
   headline        String?
   bio             String?
   photoUrl        String?
+  linkedinUrl     String?
   keywords        String[]
   servicesOffered String[] // ["roof repair", "new construction", "inspections"]
   yearsInBusiness Int?

@@ -9,6 +9,7 @@ import {
   Calendar,
   Film,
   HandCoins,
+  Linkedin,
   Mail,
   MapPin,
   MessageSquare,
@@ -27,6 +28,7 @@ interface PublicProfile {
   headline: string | null;
   bio: string | null;
   photoUrl: string | null;
+  linkedinUrl: string | null;
   videoUrl: string | null;
   servicesOffered: string[];
   yearsInBusiness: number | null;
@@ -275,6 +277,16 @@ export function MemberProfileView({ id }: { id: string }) {
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin size={14} className="text-gray-400" /> {location}
                 </span>
+              )}
+              {profile.linkedinUrl && (
+                <a
+                  href={profile.linkedinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                >
+                  <Linkedin size={14} /> LinkedIn
+                </a>
               )}
               {profile.yearsInBusiness !== null && profile.yearsInBusiness > 0 && (
                 <span className="inline-flex items-center gap-1.5">

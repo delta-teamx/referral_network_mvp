@@ -315,6 +315,8 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestRating" INTEGER;`,
       // Verification-code step removed: activate any account still waiting.
       `UPDATE "User" SET "emailVerified" = true WHERE "emailVerified" = false;`,
+      // Members can link their LinkedIn profile.
+      `ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // STAGE MERGE: contract_signed and won are one stage now.

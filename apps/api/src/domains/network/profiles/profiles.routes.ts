@@ -74,6 +74,19 @@ const upsertSchema = z.object({
   headline: clip(200).optional(),
   bio: clip(2000).optional(),
   photoUrl: z.string().url().optional(),
+  // LinkedIn profile link. Forgiving: "linkedin.com/in/name" gets https://
+  // prefixed; empty string clears the field; anything else must be a
+  // linkedin.com URL.
+  linkedinUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .transform((v) => (v === '' || /^https?:\/\//i.test(v) ? v : `https://${v}`))
+    .refine(
+      (v) => v === '' || /^https?:\/\/([a-z0-9-]+\.)*linkedin\.com\/.+/i.test(v),
+      'Enter a valid LinkedIn profile link (e.g. linkedin.com/in/yourname)',
+    )
+    .optional(),
   keywords: clipList(50, 20).optional(),
   servicesOffered: clipList(100, 15).optional(),
   yearsInBusiness: roundedNumber(0, 150).optional(),

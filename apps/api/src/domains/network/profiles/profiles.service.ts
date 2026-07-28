@@ -9,6 +9,7 @@ export interface UpsertProfileInput {
   headline?: string;
   bio?: string;
   photoUrl?: string;
+  linkedinUrl?: string;
   keywords?: string[];
   servicesOffered?: string[];
   yearsInBusiness?: number;
@@ -34,7 +35,12 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     businessName: sanitizeText(input.businessName),
     industry: sanitizeText(input.industry),
     headline: input.headline ? sanitizeText(input.headline) || null : null,
-    photoUrl: input.photoUrl || null,
+    // Only touch the photo when the payload carries it - the onboarding and
+    // settings forms don't send photoUrl, and defaulting to null here was
+    // silently WIPING an already-uploaded photo on every profile save.
+    ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
+    // Same guard for LinkedIn: undefined = leave as-is, '' = clear.
+    ...(input.linkedinUrl !== undefined ? { linkedinUrl: input.linkedinUrl || null } : {}),
     bio: input.bio ? sanitizeText(input.bio) || null : null,
     keywords: sanitizeArray((input.keywords ?? []).map((k) => k.toLowerCase())),
     servicesOffered: sanitizeArray(input.servicesOffered ?? []),
@@ -145,7 +151,7 @@ export async function setVideoTranscript(userId: string, transcript: string) {
 }
 
 const profileSelect = {
-  id: true, userId: true, businessName: true, industry: true, headline: true, bio: true, photoUrl: true,
+  id: true, userId: true, businessName: true, industry: true, headline: true, bio: true, photoUrl: true, linkedinUrl: true,
   keywords: true, servicesOffered: true, yearsInBusiness: true, icpIndustries: true, icpRoles: true,
   icpProblems: true, icpDealSize: true, canReferIndustries: true, canReferTypes: true,
   videoUrl: true, videoDurationSec: true, videoTranscript: true, videoProcessed: true,
