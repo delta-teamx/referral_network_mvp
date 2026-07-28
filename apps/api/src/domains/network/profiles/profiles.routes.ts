@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -16,6 +16,8 @@ import {
   confirmVideoUpload,
   presignPhotoUpload,
   presignVideoUpload,
+  uploadProfilePhoto,
+  uploadProfileVideo,
 } from './video.service.js';
 
 export const profilesRouter: Router = Router();
@@ -110,6 +112,40 @@ profilesRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const profile = await getMemberProfile(req.user.id);
     const body: ApiResponse<typeof profile> = { success: true, data: profile };
+    res.json(body);
+  }),
+);
+
+// Server-side uploads: the browser sends the file bytes to OUR API and the
+// server puts them in S3 (region-healed). This replaced browser-to-S3
+// presigned PUTs, which failed for real users on bucket CORS + region
+// mismatch. The presign endpoints below stay only for older cached clients.
+profilesRouter.post(
+  '/photo/upload',
+  express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '9mb' }),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    if (!Buffer.isBuffer(req.body)) {
+      throw AppError.badRequest('Send the image file as the request body with its content type.');
+    }
+    const contentType = (req.headers['content-type'] ?? '').split(';')[0]?.trim() ?? '';
+    const result = await uploadProfilePhoto(req.user.id, contentType, req.body);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+profilesRouter.post(
+  '/video/upload',
+  express.raw({ type: 'video/*', limit: '101mb' }),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    if (!Buffer.isBuffer(req.body)) {
+      throw AppError.badRequest('Send the video file as the request body with its content type.');
+    }
+    const contentType = req.headers['content-type'] ?? '';
+    const result = await uploadProfileVideo(req.user.id, contentType, req.body);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );

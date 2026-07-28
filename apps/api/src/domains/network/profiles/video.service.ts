@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { assertExternalUrl } from '../../../utils/ssrf.js';
+import { putMediaObject } from '../messaging/messaging.service.js';
 
 /**
  * Video intro upload for member profiles.
@@ -205,6 +206,115 @@ export async function confirmPhotoUpload(
     data: { photoUrl: input.photoUrl },
   });
   return { ok: true, photoUrl: input.photoUrl };
+}
+
+// ---------------------------------------------------------------------------
+// Server-side uploads (the fix for real-user upload failures).
+//
+// The old flow presigned a browser-to-S3 PUT, which silently required (a) the
+// bucket's CORS to allow PUTs from the dashboard origin and (b) AWS_REGION to
+// match the bucket's actual region. Both were wrong in production, so photo
+// and video uploads failed for members. The browser now sends the file to OUR
+// API and the server puts it in S3 through the region-healed client - the
+// exact path chat/support attachments already use reliably. Files are served
+// back through the public download proxy, so no bucket CORS or public-access
+// configuration is needed at all.
+// ---------------------------------------------------------------------------
+
+/** Where the API is reachable publicly - used to build stored media URLs. */
+function apiPublicBase(): string {
+  const url = env.API_URL.replace(/\/+$/, '');
+  if (env.NODE_ENV === 'production' && url.includes('localhost')) {
+    return 'https://api.referralnova.com';
+  }
+  return url;
+}
+
+function mediaProxyUrl(key: string): string {
+  return `${apiPublicBase()}/api/v1/messages/attachments/file?key=${encodeURIComponent(key)}`;
+}
+
+export async function uploadProfilePhoto(
+  userId: string,
+  contentType: string,
+  data: Buffer,
+): Promise<{ photoUrl: string }> {
+  if (!ALLOWED_PHOTO_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported image format. Use JPEG, PNG, or WebP.');
+  }
+  if (data.length === 0) throw AppError.badRequest('The file arrived empty. Please try again.');
+  if (data.length > MAX_PHOTO_BYTES) {
+    throw AppError.badRequest(`Image too large. Max ${MAX_PHOTO_BYTES / (1024 * 1024)}MB.`);
+  }
+  const profile = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) throw AppError.notFound('Complete your profile first before uploading a photo.');
+
+  let photoUrl: string;
+  if (!isS3Configured()) {
+    photoUrl = `https://i.pravatar.cc/600?u=${encodeURIComponent(userId)}`;
+  } else {
+    const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1] ?? 'jpg';
+    const key = `headshots/${userId}/${crypto.randomUUID()}.${ext}`;
+    await putMediaObject(key, contentType, data);
+    photoUrl = mediaProxyUrl(key);
+  }
+
+  await prisma.memberProfile.update({ where: { userId }, data: { photoUrl } });
+  return { photoUrl };
+}
+
+export async function uploadProfileVideo(
+  userId: string,
+  contentType: string,
+  data: Buffer,
+): Promise<{ videoUrl: string }> {
+  // The recorder sends e.g. "video/webm;codecs=vp9,opus" - match on base type.
+  const baseType = contentType.split(';')[0]?.trim() ?? contentType;
+  if (!ALLOWED_VIDEO_TYPES.has(baseType)) {
+    throw AppError.badRequest('Unsupported video format. Use MP4, WebM, or QuickTime.');
+  }
+  if (data.length === 0) throw AppError.badRequest('The file arrived empty. Please try again.');
+  if (data.length > MAX_VIDEO_BYTES) {
+    throw AppError.badRequest(`Video too large. Max ${MAX_VIDEO_BYTES / (1024 * 1024)}MB.`);
+  }
+  const profile = await prisma.memberProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) throw AppError.notFound('Complete your profile first before uploading video.');
+
+  let videoUrl: string;
+  let videoKey: string;
+  if (!isS3Configured()) {
+    videoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+    videoKey = `videos/${userId}/demo`;
+  } else {
+    const ext = baseType === 'video/quicktime' ? 'mov' : baseType.split('/')[1] ?? 'mp4';
+    videoKey = `videos/${userId}/${crypto.randomUUID()}.${ext}`;
+    await putMediaObject(videoKey, baseType, data);
+    videoUrl = mediaProxyUrl(videoKey);
+  }
+
+  await prisma.memberProfile.update({
+    where: { userId },
+    data: {
+      videoUrl,
+      videoKey,
+      videoProcessed: false,
+      embeddingUpdatedAt: null,
+    },
+  });
+
+  // Transcription is best-effort and async - the upload response never waits.
+  void transcribeAsync(userId, videoUrl).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(`[video] transcription failed for ${userId}:`, err);
+  });
+
+  return { videoUrl };
 }
 
 async function transcribeAsync(userId: string, videoUrl: string): Promise<void> {

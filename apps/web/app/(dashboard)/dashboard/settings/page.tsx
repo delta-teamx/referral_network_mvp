@@ -8,7 +8,7 @@ import {
   Save, Target, Video, X,
 } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
-import { api, ApiError } from '../../../../lib/api';
+import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { FormField } from '../../../../components/ui/FormField';
 import { Button } from '../../../../components/ui/Button';
@@ -80,24 +80,19 @@ export default function SettingsPage() {
     setPhotoUploading(true);
     setError(null);
     try {
-      const presign = await api.post<{ uploadUrl: string; publicUrl: string; key: string; demo: boolean }>(
-        '/api/v1/profiles/photo/presign',
-        { contentType: file.type, sizeBytes: file.size },
-        { accessToken: accessToken ?? undefined },
-      );
-      if (!presign.demo && presign.uploadUrl.startsWith('http')) {
-        const put = await fetch(presign.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: file,
-        });
-        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-      }
-      await api.post('/api/v1/profiles/photo/confirm', { photoUrl: presign.publicUrl }, { accessToken: accessToken ?? undefined });
+      // Upload through our API (server-side storage put) - no browser-to-S3.
+      const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/photo/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type, Authorization: `Bearer ${accessToken}` },
+        body: file,
+        credentials: 'include',
+      });
+      const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
+      if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
       const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
       setProfile(p);
-    } catch {
-      setError('Photo upload failed.');
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Photo upload failed.');
     } finally {
       setPhotoUploading(false);
     }
@@ -222,12 +217,17 @@ export default function SettingsPage() {
                     if (!accessToken) return;
                     setVideoUploading(true);
                     try {
-                      const presign = await api.post<{ uploadUrl: string; publicUrl: string; key: string; demo: boolean }>('/api/v1/profiles/video/presign', { contentType: 'video/webm', sizeBytes: blob.size }, { accessToken: accessToken ?? undefined });
-                      if (!presign.demo && presign.uploadUrl.startsWith('http')) await fetch(presign.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'video/webm' }, body: blob });
-                      await api.post('/api/v1/profiles/video/confirm', { videoUrl: presign.publicUrl, videoKey: presign.key, durationSec: 60, demo: presign.demo }, { accessToken: accessToken ?? undefined });
+                      const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/video/upload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'video/webm', Authorization: `Bearer ${accessToken}` },
+                        body: blob,
+                        credentials: 'include',
+                      });
+                      const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
+                      if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
                       const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
                       setProfile(p); setShowVideoRecorder(false);
-                    } catch { setError('Video upload failed.'); } finally { setVideoUploading(false); }
+                    } catch (err) { setError(err instanceof Error && err.message ? err.message : 'Video upload failed.'); } finally { setVideoUploading(false); }
                   }} />
                   <button onClick={() => setShowVideoRecorder(false)} className="mt-2 text-sm text-gray-500">Cancel</button>
                 </div>

@@ -3,14 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Camera, CircleStop, Image as ImageIcon, RefreshCw, TrendingUp, Upload, Video } from 'lucide-react';
-import { api, ApiError } from '../../lib/api';
-
-interface PresignResult {
-  uploadUrl: string;
-  publicUrl: string;
-  key: string;
-  demo: boolean;
-}
+import { ApiError, apiBaseUrl } from '../../lib/api';
 
 interface Props {
   accessToken: string | undefined;
@@ -23,36 +16,40 @@ interface Props {
 const MAX_PHOTO_MB = 8;
 const MAX_VIDEO_MB = 100;
 
+/**
+ * Upload through OUR API (server puts the file in storage). The old direct
+ * browser-to-S3 flow failed for real users on storage CORS and region
+ * config - this path has none of those dependencies.
+ */
 async function uploadMedia(
   kind: 'photo' | 'video',
   file: Blob,
   contentType: string,
-  key: string,
   accessToken: string | undefined,
 ): Promise<string> {
-  const presign = await api.post<PresignResult>(
-    `/api/v1/profiles/${kind}/presign`,
-    { contentType, sizeBytes: file.size },
-    { accessToken },
-  );
-  if (!presign.demo && presign.uploadUrl.startsWith('http')) {
-    const put = await fetch(presign.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
+  let res: Response;
+  try {
+    res = await fetch(`${apiBaseUrl()}/api/v1/profiles/${kind}/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': contentType,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       body: file,
+      credentials: 'include',
     });
-    if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+  } catch {
+    throw new Error('Network problem during the upload. Check your connection and try again.');
   }
-  if (kind === 'photo') {
-    await api.post('/api/v1/profiles/photo/confirm', { photoUrl: presign.publicUrl }, { accessToken });
-  } else {
-    await api.post(
-      '/api/v1/profiles/video/confirm',
-      { videoUrl: presign.publicUrl, videoKey: key || presign.key, demo: presign.demo },
-      { accessToken },
-    );
+  const json = (await res.json().catch(() => null)) as
+    | { success?: boolean; data?: { photoUrl?: string; videoUrl?: string }; error?: string }
+    | null;
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.error ?? `Upload failed (${res.status}). Please try again.`);
   }
-  return presign.publicUrl;
+  const url = kind === 'photo' ? json.data?.photoUrl : json.data?.videoUrl;
+  if (!url) throw new Error('Upload finished but no file URL came back. Please try again.');
+  return url;
 }
 
 export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo }: Props) {
@@ -95,7 +92,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
     setError(null);
     setPhotoBusy(true);
     try {
-      const url = await uploadMedia('photo', file, file.type, '', accessToken);
+      const url = await uploadMedia('photo', file, file.type, accessToken);
       onPhoto(url);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message);
@@ -118,7 +115,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
     setError(null);
     setVideoBusy(true);
     try {
-      const url = await uploadMedia('video', file, ct, '', accessToken);
+      const url = await uploadMedia('video', file, ct, accessToken);
       onVideo(url);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message);
@@ -156,7 +153,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
         }
         setVideoBusy(true);
         try {
-          const url = await uploadMedia('video', blob, 'video/webm', '', accessToken);
+          const url = await uploadMedia('video', blob, 'video/webm', accessToken);
           onVideo(url);
         } catch (err) {
           setError(err instanceof ApiError ? err.message : (err as Error).message);

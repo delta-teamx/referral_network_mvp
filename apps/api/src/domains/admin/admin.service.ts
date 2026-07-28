@@ -234,6 +234,8 @@ export async function hardDeleteUser(adminId: string, userId: string) {
   void deleteAttachmentPrefixes([
     ...convoIds.map((id) => `chat/${id}/`),
     ...ticketIds.map((id) => `support/${id}/`),
+    `headshots/${userId}/`,
+    `videos/${userId}/`,
   ]);
 
   await eventBus.publish('admin.user_suspended', {

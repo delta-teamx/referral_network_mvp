@@ -341,6 +341,20 @@ export async function uploadAttachmentObject(
   return { key };
 }
 
+/**
+ * Server-side S3 put for profile media (headshots, intro videos) - the same
+ * region-healed path chat attachments use. Exported so profile uploads never
+ * depend on browser-to-S3 PUTs (which broke on bucket CORS + region
+ * mismatches for real users).
+ */
+export async function putMediaObject(
+  key: string,
+  contentType: string,
+  data: Buffer,
+): Promise<void> {
+  return putObjectWithRegionHeal(key, contentType, data);
+}
+
 async function putObjectWithRegionHeal(
   key: string,
   contentType: string,
@@ -395,8 +409,16 @@ export async function deleteAttachmentPrefixes(prefixes: string[]): Promise<void
     const { ListObjectsV2Command, DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
     const s3 = await makeS3(resolvedS3Region ?? env.AWS_REGION);
     for (const prefix of prefixes) {
-      // Only ever purge inside the attachment namespaces.
-      if (!(prefix.startsWith('chat/') || prefix.startsWith('support/'))) continue;
+      // Only ever purge inside the attachment/media namespaces.
+      if (
+        !(
+          prefix.startsWith('chat/') ||
+          prefix.startsWith('support/') ||
+          prefix.startsWith('headshots/') ||
+          prefix.startsWith('videos/')
+        )
+      )
+        continue;
       const listed = await s3.send(
         new ListObjectsV2Command({ Bucket: env.AWS_S3_BUCKET, Prefix: prefix, MaxKeys: 500 }),
       );
@@ -422,7 +444,15 @@ export async function getChatAttachmentStream(key: string): Promise<{
   contentType: string;
   contentLength?: number;
 }> {
-  if (!(key.startsWith('chat/') || key.startsWith('support/')) || key.includes('..')) {
+  if (
+    !(
+      key.startsWith('chat/') ||
+      key.startsWith('support/') ||
+      key.startsWith('headshots/') ||
+      key.startsWith('videos/')
+    ) ||
+    key.includes('..')
+  ) {
     throw AppError.badRequest('Invalid attachment key');
   }
   if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
