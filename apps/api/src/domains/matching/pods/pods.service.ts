@@ -160,6 +160,8 @@ async function getEligibleMembers(): Promise<MemberProfile[]> {
       user: {
         deletedAt: null,
         emailVerified: true,
+        // Admins observe the platform; they don't get matched into pods.
+        role: { not: 'ADMIN' },
       },
     },
     select: {

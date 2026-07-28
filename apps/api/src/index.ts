@@ -344,6 +344,15 @@ async function ensureRuntimeSchema(): Promise<void> {
            AND "videoUrl" NOT LIKE 'https://api.referralnova.com/%'
            AND "videoUrl" NOT LIKE 'http://localhost%';
        EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // Admins are operators, not members: purge AI-suggested intros that
+      // involve an admin account so they vanish from member feeds.
+      `DO $$ BEGIN
+         DELETE FROM "Introduction" i
+         USING "User" u
+         WHERE i."status" = 'suggested'
+           AND (i."senderId" = u.id OR i."targetId" = u.id)
+           AND u."role" = 'ADMIN';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // STAGE MERGE: contract_signed and won are one stage now.

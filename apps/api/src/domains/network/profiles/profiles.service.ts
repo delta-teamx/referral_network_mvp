@@ -110,6 +110,9 @@ export async function searchMembers(filters: { q?: string; industry?: string; ci
   const limit = Math.min(filters.limit ?? 20, 50);
   const where: Parameters<typeof prisma.memberProfile.findMany>[0] = {
     where: {
+      // Admin accounts are operational, not networking members - never list
+      // them in the directory.
+      user: { deletedAt: null, role: { not: 'ADMIN' } },
       ...(filters.industry ? { industry: { contains: filters.industry, mode: 'insensitive' } } : {}),
       ...(filters.city ? { city: { equals: filters.city, mode: 'insensitive' } } : {}),
       ...(filters.state ? { state: filters.state.toUpperCase().slice(0, 2) } : {}),

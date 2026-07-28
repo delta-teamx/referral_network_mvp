@@ -77,7 +77,8 @@ export async function generateMatchesForUser(
   const candidates = await prisma.memberProfile.findMany({
     where: {
       userId: candidateUserIds ? { in: candidateUserIds } : { not: userId },
-      user: { deletedAt: null },
+      // Admins never appear as match candidates - they are operators.
+      user: { deletedAt: null, role: { not: 'ADMIN' } },
     },
     select: profileFields,
     take: 200,
@@ -300,6 +301,7 @@ export async function refreshAllSuggestions(groupId?: string): Promise<{ users: 
     });
   } else {
     users = await prisma.memberProfile.findMany({
+      where: { user: { deletedAt: null, role: { not: 'ADMIN' } } },
       select: { userId: true },
     });
   }

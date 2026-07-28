@@ -119,6 +119,7 @@ export async function refreshStaleEmbeddings(
   const cutoff = new Date(Date.now() - maxAge);
   const profiles = await prisma.memberProfile.findMany({
     where: {
+      user: { deletedAt: null, role: { not: 'ADMIN' } },
       OR: [
         { embeddingUpdatedAt: null },
         { embeddingUpdatedAt: { lt: cutoff } },
