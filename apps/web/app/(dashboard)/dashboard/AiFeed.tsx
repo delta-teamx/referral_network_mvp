@@ -17,6 +17,7 @@ import {
 import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { api, ApiError } from '../../../lib/api';
 import { useAuthStore } from '../../../stores/auth';
+import { Avatar } from '../../../components/ui/Avatar';
 
 interface IntroSuggestion {
   id: string;
@@ -38,6 +39,7 @@ interface MemberBrief {
     businessName: string;
     industry: string;
     headline: string | null;
+    photoUrl: string | null;
     videoUrl: string | null;
     city: string | null;
     state: string | null;
@@ -297,10 +299,12 @@ export function AiFeed() {
               >
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-light text-primary font-bold text-lg">
-                      {peer.firstName[0]}
-                      {peer.lastName[0]}
-                    </div>
+                    <Avatar
+                      src={profile?.photoUrl ?? peer.avatarUrl}
+                      name={`${peer.firstName} ${peer.lastName}`}
+                      className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
+                      fallbackClassName="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-primary font-bold text-lg"
+                    />
                     <div>
                       <h3 className="font-semibold text-gray-900">
                         {peer.firstName} {peer.lastName}
