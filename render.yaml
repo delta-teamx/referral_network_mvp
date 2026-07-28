@@ -23,7 +23,10 @@ services:
       pnpm --filter @refnet/api exec prisma generate
       pnpm --filter @refnet/api exec prisma migrate deploy || echo "migrate skipped (see logs); runtime schema-ensure will cover new tables"
       pnpm --filter @refnet/api exec prisma db seed || echo "seed skipped"
-    startCommand: pnpm --filter @refnet/api start
+    # Run tsx directly - going through pnpm makes Corepack re-download pnpm
+    # from the npm registry at boot, and one dropped connection there crashed
+    # a whole deploy. Booting must not depend on the network.
+    startCommand: cd apps/api && ./node_modules/.bin/tsx src/index.ts
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
