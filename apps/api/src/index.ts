@@ -317,6 +317,33 @@ async function ensureRuntimeSchema(): Promise<void> {
       `UPDATE "User" SET "emailVerified" = true WHERE "emailVerified" = false;`,
       // Members can link their LinkedIn profile.
       `ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT;`,
+      // MEDIA HEAL: profile photos/videos stored as direct S3 URLs (the old
+      // browser-to-S3 flow) or minted against a wrong API base render as
+      // broken images. Rewrite them to the canonical download proxy.
+      `DO $$ BEGIN
+         UPDATE "MemberProfile"
+         SET "photoUrl" = 'https://api.referralnova.com/api/v1/messages/attachments/file?key=' || split_part("photoUrl", '.amazonaws.com/', 2)
+         WHERE "photoUrl" LIKE '%.amazonaws.com/headshots/%';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      `DO $$ BEGIN
+         UPDATE "MemberProfile"
+         SET "videoUrl" = 'https://api.referralnova.com/api/v1/messages/attachments/file?key=' || split_part("videoUrl", '.amazonaws.com/', 2)
+         WHERE "videoUrl" LIKE '%.amazonaws.com/videos/%';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      `DO $$ BEGIN
+         UPDATE "MemberProfile"
+         SET "photoUrl" = 'https://api.referralnova.com/api/v1/' || split_part("photoUrl", '/api/v1/', 2)
+         WHERE "photoUrl" LIKE '%/api/v1/messages/attachments/file?key=headshots%'
+           AND "photoUrl" NOT LIKE 'https://api.referralnova.com/%'
+           AND "photoUrl" NOT LIKE 'http://localhost%';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      `DO $$ BEGIN
+         UPDATE "MemberProfile"
+         SET "videoUrl" = 'https://api.referralnova.com/api/v1/' || split_part("videoUrl", '/api/v1/', 2)
+         WHERE "videoUrl" LIKE '%/api/v1/messages/attachments/file?key=videos%'
+           AND "videoUrl" NOT LIKE 'https://api.referralnova.com/%'
+           AND "videoUrl" NOT LIKE 'http://localhost%';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // STAGE MERGE: contract_signed and won are one stage now.

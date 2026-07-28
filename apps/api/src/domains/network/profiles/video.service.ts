@@ -221,13 +221,15 @@ export async function confirmPhotoUpload(
 // configuration is needed at all.
 // ---------------------------------------------------------------------------
 
-/** Where the API is reachable publicly - used to build stored media URLs. */
+/**
+ * Where the API is reachable publicly - used to build stored media URLs.
+ * In production this is ALWAYS the canonical domain: stored URLs live in the
+ * database for years, so they must never depend on how API_URL happens to be
+ * configured at upload time.
+ */
 function apiPublicBase(): string {
-  const url = env.API_URL.replace(/\/+$/, '');
-  if (env.NODE_ENV === 'production' && url.includes('localhost')) {
-    return 'https://api.referralnova.com';
-  }
-  return url;
+  if (env.NODE_ENV === 'production') return 'https://api.referralnova.com';
+  return env.API_URL.replace(/\/+$/, '');
 }
 
 function mediaProxyUrl(key: string): string {

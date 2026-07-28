@@ -8,6 +8,7 @@ import { Handshake, MapPin, Search, Users, Video } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { Avatar } from '../../../../components/ui/Avatar';
 
 interface Member {
   id: string;
@@ -144,15 +145,12 @@ export default function MembersDirectoryPage() {
                   className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
                 >
                   <div className="mb-3 flex items-center gap-3">
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt={name} className="h-12 w-12 flex-shrink-0 rounded-full object-cover" />
-                    ) : (
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary">
-                        {m.user.firstName[0]}
-                        {m.user.lastName[0]}
-                      </div>
-                    )}
+                    <Avatar
+                      src={photo}
+                      name={name || m.businessName}
+                      className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
+                      fallbackClassName="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary"
+                    />
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-gray-900">{m.businessName}</p>
                       <p className="truncate text-xs text-gray-500">{name}</p>

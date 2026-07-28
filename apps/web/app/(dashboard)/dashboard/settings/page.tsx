@@ -8,6 +8,7 @@ import {
   Save, Target, Video, X,
 } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
+import { Avatar } from '../../../../components/ui/Avatar';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { FormField } from '../../../../components/ui/FormField';
@@ -184,16 +185,14 @@ export default function SettingsPage() {
             <div className="relative h-24 rounded-t-2xl bg-gradient-to-r from-primary via-blue-500 to-cyan-500" />
             <div className="px-6 pb-6">
               <div className="-mt-10 mb-4 flex items-end justify-between">
-                {profile.photoUrl ? (
-                  <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={profile.photoUrl} alt={profile.businessName} className="h-full w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-primary text-2xl font-bold text-white shadow-lg">
-                    {profile.businessName[0]?.toUpperCase()}
-                  </div>
-                )}
+                <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg">
+                  <Avatar
+                    src={profile.photoUrl}
+                    name={profile.businessName}
+                    className="h-full w-full object-cover"
+                    fallbackClassName="flex h-full w-full items-center justify-center bg-primary text-2xl font-bold text-white"
+                  />
+                </div>
                 <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                   <Edit3 size={14} /> Edit profile
                 </button>

@@ -20,6 +20,7 @@ import { fadeInUp } from '../../lib/animations';
 import { api, ApiError } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { BookingModal } from '../booking/BookingModal';
+import { Avatar } from '../ui/Avatar';
 
 interface PublicProfile {
   id: string;
@@ -249,18 +250,12 @@ export function MemberProfileView({ id }: { id: string }) {
       {/* ── Identity card (CV header) ─────────────────────────────── */}
       <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-start gap-6">
-          {profile.photoUrl || profile.user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.photoUrl ?? profile.user.avatarUrl ?? ''}
-              alt={initials}
-              className="h-28 w-28 rounded-2xl border border-gray-200 object-cover shadow-sm"
-            />
-          ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-2xl border border-gray-200 bg-primary-light text-3xl font-bold uppercase text-primary">
-              {initials}
-            </div>
-          )}
+          <Avatar
+            src={profile.photoUrl ?? profile.user.avatarUrl}
+            name={`${profile.user.firstName} ${profile.user.lastName}`}
+            className="h-28 w-28 rounded-2xl border border-gray-200 object-cover shadow-sm"
+            fallbackClassName="flex h-28 w-28 items-center justify-center rounded-2xl border border-gray-200 bg-primary-light text-3xl font-bold uppercase text-primary"
+          />
 
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">

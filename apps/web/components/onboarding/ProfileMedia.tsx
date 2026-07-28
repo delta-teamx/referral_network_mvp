@@ -196,7 +196,12 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="Your headshot" className="h-full w-full object-cover" />
+              <img
+                src={photoUrl}
+                alt="Your headshot"
+                className="h-full w-full object-cover"
+                onError={() => onPhoto('')}
+              />
             ) : (
               <Camera size={22} className="text-gray-300" />
             )}

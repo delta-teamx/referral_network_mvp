@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { Avatar } from '../../../../components/ui/Avatar';
 
 interface LeaderboardMember {
   userId: string;
@@ -286,18 +287,12 @@ export default function LeaderboardPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {m.photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.photoUrl}
-                            alt=""
-                            className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary">
-                            {m.name.slice(0, 1)}
-                          </span>
-                        )}
+                        <Avatar
+                          src={m.photoUrl}
+                          name={m.name}
+                          className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
+                          fallbackClassName="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary"
+                        />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-gray-900">
                             {m.name}
