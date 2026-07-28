@@ -8,7 +8,7 @@ import {
   Save, Target, Video, X,
 } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
-import { Avatar } from '../../../../components/ui/Avatar';
+import { MemberProfileView } from '../../../../components/members/MemberProfileView';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 import { FormField } from '../../../../components/ui/FormField';
@@ -173,100 +173,26 @@ export default function SettingsPage() {
   }
 
   if (!editing) {
+    // Your own profile renders through the EXACT same component other members
+    // see (same layout, same theme) - plus an Edit button on top.
     return (
       <div className="p-6 md:p-8">
-        <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mx-auto max-w-3xl">
-          {saved && (
-            <p className="mb-4 inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
-              <Check size={14} /> Profile saved.
-            </p>
-          )}
-          <div className="mb-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="relative h-24 rounded-t-2xl bg-gradient-to-r from-primary via-blue-500 to-cyan-500" />
-            <div className="px-6 pb-6">
-              <div className="-mt-10 mb-4 flex items-end justify-between">
-                <div className="h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg">
-                  <Avatar
-                    src={profile.photoUrl}
-                    name={profile.businessName}
-                    className="h-full w-full object-cover"
-                    fallbackClassName="flex h-full w-full items-center justify-center bg-primary text-2xl font-bold text-white"
-                  />
-                </div>
-                <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                  <Edit3 size={14} /> Edit profile
-                </button>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">{profile.businessName}</h1>
-              <p className="text-sm text-gray-500">{profile.industry}{profile.yearsInBusiness ? ` · ${profile.yearsInBusiness} years` : ''}</p>
-              {profile.headline && <p className="mt-2 text-sm text-gray-700">{profile.headline}</p>}
-              {(profile.city || profile.state) && (
-                <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                  <MapPin size={12} /> {[profile.city, profile.state, profile.zipCode].filter(Boolean).join(', ')}
-                </p>
-              )}
-              {profile.linkedinUrl && (
-                <a
-                  href={profile.linkedinUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                >
-                  <Linkedin size={12} /> LinkedIn profile
-                </a>
-              )}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white px-6 shadow-sm">
-            {profile.bio && (<Section icon={Briefcase} title="About"><p className="whitespace-pre-line text-sm text-gray-700">{profile.bio}</p></Section>)}
-            {profile.servicesOffered.length > 0 && (<Section icon={Briefcase} title="Services offered"><div className="flex flex-wrap gap-2">{profile.servicesOffered.map((s) => <Tag key={s}>{s}</Tag>)}</div></Section>)}
-            <Section icon={Video} title="Video intro">
-              {profile.videoUrl ? (
-                <video src={profile.videoUrl} controls className="w-full rounded-lg" style={{ maxHeight: '300px' }} />
-              ) : showVideoRecorder ? (
-                <div>
-                  <VideoRecorder maxDurationSec={60} uploading={videoUploading} onRecorded={async (blob) => {
-                    if (!accessToken) return;
-                    setVideoUploading(true);
-                    try {
-                      const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/video/upload`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'video/webm', Authorization: `Bearer ${accessToken}` },
-                        body: blob,
-                        credentials: 'include',
-                      });
-                      const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
-                      if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
-                      const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
-                      setProfile(p); setShowVideoRecorder(false);
-                    } catch (err) { setError(err instanceof Error && err.message ? err.message : 'Video upload failed.'); } finally { setVideoUploading(false); }
-                  }} />
-                  <button onClick={() => setShowVideoRecorder(false)} className="mt-2 text-sm text-gray-500">Cancel</button>
-                </div>
-              ) : (
-                <button onClick={() => setShowVideoRecorder(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-white">
-                  <Camera size={14} /> Record your 60-second intro
-                </button>
-              )}
-            </Section>
-            {(profile.icpIndustries.length > 0 || profile.icpRoles.length > 0) && (
-              <Section icon={Target} title="Who I want to meet">
-                {profile.icpIndustries.length > 0 && <div className="mb-2"><p className="mb-1 text-xs font-medium text-gray-500">Industries</p><div className="flex flex-wrap gap-2">{profile.icpIndustries.map((s) => <Tag key={s}>{s}</Tag>)}</div></div>}
-                {profile.icpRoles.length > 0 && <div className="mb-2"><p className="mb-1 text-xs font-medium text-gray-500">Roles</p><div className="flex flex-wrap gap-2">{profile.icpRoles.map((s) => <Tag key={s}>{s}</Tag>)}</div></div>}
-                {profile.icpDealSize && <p className="text-xs text-gray-500">Deal size: {profile.icpDealSize}</p>}
-              </Section>
+        <div className="mx-auto mb-4 flex max-w-4xl items-center justify-between gap-3">
+          <div>
+            {saved && (
+              <p className="inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+                <Check size={14} /> Profile saved.
+              </p>
             )}
-            {profile.canReferIndustries.length > 0 && (<Section icon={Handshake} title="Who I can refer to"><div className="flex flex-wrap gap-2">{profile.canReferIndustries.map((s) => <Tag key={s}>{s}</Tag>)}</div></Section>)}
-            {profile.openToBarter && (
-              <Section icon={Handshake} title="Open to bartering">
-                {profile.barterOfferings.length > 0 && <div className="mb-2"><p className="mb-1 text-xs font-medium text-gray-500">I can offer</p><div className="flex flex-wrap gap-2">{profile.barterOfferings.map((s) => <Tag key={s}>{s}</Tag>)}</div></div>}
-                {profile.barterWants.length > 0 && <div className="mb-2"><p className="mb-1 text-xs font-medium text-gray-500">I would accept</p><div className="flex flex-wrap gap-2">{profile.barterWants.map((s) => <Tag key={s}>{s}</Tag>)}</div></div>}
-                {profile.barterNotes && <p className="text-xs text-gray-600">{profile.barterNotes}</p>}
-              </Section>
-            )}
-            {profile.keywords.length > 0 && (<Section icon={Globe} title="Keywords for AI matching"><div className="flex flex-wrap gap-2">{profile.keywords.map((s) => <Tag key={s}>{s}</Tag>)}</div></Section>)}
           </div>
-        </motion.div>
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+          >
+            <Edit3 size={14} /> Edit profile
+          </button>
+        </div>
+        <MemberProfileView id={profile.id} />
       </div>
     );
   }
@@ -290,6 +216,42 @@ export default function SettingsPage() {
                 uploading={photoUploading}
                 onSelected={(file) => void uploadHeadshot(file)}
               />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-900">Intro video</label>
+                {profile.videoUrl && !showVideoRecorder ? (
+                  <div className="space-y-2">
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video src={profile.videoUrl} controls className="w-full max-w-md rounded-lg" style={{ maxHeight: '240px' }} />
+                    <button type="button" onClick={() => setShowVideoRecorder(true)} className="text-sm font-medium text-primary hover:underline">
+                      Re-record video
+                    </button>
+                  </div>
+                ) : showVideoRecorder ? (
+                  <div>
+                    <VideoRecorder maxDurationSec={60} uploading={videoUploading} onRecorded={async (blob) => {
+                      if (!accessToken) return;
+                      setVideoUploading(true);
+                      try {
+                        const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/video/upload`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'video/webm', Authorization: `Bearer ${accessToken}` },
+                          body: blob,
+                          credentials: 'include',
+                        });
+                        const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
+                        if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
+                        const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
+                        setProfile(p); setShowVideoRecorder(false);
+                      } catch (err) { setError(err instanceof Error && err.message ? err.message : 'Video upload failed.'); } finally { setVideoUploading(false); }
+                    }} />
+                    <button type="button" onClick={() => setShowVideoRecorder(false)} className="mt-2 text-sm text-gray-500">Cancel</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowVideoRecorder(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-white">
+                    <Camera size={14} /> Record your 60-second intro
+                  </button>
+                )}
+              </div>
               <FormField label="Business name *" name="businessName" defaultValue={profile.businessName} required />
               <FormField label="Industry *" name="industry" defaultValue={profile.industry} required />
               <FormField label="Headline" name="headline" defaultValue={profile.headline ?? ''} />
