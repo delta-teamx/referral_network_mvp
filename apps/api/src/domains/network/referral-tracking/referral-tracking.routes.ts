@@ -52,7 +52,9 @@ referralTrackingRouter.get(
   '/community',
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
-    const data = await getCommunityLeaderboard(req.user.id);
+    // ?all=1 (admin only): include members who haven't started participating.
+    const includeInactive = req.query.all === '1' && req.user.role === 'ADMIN';
+    const data = await getCommunityLeaderboard(req.user.id, { includeInactive });
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

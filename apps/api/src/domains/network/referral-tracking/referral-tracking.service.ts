@@ -306,7 +306,10 @@ export async function getReferralStats(userId: string) {
  * points (successful invites, deals won, contracts signed, referrals sent,
  * calls held), plus the viewer's own stats, badges and invite link.
  */
-export async function getCommunityLeaderboard(viewerId: string) {
+export async function getCommunityLeaderboard(
+  viewerId: string,
+  opts?: { includeInactive?: boolean },
+) {
   const users = await prisma.user.findMany({
     where: { deletedAt: null, role: { not: 'ADMIN' } },
     orderBy: { createdAt: 'asc' },
@@ -386,29 +389,41 @@ export async function getCommunityLeaderboard(viewerId: string) {
   });
 
   rows.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
-  const ranked = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  // Only members who actually started participating are ON the board -
+  // a wall of 0-point rows is noise, not a leaderboard.
+  const participants = rows.filter((r) => r.points > 0).map((r, i) => ({ ...r, rank: i + 1 }));
+  const myRow = participants.find((r) => r.userId === viewerId) ?? null;
 
-  const me = ranked.find((r) => r.userId === viewerId) ?? null;
-  const [pendingInvites, viewer] = await Promise.all([
+  // The viewer's own invite stats come straight from ReferralTracking, NOT
+  // from the rankings - so the invite link and stats always render, even for
+  // admins (excluded from rankings) and members with 0 points so far.
+  const [invitesOnboarded, invitesPending, viewer, viewerFounding] = await Promise.all([
+    prisma.referralTracking.count({
+      where: { referrerUserId: viewerId, status: { in: ['onboarded', 'paid'] } },
+    }),
     prisma.referralTracking.count({
       where: { referrerUserId: viewerId, status: { in: ['invited', 'signed_up'] } },
     }),
     prisma.user.findUnique({ where: { id: viewerId }, select: { referralRewardMonths: true } }),
+    isFoundingMember(viewerId),
   ]);
   const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
 
   return {
-    members: ranked.slice(0, 50),
-    totalMembers: ranked.length,
+    members: opts?.includeInactive ? rows.map((r, i) => ({ ...r, rank: r.points > 0 ? i + 1 : null })) : participants.slice(0, 50),
+    totalMembers: rows.length,
+    participantCount: participants.length,
     points: LEADERBOARD_POINTS,
-    me: me
-      ? {
-          ...me,
-          invitesPending: pendingInvites,
-          rewardMonths: viewer?.referralRewardMonths ?? 0,
-          inviteUrl: `${origin}/signup?ref=${viewerId}`,
-        }
-      : null,
+    inviteUrl: `${origin}/signup?ref=${viewerId}`,
+    viewer: {
+      rank: myRow?.rank ?? null,
+      points: myRow?.points ?? 0,
+      isFounding: viewerFounding,
+      badges: badgesFor(invitesOnboarded, viewerFounding),
+      invitesOnboarded,
+      invitesPending,
+      rewardMonths: viewer?.referralRewardMonths ?? 0,
+    },
   };
 }
 

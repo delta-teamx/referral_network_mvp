@@ -31,12 +31,13 @@ interface LeaderboardMember {
   callsHeld: number;
   points: number;
   badges: string[];
-  rank: number;
+  rank: number | null;
 }
 
 interface LeaderboardData {
   members: LeaderboardMember[];
   totalMembers: number;
+  participantCount: number;
   points: {
     inviteOnboarded: number;
     dealWon: number;
@@ -44,13 +45,16 @@ interface LeaderboardData {
     referralSent: number;
     callHeld: number;
   };
-  me:
-    | (LeaderboardMember & {
-        invitesPending: number;
-        rewardMonths: number;
-        inviteUrl: string;
-      })
-    | null;
+  inviteUrl: string;
+  viewer: {
+    rank: number | null;
+    points: number;
+    isFounding: boolean;
+    badges: string[];
+    invitesOnboarded: number;
+    invitesPending: number;
+    rewardMonths: number;
+  };
 }
 
 const RANK_STYLE: Record<number, string> = {
@@ -85,9 +89,9 @@ export default function LeaderboardPage() {
   }, [accessToken]);
 
   async function copyInvite() {
-    if (!data?.me?.inviteUrl) return;
+    if (!data?.inviteUrl) return;
     try {
-      await navigator.clipboard.writeText(data.me.inviteUrl);
+      await navigator.clipboard.writeText(data.inviteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -95,7 +99,7 @@ export default function LeaderboardPage() {
     }
   }
 
-  const me = data?.me ?? null;
+  const viewer = data?.viewer ?? null;
 
   return (
     <div className="p-6 md:p-8">
@@ -126,39 +130,41 @@ export default function LeaderboardPage() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-lg bg-white/15 px-3 py-2 text-xs">
-              {me?.inviteUrl ?? 'Loading your link…'}
+              {data?.inviteUrl ?? 'Loading your link…'}
             </code>
             <button
               type="button"
               onClick={() => void copyInvite()}
-              disabled={!me}
+              disabled={!data}
               className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary transition hover:bg-white/90 disabled:opacity-60"
             >
               {copied ? <Check size={13} /> : <Copy size={13} />}
               {copied ? 'Copied!' : 'Copy link'}
             </button>
           </div>
-          {me && (
+          {viewer && (
             <div className="mt-4 flex flex-wrap gap-4 text-xs">
               <span>
-                <strong className="text-base font-bold">{me.invitesOnboarded}</strong>{' '}
+                <strong className="text-base font-bold">{viewer.invitesOnboarded}</strong>{' '}
                 <span className="text-white/80">joined</span>
               </span>
               <span>
-                <strong className="text-base font-bold">{me.invitesPending}</strong>{' '}
+                <strong className="text-base font-bold">{viewer.invitesPending}</strong>{' '}
                 <span className="text-white/80">pending</span>
               </span>
               <span>
-                <strong className="text-base font-bold">#{me.rank}</strong>{' '}
-                <span className="text-white/80">your rank</span>
+                <strong className="text-base font-bold">
+                  {viewer.rank ? `#${viewer.rank}` : 'Not ranked yet'}
+                </strong>{' '}
+                <span className="text-white/80">{viewer.rank ? 'your rank' : ''}</span>
               </span>
               <span>
-                <strong className="text-base font-bold">{me.points.toLocaleString()}</strong>{' '}
+                <strong className="text-base font-bold">{viewer.points.toLocaleString()}</strong>{' '}
                 <span className="text-white/80">points</span>
               </span>
-              {me.rewardMonths > 0 && (
+              {viewer.rewardMonths > 0 && (
                 <span>
-                  <strong className="text-base font-bold">{me.rewardMonths}</strong>{' '}
+                  <strong className="text-base font-bold">{viewer.rewardMonths}</strong>{' '}
                   <span className="text-white/80">free Premium months earned</span>
                 </span>
               )}
@@ -171,7 +177,7 @@ export default function LeaderboardPage() {
           <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-900">
             <Award size={15} className="text-amber-500" /> Invite rewards
           </div>
-          {me?.isFounding ? (
+          {viewer?.isFounding !== false ? (
             <ul className="space-y-1.5 text-xs text-gray-600">
               <li className="flex items-center justify-between">
                 <span>1 invite joins</span>
@@ -255,7 +261,8 @@ export default function LeaderboardPage() {
             ) : data.members.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                  No members yet - your invites will build this board.
+                  Nobody is on the board yet. Be the first: share your invite link, book a call, or
+                  win a deal - points appear the moment activity happens.
                 </td>
               </tr>
             ) : (
@@ -271,10 +278,10 @@ export default function LeaderboardPage() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                          RANK_STYLE[m.rank] ?? 'bg-gray-100 text-gray-500'
+                          (m.rank && RANK_STYLE[m.rank]) ?? 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        {m.rank <= 3 ? <Medal size={13} /> : m.rank}
+                        {m.rank && m.rank <= 3 ? <Medal size={13} /> : m.rank ?? '·'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -338,9 +345,9 @@ export default function LeaderboardPage() {
         </table>
       </div>
 
-      {data && data.totalMembers > data.members.length && (
+      {data && (
         <p className="mt-3 text-center text-xs text-gray-400">
-          Showing the top {data.members.length} of {data.totalMembers} members.
+          {data.participantCount} of {data.totalMembers} members participating so far.
         </p>
       )}
     </div>
