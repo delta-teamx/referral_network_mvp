@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -76,6 +76,35 @@ export default function SettingsPage() {
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [videoUploading, setVideoUploading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const videoFileInput = useRef<HTMLInputElement | null>(null);
+
+  /** Shared by the in-browser recorder and the file-upload button. */
+  async function uploadVideoBlob(blob: Blob, contentType: string) {
+    if (!accessToken) return;
+    if (blob.size > 100 * 1024 * 1024) {
+      setError('Video too large. Max 100 MB.');
+      return;
+    }
+    setVideoUploading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/video/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': contentType, Authorization: `Bearer ${accessToken}` },
+        body: blob,
+        credentials: 'include',
+      });
+      const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
+      if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
+      const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
+      setProfile(p);
+      setShowVideoRecorder(false);
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Video upload failed.');
+    } finally {
+      setVideoUploading(false);
+    }
+  }
 
   async function uploadHeadshot(file: File) {
     if (!accessToken) return;
@@ -218,38 +247,50 @@ export default function SettingsPage() {
               />
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-900">Intro video</label>
-                {profile.videoUrl && !showVideoRecorder ? (
-                  <div className="space-y-2">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video src={profile.videoUrl} controls className="w-full max-w-md rounded-lg" style={{ maxHeight: '240px' }} />
-                    <button type="button" onClick={() => setShowVideoRecorder(true)} className="text-sm font-medium text-primary hover:underline">
-                      Re-record video
-                    </button>
-                  </div>
-                ) : showVideoRecorder ? (
+                <input
+                  ref={videoFileInput}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const ct = ['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type) ? file.type : 'video/mp4';
+                      void uploadVideoBlob(file, ct);
+                    }
+                    if (videoFileInput.current) videoFileInput.current.value = '';
+                  }}
+                />
+                {showVideoRecorder ? (
                   <div>
-                    <VideoRecorder maxDurationSec={60} uploading={videoUploading} onRecorded={async (blob) => {
-                      if (!accessToken) return;
-                      setVideoUploading(true);
-                      try {
-                        const res = await fetch(`${apiBaseUrl()}/api/v1/profiles/video/upload`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'video/webm', Authorization: `Bearer ${accessToken}` },
-                          body: blob,
-                          credentials: 'include',
-                        });
-                        const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
-                        if (!res.ok || !json?.success) throw new Error(json?.error ?? `Upload failed (${res.status})`);
-                        const p = await api.get<Profile>('/api/v1/profiles/me', { accessToken: accessToken ?? undefined });
-                        setProfile(p); setShowVideoRecorder(false);
-                      } catch (err) { setError(err instanceof Error && err.message ? err.message : 'Video upload failed.'); } finally { setVideoUploading(false); }
-                    }} />
+                    <VideoRecorder
+                      maxDurationSec={60}
+                      uploading={videoUploading}
+                      onRecorded={(blob) => void uploadVideoBlob(blob, 'video/webm')}
+                    />
                     <button type="button" onClick={() => setShowVideoRecorder(false)} className="mt-2 text-sm text-gray-500">Cancel</button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setShowVideoRecorder(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-white">
-                    <Camera size={14} /> Record your 60-second intro
-                  </button>
+                  <div className="space-y-2">
+                    {profile.videoUrl && (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video src={profile.videoUrl} controls className="w-full max-w-md rounded-lg" style={{ maxHeight: '240px' }} />
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setShowVideoRecorder(true)} className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-white">
+                        <Camera size={14} /> {profile.videoUrl ? 'Re-record video' : 'Record your 60-second intro'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={videoUploading}
+                        onClick={() => videoFileInput.current?.click()}
+                        className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-primary disabled:opacity-60"
+                      >
+                        <Video size={14} /> {videoUploading ? 'Uploading…' : profile.videoUrl ? 'Upload a new video' : 'Upload video file'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">MP4, WebM or QuickTime · up to 100 MB.</p>
+                  </div>
                 )}
               </div>
               <FormField label="Business name *" name="businessName" defaultValue={profile.businessName} required />
