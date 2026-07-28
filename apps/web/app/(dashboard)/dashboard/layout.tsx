@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
@@ -69,12 +69,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // The persisted user object can be days old (tokens last 7 days), so admin
   // changes like a plan upgrade never showed until re-login. Re-sync the user
-  // from the server once per dashboard mount.
+  // from the server once per dashboard mount - AFTER hydration provides the
+  // token (a mount-only effect ran before the token existed and never fired).
   const refreshUserOnMount = useAuthStore((s) => s.refreshUser);
+  const didSyncUser = useRef(false);
   useEffect(() => {
-    if (accessToken) void refreshUserOnMount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!accessToken || didSyncUser.current) return;
+    didSyncUser.current = true;
+    void refreshUserOnMount();
+  }, [accessToken, refreshUserOnMount]);
 
   // Opening a tab clears its red dot - the dot means "unseen", so seeing the
   // tab marks its notification types read (server + local + bell count).

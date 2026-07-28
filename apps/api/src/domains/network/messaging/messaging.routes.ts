@@ -29,6 +29,12 @@ messagingRouter.get(
     res.setHeader('Content-Type', f.contentType);
     if (f.contentLength) res.setHeader('Content-Length', String(f.contentLength));
     res.setHeader('Cache-Control', 'private, max-age=3600');
+    // helmet() defaults to Cross-Origin-Resource-Policy: same-origin, which
+    // makes browsers DISCARD these files when the dashboard (a different
+    // subdomain) embeds them in <img>/<video> tags - profile photos rendered
+    // as broken images even though upload+storage worked. This media proxy
+    // explicitly serves cross-origin.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     (f.body as unknown as { pipe: (r: typeof res) => void }).pipe(res);
   }),
 );
