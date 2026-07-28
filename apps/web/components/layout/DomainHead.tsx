@@ -14,8 +14,9 @@ export function DomainHead() {
     const link = document.createElement('link');
     link.rel = 'icon';
     link.type = 'image/svg+xml';
+    // "RN" monogram on the brand-blue rounded square (no star imagery).
     link.href =
-      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="%232563eb"/><circle cx="20" cy="20" r="5" fill="white" opacity="0.95"/><path d="M20 8 L22 16 L20 14 L18 16 Z" fill="white" opacity="0.7"/><path d="M20 32 L22 24 L20 26 L18 24 Z" fill="white" opacity="0.7"/><path d="M8 20 L16 18 L14 20 L16 22 Z" fill="white" opacity="0.7"/><path d="M32 20 L24 18 L26 20 L24 22 Z" fill="white" opacity="0.7"/></svg>';
+      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="10" fill="%232563eb"/><text x="20" y="21" text-anchor="middle" dominant-baseline="central" font-family="Montserrat, Arial, sans-serif" font-weight="800" font-size="16.5" letter-spacing="-0.5" fill="white">RN</text></svg>';
     document.head.appendChild(link);
   }, []);
 
