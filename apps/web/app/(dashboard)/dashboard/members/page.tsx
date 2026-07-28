@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
-import { Handshake, MapPin, Search, Users, Video } from 'lucide-react';
+import { Crown, Handshake, MapPin, Search, Users, Video } from 'lucide-react';
 import { fadeInUp, staggerContainer } from '../../../../lib/animations';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
@@ -22,6 +22,7 @@ interface Member {
   state: string | null;
   icpIndustries: string[];
   openToBarter: boolean;
+  isFoundingMember?: boolean;
   user: { id: string; firstName: string; lastName: string; avatarUrl: string | null };
 }
 
@@ -160,6 +161,11 @@ export default function MembersDirectoryPage() {
                   {m.headline && <p className="mt-1 line-clamp-2 text-sm text-gray-600">{m.headline}</p>}
 
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {m.isFoundingMember && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+                        <Crown size={11} /> Founding Member
+                      </span>
+                    )}
                     {m.videoUrl && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary">
                         <Video size={11} /> Video

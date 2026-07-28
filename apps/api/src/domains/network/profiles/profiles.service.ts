@@ -94,16 +94,44 @@ export async function getMemberProfile(userId: string) {
   return profile;
 }
 
+/** The first N (non-admin) accounts are founding members. */
+const FOUNDING_MEMBER_LIMIT = 200;
+
+/**
+ * createdAt of the Nth member, or null while the community is still smaller
+ * than N (then everyone qualifies).
+ */
+async function foundingCutoffDate(): Promise<Date | null> {
+  const nth = await prisma.user.findMany({
+    where: { deletedAt: null, role: { not: 'ADMIN' } },
+    orderBy: { createdAt: 'asc' },
+    skip: FOUNDING_MEMBER_LIMIT - 1,
+    take: 1,
+    select: { createdAt: true },
+  });
+  return nth[0]?.createdAt ?? null;
+}
+
+function isFounding(createdAt: Date, role: string, cutoff: Date | null): boolean {
+  return role !== 'ADMIN' && (cutoff === null || createdAt <= cutoff);
+}
+
 export async function getPublicProfile(idOrUserId: string) {
   const profile = await prisma.memberProfile.findFirst({
     where: { OR: [{ id: idOrUserId }, { userId: idOrUserId }] },
     select: {
       ...profileSelect,
-      user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, createdAt: true } },
+      user: {
+        select: { id: true, firstName: true, lastName: true, avatarUrl: true, createdAt: true, role: true },
+      },
     },
   });
   if (!profile) throw AppError.notFound('Profile not found');
-  return profile;
+  const cutoff = await foundingCutoffDate();
+  return {
+    ...profile,
+    isFoundingMember: isFounding(profile.user.createdAt, profile.user.role, cutoff),
+  };
 }
 
 export async function searchMembers(filters: { q?: string; industry?: string; city?: string; state?: string; groupId?: string; limit?: number }) {
@@ -128,13 +156,25 @@ export async function searchMembers(filters: { q?: string; industry?: string; ci
     const members = await prisma.groupMember.findMany({ where: { groupId: filters.groupId }, select: { userId: true } });
     userIds = members.map((m) => m.userId);
   }
-  return prisma.memberProfile.findMany({
-    ...where,
-    ...(userIds ? { where: { ...where.where, userId: { in: userIds } } } : {}),
-    orderBy: { updatedAt: 'desc' },
-    take: limit,
-    select: { ...profileSelect, user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
-  });
+  const [profiles, cutoff] = await Promise.all([
+    prisma.memberProfile.findMany({
+      ...where,
+      ...(userIds ? { where: { ...where.where, userId: { in: userIds } } } : {}),
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      select: {
+        ...profileSelect,
+        user: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, createdAt: true, role: true },
+        },
+      },
+    }),
+    foundingCutoffDate(),
+  ]);
+  return profiles.map((p) => ({
+    ...p,
+    isFoundingMember: isFounding(p.user.createdAt, p.user.role, cutoff),
+  }));
 }
 
 export async function setVideoMeta(userId: string, meta: { videoUrl: string; videoKey: string; videoDurationSec?: number }) {

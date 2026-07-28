@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import {
   Briefcase,
   Calendar,
+  Crown,
   Film,
   HandCoins,
   Linkedin,
@@ -42,6 +43,7 @@ interface PublicProfile {
   barterOfferings: string[];
   barterWants: string[];
   barterNotes: string | null;
+  isFoundingMember?: boolean;
   user: {
     id: string;
     firstName: string;
@@ -258,9 +260,16 @@ export function MemberProfileView({ id }: { id: string }) {
           />
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
-              {profile.user.firstName} {profile.user.lastName}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+                {profile.user.firstName} {profile.user.lastName}
+              </h1>
+              {profile.isFoundingMember && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+                  <Crown size={11} /> Founding Member
+                </span>
+              )}
+            </div>
             <p className="text-base font-semibold text-primary">{profile.businessName}</p>
             {profile.headline && <p className="mt-1 text-sm text-gray-600">{profile.headline}</p>}
 
