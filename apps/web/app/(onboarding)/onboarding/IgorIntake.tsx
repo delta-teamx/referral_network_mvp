@@ -28,7 +28,7 @@ const INDUSTRIES = [
   'Accounting / CPA', 'Law', 'Insurance', 'Web Design / Development', 'Marketing',
   'Interior Design', 'Healthcare', 'Financial Planning', 'Roofing', 'HVAC',
   'Landscaping', 'Auto Services', 'Consulting', 'Business Consultant',
-  'Franchise Consultant', 'Franchise Coach', 'Other',
+  'Franchise Consultant', 'Franchise Coach', 'Travel Agent', 'Other',
 ];
 
 const SERVICE_AREAS = [
@@ -63,6 +63,7 @@ export function IgorIntake() {
   // Form state across steps
   const [businessName, setBusinessName] = useState('');
   const [industry, setIndustry] = useState('');
+  const [customIndustry, setCustomIndustry] = useState('');
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -134,7 +135,11 @@ export function IgorIntake() {
         '/api/v1/profiles',
         {
           businessName: businessName.trim().slice(0, 150),
-          industry,
+          // "Other" saves what the member actually typed, not the word Other.
+          industry:
+            industry === 'Other' && customIndustry.trim()
+              ? customIndustry.trim().slice(0, 80)
+              : industry,
           headline: headline.trim().slice(0, 200) || undefined,
           linkedinUrl: linkedinUrl.trim().slice(0, 300) || undefined,
           bio: bio.trim().slice(0, 2000) || undefined,
@@ -258,6 +263,18 @@ export function IgorIntake() {
                 ))}
               </select>
             </div>
+            {industry === 'Other' && (
+              <FormField
+                label="Your industry"
+                name="customIndustry"
+                required
+                maxLength={80}
+                placeholder="e.g. Commercial Drone Services"
+                hint="Tell us what industry you're in - this is what members and the matching engine will see."
+                value={customIndustry}
+                onChange={(e) => setCustomIndustry(e.target.value)}
+              />
+            )}
             <FormField
               label="Headline"
               name="headline"
@@ -491,7 +508,10 @@ export function IgorIntake() {
               <Button
                 onClick={next}
                 loading={saving}
-                disabled={step === 'business' && (!businessName || !industry)}
+                disabled={
+                  step === 'business' &&
+                  (!businessName || !industry || (industry === 'Other' && !customIndustry.trim()))
+                }
               >
                 {step === 'referrals' ? 'Save & continue' : 'Next →'}
               </Button>
