@@ -449,6 +449,57 @@ export async function deleteAttachmentPrefixes(prefixes: string[]): Promise<void
   }
 }
 
+/**
+ * Presigned S3 GET URL for an attachment/media key. The media proxy route
+ * 302-redirects here instead of streaming bytes through the API - so image and
+ * video traffic is served directly by S3 (fast, CDN-cacheable, and with native
+ * HTTP Range support so videos seek/stream instead of re-downloading). Region
+ * self-heals once so a wrong AWS_REGION doesn't break the signed endpoint.
+ */
+export async function getAttachmentDownloadUrl(key: string): Promise<string> {
+  if (
+    !(
+      key.startsWith('chat/') ||
+      key.startsWith('support/') ||
+      key.startsWith('headshots/') ||
+      key.startsWith('videos/')
+    ) ||
+    key.includes('..')
+  ) {
+    throw AppError.badRequest('Invalid attachment key');
+  }
+  if (!(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)) {
+    throw AppError.notFound('File storage not configured');
+  }
+  const { GetObjectCommand, HeadObjectCommand } = await import('@aws-sdk/client-s3');
+  const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+
+  if (!resolvedS3Region) {
+    try {
+      const s3 = await makeS3(env.AWS_REGION);
+      await s3.send(new HeadObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key }));
+      resolvedS3Region = env.AWS_REGION;
+    } catch (err) {
+      const name = (err as { name?: string })?.name ?? '';
+      const region =
+        name === 'PermanentRedirect' || name === 'AuthorizationHeaderMalformed'
+          ? regionFromRedirect(err)
+          : null;
+      if (region) resolvedS3Region = region;
+      // A 404/403 here is fine - we still issue the presign (S3 answers the GET).
+    }
+  }
+  const s3 = await makeS3(resolvedS3Region ?? env.AWS_REGION);
+  const cmd = new GetObjectCommand({
+    Bucket: env.AWS_S3_BUCKET,
+    Key: key,
+    ResponseCacheControl: 'public, max-age=86400',
+  });
+  // Valid for 2h; the route caches the redirect for only 1h so a cached
+  // redirect never points at an already-expired URL.
+  return getSignedUrl(s3, cmd, { expiresIn: 7200 });
+}
+
 export async function getChatAttachmentStream(key: string): Promise<{
   body: NodeJS.ReadableStream;
   contentType: string;

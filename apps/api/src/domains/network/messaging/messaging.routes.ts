@@ -7,6 +7,7 @@ import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
+  getAttachmentDownloadUrl,
   getChatAttachmentStream,
   getOrCreateConversation,
   listConversations,
@@ -19,38 +20,43 @@ import {
 
 export const messagingRouter: Router = Router();
 
-// Public download proxy - attachment links must open in a new tab without an
-// Authorization header. Keys contain an unguessable UUID.
+// Public media proxy - attachment links open directly in <img>/<video> tags
+// (no Authorization header). Keys contain an unguessable UUID. Instead of
+// streaming the bytes THROUGH the API (slow, ties up an API connection per
+// image, no video seeking), we 302-redirect to a short-lived presigned S3 URL
+// so S3 serves the file directly with native Range support and CDN caching.
 messagingRouter.get(
   '/attachments/file',
   asyncHandler(async (req, res) => {
     const key = typeof req.query.key === 'string' ? req.query.key : '';
-    const f = await getChatAttachmentStream(key);
-    res.setHeader('Content-Type', f.contentType);
-    if (f.contentLength) res.setHeader('Content-Length', String(f.contentLength));
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    // helmet() defaults to Cross-Origin-Resource-Policy: same-origin, which
-    // makes browsers DISCARD these files when the dashboard (a different
-    // subdomain) embeds them in <img>/<video> tags - profile photos rendered
-    // as broken images even though upload+storage worked. This media proxy
-    // explicitly serves cross-origin.
+    let url: string;
+    try {
+      url = await getAttachmentDownloadUrl(key);
+    } catch {
+      // Fall back to streaming through the API if presigning is unavailable
+      // (e.g. S3 not configured / demo mode), so links never hard-fail.
+      const f = await getChatAttachmentStream(key);
+      res.setHeader('Content-Type', f.contentType);
+      if (f.contentLength) res.setHeader('Content-Length', String(f.contentLength));
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      const stream = f.body as unknown as {
+        pipe: (r: typeof res) => void;
+        on: (ev: string, cb: (e?: unknown) => void) => void;
+        destroy?: () => void;
+      };
+      stream.on('error', () => {
+        if (!res.headersSent) res.status(502).end();
+        else res.destroy();
+      });
+      res.on('close', () => stream.destroy?.());
+      stream.pipe(res);
+      return;
+    }
+    // Cache the redirect for 1h (presigned target is valid for 2h).
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    // Attach an 'error' handler BEFORE piping: an unhandled 'error' on the S3
-    // source stream (network blip, client abort mid-transfer) would otherwise
-    // throw an uncaught exception and crash the whole process.
-    const stream = f.body as unknown as {
-      pipe: (r: typeof res) => void;
-      on: (ev: string, cb: (e?: unknown) => void) => void;
-      destroy?: () => void;
-    };
-    stream.on('error', (err) => {
-      // eslint-disable-next-line no-console
-      console.error('[messaging:attachment] stream error', err);
-      if (!res.headersSent) res.status(502).end();
-      else res.destroy();
-    });
-    res.on('close', () => stream.destroy?.());
-    stream.pipe(res);
+    res.redirect(302, url);
   }),
 );
 

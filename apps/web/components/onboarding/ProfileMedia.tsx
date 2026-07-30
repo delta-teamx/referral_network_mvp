@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Camera, CircleStop, Image as ImageIcon, RefreshCw, TrendingUp, Upload, Video } from 'lucide-react';
 import { ApiError, apiBaseUrl } from '../../lib/api';
+import { compressImageToJpeg } from '../../lib/image';
 
 interface Props {
   accessToken: string | undefined;
@@ -85,14 +86,19 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
   async function onPhotoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
-      setError(`Photo is ${(file.size / 1024 / 1024).toFixed(1)} MB - max ${MAX_PHOTO_MB} MB.`);
+    // Sanity cap on the ORIGINAL (before compression) so we don't try to decode
+    // an enormous file; compression shrinks it well under the API limit.
+    if (file.size > 40 * 1024 * 1024) {
+      setError(`Photo is ${(file.size / 1024 / 1024).toFixed(1)} MB - please pick one under 40 MB.`);
       return;
     }
     setError(null);
     setPhotoBusy(true);
     try {
-      const url = await uploadMedia('photo', file, file.type, accessToken);
+      // Compress/convert to a small JPEG first - fixes HEIC (iPhone) and large
+      // photos that were silently failing, and makes the upload fast.
+      const { blob, contentType } = await compressImageToJpeg(file);
+      const url = await uploadMedia('photo', blob, contentType, accessToken);
       onPhoto(url);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message);
@@ -210,7 +216,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
             <input
               ref={photoInput}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               className="hidden"
               onChange={onPhotoChange}
             />
