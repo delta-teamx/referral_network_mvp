@@ -23,7 +23,8 @@ export type EmailTemplate =
   | 'lead_received'
   | 'referral_received'
   | 'booking_confirmed'
-  | 'event_registered';
+  | 'event_registered'
+  | 'support_escalation';
 
 export interface EmailAttachment {
   filename: string;
@@ -202,6 +203,22 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            ${d.notes ? `<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;color:#444;margin:16px 0">${escapeHtml(String(d.notes))}</blockquote>` : ''}
            ${cta('Join Zoom meeting', String(d.zoomUrl ?? '#'))}
            <p style="color:#888;font-size:12px">A calendar invite is attached - open it to add this to your calendar.</p>`,
+        ),
+      };
+    case 'support_escalation':
+      return {
+        subject: `⚠️ ROUL escalation: ${d.name ?? 'a user'} stuck on onboarding`,
+        text: `ROUL escalated an unresolved onboarding query.\nUser: ${d.name} (${d.email}) · Plan: ${d.plan}\nStuck on: ${d.stuckStep}\nTime: ${d.when}\n\nTranscript:\n${d.transcript}\n\nAdmin: ${d.ticketUrl}`,
+        html: brandedLayout(
+          'Support escalation from ROUL',
+          `<p>ROUL couldn't resolve an onboarding query and escalated it to the technical team.</p>
+           <p><strong>User:</strong> ${escapeHtml(String(d.name ?? ''))} (${escapeHtml(String(d.email ?? ''))})<br>
+           <strong>Plan:</strong> ${escapeHtml(String(d.plan ?? ''))}<br>
+           <strong>Stuck on:</strong> ${escapeHtml(String(d.stuckStep ?? ''))}<br>
+           <strong>Time:</strong> ${escapeHtml(String(d.when ?? ''))}</p>
+           <p style="font-weight:700;margin-bottom:4px;">Conversation transcript</p>
+           <pre style="white-space:pre-wrap;background:#f3f4f6;border-radius:8px;padding:12px;font-size:13px;color:#374151;">${escapeHtml(String(d.transcript ?? ''))}</pre>
+           ${button('Open in admin support', String(d.ticketUrl ?? '#'))}`,
         ),
       };
     case 'event_registered':

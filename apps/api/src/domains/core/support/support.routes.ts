@@ -20,14 +20,48 @@ import {
 
 export const supportRouter: Router = Router();
 
-// Widget bootstrap: is a human online right now?
+// Widget bootstrap: support is 24/7 (ROUL is first responder).
 supportRouter.get(
   '/status',
   asyncHandler(async (_req, res) => {
     const body: ApiResponse<{ online: boolean }> = {
       success: true,
-      data: { online: isSupportOnline() },
+      data: { online: true },
     };
+    res.json(body);
+  }),
+);
+
+// ROUL — AI Support Manager, first responder. Public (visitors use support);
+// personalizes + escalates when the caller is authenticated.
+const roulSchema = z.object({
+  question: z.string().trim().min(1).max(2000),
+  history: z
+    .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(2000) }))
+    .max(20)
+    .optional(),
+  ticketId: z.string().optional(),
+  isOnboarding: z.boolean().optional(),
+});
+supportRouter.post(
+  '/roul',
+  optionalAuthenticate,
+  validate(roulSchema),
+  asyncHandler(async (req, res) => {
+    const { askRoul } = await import('./roul.service.js');
+    const user = req.user
+      ? {
+          id: req.user.id,
+          email: req.user.email,
+          plan: req.user.subscriptionTier,
+          name: req.user.email,
+        }
+      : null;
+    const result = await askRoul(req.body.question, req.body.history ?? [], user, {
+      ticketId: req.body.ticketId,
+      isOnboarding: req.body.isOnboarding,
+    });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );
