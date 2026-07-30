@@ -527,12 +527,19 @@ function MessagesInner() {
               >
                 👍
               </button>
-              <input
-                type="text"
+              <textarea
+                rows={1}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Type a message..."
-                className="min-w-0 flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
+                onKeyDown={(e) => {
+                  // Enter sends; Shift+Enter inserts a newline (WhatsApp/Messenger style).
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (draft.trim() && !sending) void handleSend();
+                  }
+                }}
+                placeholder="Type a message…  (Shift+Enter for a new line)"
+                className="max-h-32 min-w-0 flex-1 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm leading-relaxed outline-none transition focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
               <button
                 type="submit"

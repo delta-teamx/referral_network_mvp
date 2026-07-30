@@ -84,15 +84,48 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
           `<p>Click below to set a new password. The link expires in 1 hour.</p>${cta('Reset password', String(d.resetUrl))}<p style="color:#888;font-size:12px">If you didn\u2019t request this, ignore this email.</p>`,
         ),
       };
-    case 'welcome':
+    case 'welcome': {
+      const firstName = String(d.firstName ?? 'there');
+      const dashUrl = `${BRAND.app}/dashboard`;
+      const gettingStarted = linkList([
+        { label: 'How It Works', url: `${BRAND.marketing}/how-it-works`, desc: 'The 4-step referral engine, start to finish.' },
+        { label: 'For Members', url: `${BRAND.marketing}/for-members`, desc: 'What you get and how to make the most of it.' },
+        { label: 'Complete your profile', url: `${BRAND.app}/onboarding`, desc: 'Add your business, industry and what you can refer.' },
+        { label: 'Record your 60-second intro video', url: `${BRAND.app}/onboarding`, desc: 'Members send far more referrals to people they can see and hear.' },
+        { label: 'AI matching & Trust Score', url: `${BRAND.marketing}/trust-score`, desc: 'How we match you and how your Trust Score is calculated.' },
+      ]);
       return {
-        subject: `Welcome to ${appName}`,
-        text: `Your account is live. Start by completing onboarding: ${d.onboardingUrl}`,
-        html: basicLayout(
-          `Welcome aboard`,
-          `<p>Your account is ready. Tell us a little about your goals and we\u2019ll match you to the right pros and partners.</p>${cta('Complete onboarding', String(d.onboardingUrl))}`,
+        subject: `Welcome to ${appName} \u2014 here's how to get started`,
+        text:
+          `Hi ${firstName}, welcome to Referral Nova.\n\n` +
+          `Referral Nova turns your network into revenue: our AI matches you with trusted partners and qualified referrals flow both ways, week after week.\n\n` +
+          `What happens next: complete your profile, record a 60-second intro, and our AI starts suggesting introductions. First, open your dashboard: ${dashUrl}\n\n` +
+          `Getting started: How It Works ${BRAND.marketing}/how-it-works \u00b7 For Members ${BRAND.marketing}/for-members \u00b7 Profile setup ${BRAND.app}/onboarding \u00b7 Trust Score ${BRAND.marketing}/trust-score\n\n` +
+          `Privacy ${BRAND.marketing}/privacy \u00b7 Terms ${BRAND.marketing}/terms\n\n` +
+          `Thank you for joining \u2014 Founder, Referral Nova`,
+        html: brandedLayout(
+          `Welcome to Referral Nova, ${escapeHtml(firstName)} \ud83d\udc4b`,
+          `<p>We're thrilled to have you. <strong>Referral Nova</strong> turns your professional network into a reliable source of business: our AI matches you with trusted partners, and qualified referrals flow in both directions \u2014 continuously, not just once.</p>
+           <p><strong>What happens next:</strong> finish your profile so the AI understands who you are and who you want to meet, record a quick 60-second intro video, and we'll start suggesting introductions and meetings. The best first step is simply to open your dashboard and complete setup.</p>
+           ${button('Go to my dashboard', dashUrl)}
+           <h2 style="font-size:16px;margin:28px 0 6px;color:${BRAND.ink};">Getting started</h2>
+           <p style="margin:0 0 6px;color:${BRAND.gray};font-size:14px;">A few short reads to help you set up and get matched:</p>
+           ${gettingStarted}
+           <h2 style="font-size:16px;margin:28px 0 10px;color:${BRAND.ink};">The legal bits</h2>
+           ${secondaryButtons([
+             { label: 'Privacy Policy', url: `${BRAND.marketing}/privacy` },
+             { label: 'Terms of Service', url: `${BRAND.marketing}/terms` },
+             { label: 'Disclaimers', url: `${BRAND.marketing}/terms#referral-agreements` },
+           ])}
+           <div style="margin-top:28px;padding-top:20px;border-top:1px solid ${BRAND.line};">
+             <p style="margin:0 0 4px;">Thank you for trusting us to help grow your business. We built Referral Nova to make referrals happen on purpose, not by luck \u2014 and we're glad you're here.</p>
+             <p style="margin:12px 0 0;color:${BRAND.gray};">Warmly,<br>
+             <!-- FOUNDER_NAME_PLACEHOLDER: drop the founder's name on the line below when ready -->
+             <strong style="color:${BRAND.ink};">Founder, Referral Nova</strong></p>
+           </div>`,
         ),
       };
+    }
     case 'new_signup_admin':
       return {
         subject: `New ${appName} sign-up: ${d.name}`,
@@ -185,7 +218,45 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
   }
 }
 
+const BRAND = {
+  blue: '#2563eb',
+  ink: '#111827',
+  gray: '#6b7280',
+  line: '#e5e7eb',
+  bg: '#f3f4f6',
+  marketing: 'https://referralnova.com',
+  app: 'https://dashboard.referralnova.com',
+};
+
+/** Branded, mobile-safe, table-based layout shared by every email. */
+function brandedLayout(heading: string, bodyHtml: string): string {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${BRAND.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bg};padding:24px 12px;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+      <tr><td style="background:${BRAND.blue};border-radius:14px 14px 0 0;padding:22px 28px;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:middle;"><span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;background:#ffffff;color:${BRAND.blue};border-radius:9px;font-weight:800;font-size:15px;">RN</span></td>
+          <td style="vertical-align:middle;padding-left:12px;"><span style="color:#ffffff;font-weight:800;font-size:18px;">Referral Nova</span></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="background:#ffffff;padding:32px 28px;">
+        <h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:${BRAND.ink};">${heading}</h1>
+        <div style="font-size:15px;line-height:1.6;color:#374151;">${bodyHtml}</div>
+      </td></tr>
+      <tr><td style="background:#ffffff;border-radius:0 0 14px 14px;border-top:1px solid ${BRAND.line};padding:20px 28px 28px;">${legalFooter()}</td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+/** Back-compat shim: existing templates call basicLayout; route to branded. */
 function basicLayout(heading: string, bodyHtml: string): string {
+  return brandedLayout(heading, `${bodyHtml}`);
+}
+
+function legacyUnusedLayout(heading: string, bodyHtml: string): string {
   return `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111;max-width:560px;margin:0 auto;padding:24px;">
     <h1 style="font-size:20px;margin:0 0 16px;">${heading}</h1>
     ${bodyHtml}
@@ -194,8 +265,54 @@ function basicLayout(heading: string, bodyHtml: string): string {
   </body></html>`;
 }
 
+/** Primary branded button. */
+function button(label: string, url: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td style="border-radius:8px;background:${BRAND.blue};">
+    <a href="${escapeAttr(url)}" style="display:inline-block;padding:13px 26px;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;border-radius:8px;">${escapeHtml(label)}</a>
+  </td></tr></table>`;
+}
+
+/** Backwards-compatible alias so existing templates keep working. */
 function cta(label: string, url: string): string {
-  return `<p style="margin:24px 0"><a href="${escapeAttr(url)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">${label}</a></p>`;
+  return button(label, url);
+}
+
+/** Row of small secondary (outline) buttons, e.g. legal links. */
+function secondaryButtons(items: { label: string; url: string }[]): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;"><tr>${items
+    .map(
+      (i) =>
+        `<td style="padding-right:8px;"><a href="${escapeAttr(i.url)}" style="display:inline-block;padding:8px 14px;border:1px solid ${BRAND.line};border-radius:8px;color:${BRAND.blue};text-decoration:none;font-weight:600;font-size:13px;">${escapeHtml(i.label)}</a></td>`,
+    )
+    .join('')}</tr></table>`;
+}
+
+/** Labeled link list (label + one-line description), for getting-started items. */
+function linkList(items: { label: string; url: string; desc: string }[]): string {
+  return items
+    .map(
+      (i) =>
+        `<div style="padding:12px 0;border-bottom:1px solid ${BRAND.line};">
+           <a href="${escapeAttr(i.url)}" style="color:${BRAND.blue};font-weight:700;text-decoration:none;font-size:15px;">${escapeHtml(i.label)} &rarr;</a>
+           <div style="color:${BRAND.gray};font-size:13px;margin-top:2px;">${escapeHtml(i.desc)}</div>
+         </div>`,
+    )
+    .join('');
+}
+
+function legalFooter(): string {
+  const links = [
+    { label: 'Privacy Policy', url: `${BRAND.marketing}/privacy` },
+    { label: 'Terms of Service', url: `${BRAND.marketing}/terms` },
+    { label: 'Contact', url: `${BRAND.marketing}/contact` },
+  ];
+  return `<p style="margin:0 0 8px;font-size:12px;color:${BRAND.gray};">
+      ${links.map((l) => `<a href="${escapeAttr(l.url)}" style="color:${BRAND.gray};text-decoration:underline;">${l.label}</a>`).join(' &nbsp;&middot;&nbsp; ')}
+    </p>
+    <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
+      Referral Nova &mdash; the AI-powered referral network for businesses.<br>
+      You're receiving this because you have a Referral Nova account.
+    </p>`;
 }
 
 function escapeHtml(s: string): string {

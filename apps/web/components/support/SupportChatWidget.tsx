@@ -11,7 +11,8 @@ import { useAuthStore } from '../../stores/auth';
  * Floating support chat - lives on the marketing site AND the dashboard
  * (desktop/tablet only; hidden on phones). A visitor describes their issue,
  * a ticket is opened instantly in the admin console's Support tickets tab,
- * and during live hours (9-5 ET, weekdays) a real person replies in-line.
+ * Support is online 24/7 (our AI agent is first responder), and a person can
+ * step in on the same thread.
  */
 
 interface TicketMessage {
@@ -266,12 +267,8 @@ export function SupportChatWidget() {
               <div>
                 <p className="text-sm font-bold leading-tight">Referral Nova Support</p>
                 <p className="flex items-center gap-1 text-[10px] text-white/80">
-                  <span
-                    className={`inline-block h-1.5 w-1.5 rounded-full ${
-                      online ? 'bg-emerald-300' : 'bg-amber-300'
-                    }`}
-                  />
-                  {online === null ? 'Connecting…' : online ? 'Live now (9-5 ET)' : 'Back weekdays 9-5 ET'}
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                  Online 24/7
                 </p>
               </div>
             </div>
