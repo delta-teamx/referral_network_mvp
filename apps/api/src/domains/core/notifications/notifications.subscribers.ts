@@ -61,23 +61,9 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
     // Email notification already sent above
   });
 
-  eventBus.subscribe('consumer_lead.created', async ({ leadId, listingId, eventType }) => {
-    const listing = await prisma.listing.findUnique({
-      where: { id: listingId },
-      select: { user: { select: { email: true, phone: true } } },
-    });
-    if (!listing) return;
-    await sendEmail({
-      to: listing.user.email,
-      template: 'lead_received',
-      data: {
-        eventType,
-        leadId,
-        leadUrl: `${origin}/dashboard/leads`,
-      },
-    });
-    // Email notification already sent above
-  });
+  // NOTE: the `lead_received` email for consumer_lead.created is sent by
+  // registerLeadSubscribers (leads.subscribers.ts) with fuller detail. It was
+  // ALSO sent here, so every lead emailed the owner twice - removed to dedupe.
 
   // Booking confirmation emails to BOTH host and guest with .ics attachment
   eventBus.subscribe('booking.created', async ({ bookingId }) => {

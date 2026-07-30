@@ -5,7 +5,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AppError } from '../../utils/AppError.js';
-import { createCheckoutSession, finaliseUpgrade, getBillingStatus } from './billing.service.js';
+import { createCheckoutSession, getBillingStatus } from './billing.service.js';
 import { canReceiveMoreLeads, TIERS, type Tier } from './billing.tiers.js';
 import { getFoundingStatus } from './founding.service.js';
 
@@ -58,18 +58,12 @@ billingRouter.post(
   }),
 );
 
-const finaliseSchema = z.object({ tier: z.enum(['PRO', 'PREMIUM']) });
-
-billingRouter.post(
-  '/finalise-demo',
-  validate(finaliseSchema),
-  asyncHandler(async (req, res) => {
-    if (!req.user) throw AppError.unauthorized();
-    await finaliseUpgrade(req.user.id, req.body.tier as Tier);
-    const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
-    res.json(body);
-  }),
-);
+// NOTE: the old POST /finalise-demo endpoint was REMOVED. It flipped a user's
+// subscriptionTier with no payment verification, so any logged-in user could
+// grant themselves PREMIUM for free. Tier activation now happens exclusively in
+// the signature-verified Stripe webhook (billing.webhook.ts) on
+// checkout.session.completed. The /billing/success page just re-hydrates to
+// pick up the new tier.
 
 // Live plan state incl. unpaid dues (powers the paused-subscription alert).
 billingRouter.get(

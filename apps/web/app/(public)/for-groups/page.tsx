@@ -142,7 +142,7 @@ export default function ForGroupsPage() {
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-block rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-primary/90"
             >
               Start your free trial
@@ -475,7 +475,7 @@ export default function ForGroupsPage() {
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-block rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-primary/90"
             >
               Start your free trial

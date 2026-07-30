@@ -132,10 +132,7 @@ export async function apiRequest<T>(
       !path.includes('/auth/')
     ) {
       try {
-        const refreshed = await apiRequest<{ tokens: { accessToken: string; expiresIn: number }; user: unknown }>(
-          'POST',
-          '/api/v1/auth/refresh',
-        );
+        const refreshed = await sharedRefresh();
         const { useAuthStore } = await import('../stores/auth');
         const store = useAuthStore.getState();
         store.setAuth(
@@ -170,6 +167,27 @@ export async function apiRequest<T>(
     }
     throw err;
   }
+}
+
+/**
+ * Single-flight refresh. When several requests 401 at once (e.g. the tab wakes
+ * from sleep with an expired access token), they all await ONE /auth/refresh
+ * instead of each firing their own - with refresh-token rotation, parallel
+ * refreshes would invalidate each other and bounce the user to /login.
+ */
+let inFlightRefresh:
+  | Promise<{ tokens: { accessToken: string; expiresIn: number }; user: unknown }>
+  | null = null;
+function sharedRefresh() {
+  if (!inFlightRefresh) {
+    inFlightRefresh = apiRequest<{ tokens: { accessToken: string; expiresIn: number }; user: unknown }>(
+      'POST',
+      '/api/v1/auth/refresh',
+    ).finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
 }
 
 export const api = {

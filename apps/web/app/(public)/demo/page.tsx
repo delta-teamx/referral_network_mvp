@@ -84,7 +84,7 @@ export default function DemoPage() {
             messaging, and network management - exactly what your members will use.
           </p>
           <Link
-            href="/signup"
+            href="https://dashboard.referralnova.com/signup"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90"
           >
             Start free - no credit card <ArrowRight size={14} />
@@ -319,7 +319,7 @@ export default function DemoPage() {
           <div className="border-t border-gray-200 bg-gradient-to-r from-primary/5 to-amber-50 px-6 py-4 text-center">
             <p className="mb-2 text-sm font-semibold text-gray-900">This is a live preview. Ready to try it for real?</p>
             <Link
-              href="/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
             >
               Create your free account <ArrowRight size={14} />

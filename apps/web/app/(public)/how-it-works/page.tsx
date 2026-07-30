@@ -339,7 +339,7 @@ export default function HowItWorksPage() {
           </motion.p>
           <motion.div variants={fadeInUp} className="mt-8">
             <Link
-              href="/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-block rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-primary/90"
             >
               Join free

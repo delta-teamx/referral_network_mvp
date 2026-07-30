@@ -1,6 +1,9 @@
 import type { EventBus } from '../../core/events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
+import { env } from '../../../config/env.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
+
+const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
 
 /**
  * Lead notification subscribers - fire emails when a consumer creates
@@ -38,6 +41,7 @@ export function registerLeadSubscribers(bus: EventBus): void {
         consumerEmail: lead.consumer.email,
         consumerPhone: lead.consumer.phone ?? '-',
         notes: lead.notes ?? '-',
+        leadUrl: `${origin}/dashboard/leads`,
       },
     });
   });

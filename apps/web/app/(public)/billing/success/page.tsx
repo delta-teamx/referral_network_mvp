@@ -6,7 +6,6 @@ import { Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
-import { api } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
 function Inner() {
@@ -18,20 +17,26 @@ function Inner() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!tier || !accessToken) {
+    if (!accessToken) {
       setReady(true);
       return;
     }
-    async function finalise() {
-      try {
-        await api.post('/api/v1/billing/finalise-demo', { tier }, { accessToken: accessToken ?? undefined });
-      } finally {
+    // The Stripe webhook (checkout.session.completed) applies the upgrade
+    // server-side. We just re-hydrate a couple of times to pick up the new tier
+    // once the webhook lands - no client-trusted upgrade call.
+    let cancelled = false;
+    async function syncTier() {
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
         await hydrate();
-        setReady(true);
+        await new Promise((r) => setTimeout(r, 1500));
       }
+      if (!cancelled) setReady(true);
     }
-    void finalise();
-  }, [tier, accessToken, hydrate]);
+    void syncTier();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, hydrate]);
 
   return (
     <main className="flex min-h-[60vh] items-center bg-gradient-to-br from-primary-light via-white to-amber-50 px-6 py-16">

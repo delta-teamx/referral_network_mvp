@@ -172,6 +172,13 @@ export async function refresh(refreshTokenRaw: string): Promise<AuthResult> {
     where: { id: claims.sub, deletedAt: null },
   });
   if (!user) throw AppError.unauthorized('Session no longer valid');
+  // Revocation check: a password reset (or "log out everywhere") bumps
+  // user.tokenVersion, which invalidates every refresh token minted before it.
+  // Tokens issued before this field existed carry no `tv` and are grandfathered
+  // against the current version once (they'll rotate to a versioned token here).
+  if (typeof claims.tv === 'number' && claims.tv !== user.tokenVersion) {
+    throw AppError.unauthorized('Session has been revoked. Please log in again.');
+  }
   return buildAuthSuccess(user);
 }
 
@@ -236,6 +243,9 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
       passwordHash,
       resetToken: null,
       resetTokenExpiry: null,
+      // Invalidate every outstanding refresh token so a reset actually evicts
+      // anyone who had access (e.g. via a stolen token).
+      tokenVersion: { increment: 1 },
     },
   });
 }
@@ -253,6 +263,7 @@ async function buildAuthSuccess(user: User): Promise<AuthResult> {
   const refreshToken = signRefreshToken({
     sub: user.id,
     jti: generateToken(16),
+    tv: user.tokenVersion,
   });
   return {
     dto: {

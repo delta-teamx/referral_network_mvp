@@ -73,7 +73,7 @@ export function Hero() {
             <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
           </Link>
           <Link
-            href="/signup"
+            href="https://dashboard.referralnova.com/signup"
             className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
           >
             List your business - free

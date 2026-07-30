@@ -104,7 +104,9 @@ async function fetchUserInfo(accessToken: string): Promise<GoogleUserInfo> {
 
 async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user: User; isNew: boolean }> {
   const email = profile.email.toLowerCase().trim();
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Exclude soft-deleted (suspended) accounts - matching by email alone let a
+  // banned user sign back in via Google and revive their account.
+  const existing = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   if (existing) {
     if (!existing.emailVerified && profile.email_verified) {
       const updated = await prisma.user.update({

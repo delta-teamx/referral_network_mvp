@@ -60,27 +60,17 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
     return;
   }
 
-  // Idempotency: skip if we've processed this event id before.
-  try {
-    await prisma.domainEvent.create({
-      data: {
-        id: event.id,
-        type: `stripe.${event.type}`,
-        aggregateId: event.data.object && (event.data.object as { id?: string }).id ? String((event.data.object as { id: string }).id) : event.id,
-        payload: event as unknown as object,
-      },
-    });
-  } catch (err) {
-    // Only a unique-violation (P2002) means we've already processed this event;
-    // ack and move on. Any other failure (DB blip, oversized payload) must NOT
-    // be treated as a duplicate - return 500 so Stripe retries later.
-    if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') {
-      res.json({ received: true, duplicate: true });
-      return;
-    }
-    // eslint-disable-next-line no-console
-    console.error('[stripe:webhook] idempotency insert failed', err);
-    res.status(500).json({ success: false, error: 'Webhook persistence failed' });
+  // Idempotency: if we've already recorded this event id, it was fully
+  // processed before - ack and skip. The idempotency row is written AFTER
+  // successful processing (below), NOT here: writing it first meant a transient
+  // error during processing returned 500, and Stripe's retry then hit the
+  // duplicate row and was acked WITHOUT ever applying the effect - so a paying
+  // customer could silently never be upgraded.
+  const already = await prisma.domainEvent
+    .findUnique({ where: { id: event.id }, select: { id: true } })
+    .catch(() => null);
+  if (already) {
+    res.json({ received: true, duplicate: true });
     return;
   }
 
@@ -216,6 +206,27 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         // Unhandled event type - ack anyway so Stripe stops retrying.
         break;
     }
+    // Record the event ONLY after it processed successfully, so a transient
+    // failure above leaves no idempotency row and Stripe's retry reprocesses it.
+    // A P2002 here just means a concurrent delivery already recorded it - fine.
+    await prisma.domainEvent
+      .create({
+        data: {
+          id: event.id,
+          type: `stripe.${event.type}`,
+          aggregateId:
+            event.data.object && (event.data.object as { id?: string }).id
+              ? String((event.data.object as { id: string }).id)
+              : event.id,
+          payload: event as unknown as object,
+        },
+      })
+      .catch((err) => {
+        if (!(err && typeof err === 'object' && (err as { code?: string }).code === 'P2002')) {
+          // eslint-disable-next-line no-console
+          console.error('[stripe:webhook] idempotency record failed (effect already applied)', err);
+        }
+      });
     res.json({ received: true });
   } catch (err) {
     // eslint-disable-next-line no-console

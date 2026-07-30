@@ -111,7 +111,7 @@ export default function EventsPage() {
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               {!user && (
                 <Link
-                  href="/signup"
+                  href="https://dashboard.referralnova.com/signup"
                   className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
                 >
                   Join free - get notified
@@ -201,7 +201,7 @@ export default function EventsPage() {
                     )
                   ) : (
                     <Link
-                      href={`/login?next=/events`}
+                      href={`https://dashboard.referralnova.com/login?next=/events`}
                       className="text-xs font-semibold text-primary hover:underline"
                     >
                       Log in to register →

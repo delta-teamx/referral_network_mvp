@@ -69,14 +69,23 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     select: profileSelect,
   });
 
+  // Merge (union) the step into whatever's already recorded instead of
+  // overwriting - the old `set: ['profile_submitted']` wiped every other step a
+  // member had completed each time they saved their profile.
+  const existingProgress = await prisma.onboardingProgress.findUnique({
+    where: { userId },
+    select: { completedSteps: true },
+  });
+  // completedSteps is a Json column - coerce to a string[] before merging.
+  const priorSteps = Array.isArray(existingProgress?.completedSteps)
+    ? (existingProgress.completedSteps as string[])
+    : [];
+  const mergedSteps = Array.from(new Set([...priorSteps, 'profile_submitted']));
   await prisma.onboardingProgress.upsert({
     where: { userId },
     create: { userId, completedSteps: ['profile_submitted'], completedAt: new Date() },
-    // The row already exists (created at signup), so the update branch is what
-    // actually runs - record the step here too (set, not push, to stay
-    // idempotent when a member edits their profile again).
     update: {
-      completedSteps: ['profile_submitted'],
+      completedSteps: mergedSteps,
       completedAt: new Date(),
     },
   });

@@ -267,12 +267,16 @@ async function assertGroupMember(groupId: string, userId: string): Promise<void>
 
 export async function listGroupMessages(groupId: string, userId: string) {
   await assertGroupMember(groupId, userId);
-  return prisma.groupMessage.findMany({
-    where: { groupId },
-    orderBy: { createdAt: 'asc' },
-    take: 200,
-    select: groupMessageSelect,
-  });
+  // Newest 200, returned chronologically - see listMessages: asc + take would
+  // strand the view on the oldest messages once the group passed 200.
+  return (
+    await prisma.groupMessage.findMany({
+      where: { groupId },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: groupMessageSelect,
+    })
+  ).reverse();
 }
 
 export async function postGroupMessage(groupId: string, userId: string, text: string) {

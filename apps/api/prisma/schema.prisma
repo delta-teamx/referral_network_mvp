@@ -96,6 +96,8 @@ model User {
   lastLoginAt      DateTime?
   referredByUserId String?
   referralRewardMonths Int @default(0)
+  referralCode     String?          @unique
+  tokenVersion     Int              @default(0)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   deletedAt        DateTime?

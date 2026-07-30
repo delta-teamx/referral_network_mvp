@@ -327,7 +327,7 @@ export default function PricingPage() {
             Join 500+ professionals who let AI handle their referrals.
           </p>
           <Link
-            href="/signup"
+            href="https://dashboard.referralnova.com/signup"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
           >
             Create your free profile <ArrowRight size={16} />

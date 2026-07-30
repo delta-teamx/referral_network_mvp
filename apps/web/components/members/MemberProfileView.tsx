@@ -346,7 +346,7 @@ export function MemberProfileView({ id }: { id: string }) {
         {!user && (
           <div className="mt-5 border-t border-gray-100 pt-5">
             <a
-              href={`/login?next=${encodeURIComponent(`/dashboard/members/profile?id=${profile.id}`)}`}
+              href={`https://dashboard.referralnova.com/login?next=${encodeURIComponent(`/dashboard/members/profile?id=${profile.id}`)}`}
               className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
             >
               <Calendar size={14} /> Log in to book a call

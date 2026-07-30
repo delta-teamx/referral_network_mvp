@@ -510,17 +510,22 @@ export async function listMessages(
     throw AppError.forbidden('You are not a participant of this conversation.');
   }
 
-  const messages = await prisma.message.findMany({
-    where: { conversationId },
-    orderBy: { createdAt: 'asc' },
-    take: limit,
-    select: {
-      id: true,
-      senderId: true,
-      text: true,
-      createdAt: true,
-    },
-  });
+  // Take the NEWEST `limit` messages (desc), then flip to chronological order
+  // for display. Ordering asc + take would pin the view to the OLDEST messages,
+  // so once a thread passed the limit new messages would never appear.
+  const messages = (
+    await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        senderId: true,
+        text: true,
+        createdAt: true,
+      },
+    })
+  ).reverse();
 
   // Mark conversation as read for this user.
   await prisma.conversationParticipant.updateMany({

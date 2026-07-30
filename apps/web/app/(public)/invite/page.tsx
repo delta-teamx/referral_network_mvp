@@ -182,7 +182,7 @@ function InviteInner() {
                 ) : (
                   <div className="space-y-3">
                     <Link
-                      href={`/signup?invite=${token}&email=${encodeURIComponent(invite.recipientEmail)}`}
+                      href={`https://dashboard.referralnova.com/signup?invite=${token}&email=${encodeURIComponent(invite.recipientEmail)}`}
                       className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90"
                     >
                       Sign up and accept →
@@ -190,7 +190,7 @@ function InviteInner() {
                     <p className="text-center text-xs text-gray-500">
                       Already have an account?{' '}
                       <Link
-                        href={`/login?next=/invite?token=${token}`}
+                        href={`https://dashboard.referralnova.com/login?next=/invite?token=${token}`}
                         className="font-semibold text-primary hover:underline"
                       >
                         Log in to accept

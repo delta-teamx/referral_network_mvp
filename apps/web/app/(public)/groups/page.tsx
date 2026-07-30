@@ -151,7 +151,7 @@ export default function GroupsPage() {
                 </Link>
               ) : (
                 <Link
-                  href="/signup"
+                  href="https://dashboard.referralnova.com/signup"
                   className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
                 >
                   Join free & start a group

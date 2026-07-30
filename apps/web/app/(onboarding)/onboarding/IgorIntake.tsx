@@ -28,7 +28,9 @@ const INDUSTRIES = [
   'Accounting / CPA', 'Law', 'Insurance', 'Web Design / Development', 'Marketing',
   'Interior Design', 'Healthcare', 'Financial Planning', 'Roofing', 'HVAC',
   'Landscaping', 'Auto Services', 'Consulting', 'Business Consultant',
-  'Franchise Consultant', 'Franchise Coach', 'Travel Agent', 'Other',
+  'Franchise Consultant', 'Franchise Coach', 'Travel Agent',
+  'Software Development', 'I.T. Services', 'AI Agency', 'Automation / AI',
+  'Other',
 ];
 
 const SERVICE_AREAS = [

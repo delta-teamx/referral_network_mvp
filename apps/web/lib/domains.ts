@@ -7,6 +7,14 @@
 export const APP_BASE_URL = 'https://dashboard.referralnova.com';
 export const MARKETING_BASE_URL = 'https://referralnova.com';
 
+/**
+ * Canonical auth entry points. Login/signup always live on the app domain
+ * (dashboard.referralnova.com), so every marketing CTA points here rather than
+ * at a relative path that would strand the user on the marketing origin.
+ */
+export const SIGNUP_URL = `${APP_BASE_URL}/signup`;
+export const LOGIN_URL = `${APP_BASE_URL}/login`;
+
 const APP_HOSTS = [
   'dashboard.referralnova.com',
 ];

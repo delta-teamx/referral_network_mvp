@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useFoundingStatus } from '../../lib/useFoundingStatus';
 import { useI18n } from '../../lib/i18n';
-
-const SIGNUP_URL = '/signup';
+import { SIGNUP_URL } from '../../lib/domains';
 
 /**
  * Founding-member promo, backed by the live /billing/founding-status count.

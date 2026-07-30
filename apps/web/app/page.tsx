@@ -101,7 +101,7 @@ export default function HomePage() {
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
                 <Link
-                  href="/signup"
+                  href="https://dashboard.referralnova.com/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
                   {t('hero.ctaJoin')} <ArrowRight size={16} />
@@ -757,7 +757,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="/signup"
+              href="https://dashboard.referralnova.com/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
               Claim your founding spot <ArrowRight size={16} />

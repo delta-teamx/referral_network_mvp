@@ -71,7 +71,12 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (/^https:\/\/[a-z0-9-]+--(refnet|referral-network|virtualpros)[a-z0-9-]*\.netlify\.app$/i.test(origin)) {
+      // Netlify preview deploys for OUR site only. The site name is anchored
+      // exactly ("--virtualprosnetwork.netlify.app") so an attacker cannot
+      // register a site whose name merely starts with our token (e.g.
+      // "refnet-evil") and get a credentialed cross-origin allow. Branch part
+      // is the only wildcard.
+      if (/^https:\/\/[a-z0-9-]+--virtualprosnetwork\.netlify\.app$/i.test(origin)) {
         return cb(null, true);
       }
       return cb(new Error(`CORS blocked: ${origin}`));
@@ -317,6 +322,12 @@ async function ensureRuntimeSchema(): Promise<void> {
       `UPDATE "User" SET "emailVerified" = true WHERE "emailVerified" = false;`,
       // Members can link their LinkedIn profile.
       `ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT;`,
+      // Short, shareable invite codes for referralnova.com/join/<code> links.
+      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "referralCode" TEXT;`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "User_referralCode_key" ON "User" ("referralCode");`,
+      // Refresh-token revocation: bump this to invalidate all outstanding
+      // refresh tokens for a user (password reset / log out everywhere).
+      `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tokenVersion" INTEGER NOT NULL DEFAULT 0;`,
       // MEDIA HEAL: profile photos/videos stored as direct S3 URLs (the old
       // browser-to-S3 flow) or minted against a wrong API base render as
       // broken images. Rewrite them to the canonical download proxy.

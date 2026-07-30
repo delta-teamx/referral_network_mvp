@@ -16,7 +16,7 @@ export function FinalCTA() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/signup"
+            href="https://dashboard.referralnova.com/signup"
             className="rounded-full bg-secondary px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-secondary/30 transition hover:bg-secondary/90"
           >
             Create your free account

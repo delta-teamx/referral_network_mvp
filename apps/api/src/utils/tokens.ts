@@ -13,8 +13,10 @@ export interface AccessTokenClaims {
 
 export interface RefreshTokenClaims {
   sub: string; // userId
-  /** Opaque token ID; DB row tracks revocation + rotation. */
+  /** Opaque token ID (rotation aid). */
   jti: string;
+  /** Snapshot of the user's tokenVersion; refresh is rejected if it drifts. */
+  tv?: number;
 }
 
 function requireAccessSecret(): string {

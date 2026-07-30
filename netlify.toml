@@ -13,6 +13,11 @@
 
 # Dynamic route fallbacks
 [[redirects]]
+  from = "/join/*"
+  to = "/join/index.html"
+  status = 200
+
+[[redirects]]
   from = "/listing/*"
   to = "/listing/listing/index.html"
   status = 200

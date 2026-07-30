@@ -41,13 +41,11 @@ function getStore(namespace: string): Map<string, Bucket> {
 }
 
 function extractIp(req: Request): string {
-  // Trust `X-Forwarded-For` only behind a known proxy - in production Express
-  // should be configured with `app.set('trust proxy', 1)` before entries in
-  // this header are honoured. Fall back to socket.remoteAddress.
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) {
-    return xff.split(',')[0]?.trim() ?? 'unknown';
-  }
+  // Use `req.ip`, which Express derives from X-Forwarded-For according to the
+  // configured `trust proxy` setting (see index.ts: `trust proxy 1`). We must
+  // NOT read the raw X-Forwarded-For header ourselves - its leftmost value is
+  // fully client-controlled, so keying buckets off it let attackers spoof a
+  // fresh IP per request and bypass every rate limit (login/OTP/signup).
   return req.ip ?? req.socket.remoteAddress ?? 'unknown';
 }
 

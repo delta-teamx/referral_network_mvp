@@ -46,7 +46,11 @@ interface LeaderboardData {
     referralSent: number;
     callHeld: number;
   };
+  period: 'month' | 'all';
+  cycleLabel: string;
   inviteUrl: string;
+  inviteCode: string;
+  inviteUrlRaw: string;
   viewer: {
     rank: number | null;
     points: number;
@@ -70,13 +74,17 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [scriptCopied, setScriptCopied] = useState(false);
+  const [period, setPeriod] = useState<'month' | 'all'>('month');
 
   useEffect(() => {
     if (!accessToken) return;
     let cancelled = false;
+    setData(null);
     api
       .get<LeaderboardData>('/api/v1/referral-tracking/community', {
         accessToken: accessToken ?? undefined,
+        query: { period },
       })
       .then((d) => {
         if (!cancelled) setData(d);
@@ -87,7 +95,13 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, [accessToken, period]);
+
+  // Ready-made invite message with the member's personal link auto-filled.
+  const inviteScript = data
+    ? `Hey! I'm building my network on Referral Nova - an AI-powered referral platform for businesses. ` +
+      `Founding members get lifetime Premium free. Join with my personal link and we'll auto-connect:\n\n${data.inviteUrl}`
+    : '';
 
   async function copyInvite() {
     if (!data?.inviteUrl) return;
@@ -100,17 +114,54 @@ export default function LeaderboardPage() {
     }
   }
 
+  async function copyScript() {
+    if (!inviteScript) return;
+    try {
+      await navigator.clipboard.writeText(inviteScript);
+      setScriptCopied(true);
+      setTimeout(() => setScriptCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
   const viewer = data?.viewer ?? null;
 
   return (
     <div className="p-6 md:p-8">
-      <header className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Community</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">Leaderboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Invite businesses you trust, close deals, and climb the board. Every successful invite
-          makes the whole network stronger.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Community</p>
+          <h1 className="mt-1 text-2xl font-bold text-gray-900">Leaderboard</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Invite businesses you trust, close deals, and climb the board.{' '}
+            {period === 'month'
+              ? `Rankings reset every month - you're seeing the ${data?.cycleLabel ?? 'current'} cycle.`
+              : 'You are viewing the all-time board.'}
+          </p>
+        </div>
+        {/* Monthly cycle vs. all-time toggle - stats reset each month so there's
+            always a fresh race, but the all-time view preserves total history. */}
+        <div className="inline-flex rounded-full border border-gray-200 bg-white p-0.5 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setPeriod('month')}
+            className={`rounded-full px-3 py-1.5 transition ${
+              period === 'month' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'
+            }`}
+          >
+            This month
+          </button>
+          <button
+            type="button"
+            onClick={() => setPeriod('all')}
+            className={`rounded-full px-3 py-1.5 transition ${
+              period === 'all' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'
+            }`}
+          >
+            All time
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -142,6 +193,28 @@ export default function LeaderboardPage() {
               {copied ? <Check size={13} /> : <Copy size={13} />}
               {copied ? 'Copied!' : 'Copy link'}
             </button>
+          </div>
+
+          {/* Ready-made invite message - your link is already filled in. One tap
+              copies the whole thing so members can paste it into any chat. */}
+          <div className="mt-3 rounded-xl bg-white/10 p-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/70">
+                Ready-to-send message
+              </span>
+              <button
+                type="button"
+                onClick={() => void copyScript()}
+                disabled={!data}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold text-primary transition hover:bg-white/90 disabled:opacity-60"
+              >
+                {scriptCopied ? <Check size={12} /> : <Copy size={12} />}
+                {scriptCopied ? 'Copied!' : 'Copy message'}
+              </button>
+            </div>
+            <p className="whitespace-pre-line text-xs leading-relaxed text-white/90">
+              {inviteScript || 'Loading your message…'}
+            </p>
           </div>
           {viewer && (
             <div className="mt-4 flex flex-wrap gap-4 text-xs">

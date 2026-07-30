@@ -201,6 +201,68 @@ async function applyInviteRewards(referrerUserId: string, inviteeName: string): 
   }
 }
 
+/** First instant of the current calendar month (UTC) - the leaderboard cycle boundary. */
+function currentMonthStart(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+}
+
+/** Human-friendly label for the active monthly cycle, e.g. "July 2026". */
+function monthLabel(d: Date): string {
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * Ensure a member has a short, shareable referral code (used in
+ * referralnova.com/join/<code> links). Generated lazily on first leaderboard
+ * load from their first name + a short random suffix; unique per member.
+ */
+async function ensureReferralCode(
+  userId: string,
+  firstName: string | null,
+): Promise<string> {
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { referralCode: true },
+  });
+  if (existing?.referralCode) return existing.referralCode;
+
+  const base =
+    (firstName ?? 'member')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 16) || 'member';
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const code = `${base}-${suffix}`;
+    try {
+      await prisma.user.update({ where: { id: userId }, data: { referralCode: code } });
+      return code;
+    } catch {
+      // unique collision - try another suffix
+    }
+  }
+  // Fallback: guaranteed-unique code from the id tail.
+  const code = `${base}-${userId.slice(-6).toLowerCase()}`;
+  await prisma.user.update({ where: { id: userId }, data: { referralCode: code } }).catch(() => {});
+  return code;
+}
+
+/**
+ * Resolve a /join/<code> short code back to the referrer's user id, so the
+ * marketing redirect can attribute the signup. Returns null for unknown codes.
+ */
+export async function resolveReferralCode(code: string): Promise<string | null> {
+  const clean = code.trim().toLowerCase().slice(0, 40);
+  if (!clean) return null;
+  const user = await prisma.user.findFirst({
+    where: { referralCode: clean, deletedAt: null },
+    select: { id: true },
+  });
+  return user?.id ?? null;
+}
+
 /** Founding member = among the first 200 (non-admin) accounts ever created. */
 async function isFoundingMember(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } });
@@ -308,8 +370,15 @@ export async function getReferralStats(userId: string) {
  */
 export async function getCommunityLeaderboard(
   viewerId: string,
-  opts?: { includeInactive?: boolean },
+  opts?: { includeInactive?: boolean; period?: 'month' | 'all' },
 ) {
+  const period = opts?.period ?? 'month';
+  const monthStart = currentMonthStart();
+  // When ranking the monthly cycle, only count activity dated within this
+  // month; the all-time view counts everything. Each activity is bucketed by
+  // the timestamp that best represents when it "happened".
+  const since = period === 'month' ? monthStart : undefined;
+
   const users = await prisma.user.findMany({
     where: { deletedAt: null, role: { not: 'ADMIN' } },
     orderBy: { createdAt: 'asc' },
@@ -325,28 +394,41 @@ export async function getCommunityLeaderboard(
   const [invites, deals, contracts, referrals, hostCalls, guestCalls] = await Promise.all([
     prisma.referralTracking.groupBy({
       by: ['referrerUserId'],
-      where: { status: { in: ['onboarded', 'paid'] } },
+      where: {
+        status: { in: ['onboarded', 'paid'] },
+        ...(since ? { inviteeJoinedAt: { gte: since } } : {}),
+      },
       _count: { _all: true },
     }),
     prisma.pipelineCard.groupBy({
       by: ['ownerId'],
-      where: { stage: 'won' },
+      where: { stage: 'won', ...(since ? { stageUpdatedAt: { gte: since } } : {}) },
       _count: { _all: true },
     }),
     prisma.contract.groupBy({
       by: ['senderId'],
-      where: { status: 'signed' },
+      where: { status: 'signed', ...(since ? { updatedAt: { gte: since } } : {}) },
       _count: { _all: true },
     }),
-    prisma.referral.groupBy({ by: ['senderId'], _count: { _all: true } }),
+    prisma.referral.groupBy({
+      by: ['senderId'],
+      where: since ? { createdAt: { gte: since } } : {},
+      _count: { _all: true },
+    }),
     prisma.bookingCall.groupBy({
       by: ['hostId'],
-      where: { status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      where: {
+        status: { in: ['confirmed', 'completed'] },
+        endsAt: since ? { lt: now, gte: since } : { lt: now },
+      },
       _count: { _all: true },
     }),
     prisma.bookingCall.groupBy({
       by: ['guestId'],
-      where: { status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      where: {
+        status: { in: ['confirmed', 'completed'] },
+        endsAt: since ? { lt: now, gte: since } : { lt: now },
+      },
       _count: { _all: true },
     }),
   ]);
@@ -407,14 +489,28 @@ export async function getCommunityLeaderboard(
     prisma.user.findUnique({ where: { id: viewerId }, select: { referralRewardMonths: true } }),
     isFoundingMember(viewerId),
   ]);
-  const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
+  // Short, branded invite link: referralnova.com/join/<code>. The /join route
+  // resolves the code back to this user id and forwards to the signup page with
+  // attribution, so the link stays short while ?ref= keeps working underneath.
+  const viewerRecord = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: { firstName: true },
+  });
+  const code = await ensureReferralCode(viewerId, viewerRecord?.firstName ?? null);
+  const appOrigin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
+  const inviteUrl = `https://referralnova.com/join/${code}`;
 
   return {
     members: opts?.includeInactive ? rows.map((r, i) => ({ ...r, rank: r.points > 0 ? i + 1 : null })) : participants.slice(0, 50),
     totalMembers: rows.length,
     participantCount: participants.length,
     points: LEADERBOARD_POINTS,
-    inviteUrl: `${origin}/signup?ref=${viewerId}`,
+    period,
+    cycleLabel: monthLabel(monthStart),
+    inviteUrl,
+    inviteCode: code,
+    // Full attribution URL as a fallback (used if the short /join link can't resolve).
+    inviteUrlRaw: `${appOrigin}/signup?ref=${viewerId}`,
     viewer: {
       rank: myRow?.rank ?? null,
       points: myRow?.points ?? 0,

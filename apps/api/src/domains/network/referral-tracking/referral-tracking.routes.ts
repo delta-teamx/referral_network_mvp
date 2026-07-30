@@ -9,10 +9,24 @@ import {
   getCommunityLeaderboard,
   getReferralStats,
   getTopReferrers,
+  resolveReferralCode,
   trackReferral,
 } from './referral-tracking.service.js';
 
 export const referralTrackingRouter: Router = Router();
+
+// Public: resolve a /join/<code> short link to the referrer id, so the
+// marketing redirect page can attribute the signup. Mounted BEFORE the
+// authenticate gate below - anonymous visitors follow invite links.
+referralTrackingRouter.get(
+  '/resolve/:code',
+  asyncHandler(async (req, res) => {
+    const ref = await resolveReferralCode(req.params.code ?? '');
+    const body: ApiResponse<{ ref: string | null }> = { success: true, data: { ref } };
+    res.json(body);
+  }),
+);
+
 referralTrackingRouter.use(authenticate);
 
 const trackSchema = z.object({
@@ -54,7 +68,9 @@ referralTrackingRouter.get(
     if (!req.user) throw AppError.unauthorized();
     // ?all=1 (admin only): include members who haven't started participating.
     const includeInactive = req.query.all === '1' && req.user.role === 'ADMIN';
-    const data = await getCommunityLeaderboard(req.user.id, { includeInactive });
+    // ?period=all shows the all-time board; default is the current monthly cycle.
+    const period = req.query.period === 'all' ? 'all' : 'month';
+    const data = await getCommunityLeaderboard(req.user.id, { includeInactive, period });
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

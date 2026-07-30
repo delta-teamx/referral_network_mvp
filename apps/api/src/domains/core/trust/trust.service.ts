@@ -55,12 +55,26 @@ export async function recomputeTrustForListing(listingId: string): Promise<numbe
   });
   const networkScore = Math.min(10, Math.log1p(acceptedConnections) * 3);
 
-  const daysSinceEdit = (Date.now() - listing.updatedAt.getTime()) / 86400_000;
-  const activityScore = Math.max(0, 10 - daysSinceEdit / 3);
+  // Freshness must come from a signal the recompute does NOT itself mutate.
+  // Using listing.updatedAt was self-perpetuating: writing trustScore below
+  // bumps @updatedAt, so every nightly run reset "days since edit" to ~0 and
+  // every listing permanently earned the full activity bonus. Base it on the
+  // latest genuine engagement (most recent review) instead.
+  const latestReview = await prisma.review.findFirst({
+    where: { listingId: listing.id },
+    orderBy: { createdAt: 'desc' },
+    select: { createdAt: true },
+  });
+  const daysSinceActivity = latestReview
+    ? (Date.now() - latestReview.createdAt.getTime()) / 86400_000
+    : 90; // no reviews yet → no activity bonus (rather than a free +10)
+  const activityScore = Math.max(0, 10 - daysSinceActivity / 3);
 
   const raw =
     ratingScore + reviewBonus + conversionScore + verifiedScore + networkScore + activityScore;
-  const clamped = Math.max(0, Math.min(100, Math.round(raw * 10) / 10));
+  // Column is Decimal(3,1) → max 99.9; clamping at 100 overflowed and threw on
+  // a perfect score, failing the whole recompute.
+  const clamped = Math.max(0, Math.min(99.9, Math.round(raw * 10) / 10));
 
   await prisma.listing.update({
     where: { id: listing.id },

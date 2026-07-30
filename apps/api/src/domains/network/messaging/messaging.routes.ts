@@ -35,7 +35,22 @@ messagingRouter.get(
     // as broken images even though upload+storage worked. This media proxy
     // explicitly serves cross-origin.
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    (f.body as unknown as { pipe: (r: typeof res) => void }).pipe(res);
+    // Attach an 'error' handler BEFORE piping: an unhandled 'error' on the S3
+    // source stream (network blip, client abort mid-transfer) would otherwise
+    // throw an uncaught exception and crash the whole process.
+    const stream = f.body as unknown as {
+      pipe: (r: typeof res) => void;
+      on: (ev: string, cb: (e?: unknown) => void) => void;
+      destroy?: () => void;
+    };
+    stream.on('error', (err) => {
+      // eslint-disable-next-line no-console
+      console.error('[messaging:attachment] stream error', err);
+      if (!res.headersSent) res.status(502).end();
+      else res.destroy();
+    });
+    res.on('close', () => stream.destroy?.());
+    stream.pipe(res);
   }),
 );
 

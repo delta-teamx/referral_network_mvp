@@ -1,7 +1,6 @@
 import { prisma } from '../../config/prisma.js';
 import { env } from '../../config/env.js';
 import { AppError } from '../../utils/AppError.js';
-import { eventBus } from '../core/events/index.js';
 import { TIERS, type Tier } from './billing.tiers.js';
 
 export interface CheckoutSessionResult {
@@ -134,11 +133,6 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
   }
 }
 
-export async function finaliseUpgrade(userId: string, tier: Tier): Promise<void> {
-  if (tier === 'FREE') return;
-  await prisma.user.update({
-    where: { id: userId },
-    data: { subscriptionTier: tier },
-  });
-  await eventBus.publish('subscription.activated', { userId, tier });
-}
+// finaliseUpgrade() was removed: it set a paid tier with no payment proof and
+// was a free-upgrade bypass. Tier activation is now done only by the
+// signature-verified Stripe webhook (billing.webhook.ts).
