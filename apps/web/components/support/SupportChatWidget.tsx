@@ -196,6 +196,28 @@ export function SupportChatWidget() {
       );
       setTicket(t);
       window.localStorage.setItem(storageKey, t.id);
+
+      // ROUL answers the opening message immediately.
+      const opening = String(form.get('message') ?? '').trim();
+      const isOnboarding = /onboard|sign\s?up|profile|verif|login|log in|password|photo|video|upload/i.test(opening);
+      const r = await api.post<{ answer: string; escalated: boolean }>(
+        '/api/v1/support/roul',
+        { question: opening, history: [], ticketId: t.id, isOnboarding },
+        { accessToken: accessToken ?? undefined },
+      );
+      if (r?.answer) {
+        setTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                messages: [
+                  ...prev.messages,
+                  { id: `roul-open-${prev.messages.length}`, senderType: 'agent', body: r.answer, createdAt: new Date().toISOString() },
+                ],
+              }
+            : prev,
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reach support - try again.');
     } finally {
@@ -242,6 +264,7 @@ export function SupportChatWidget() {
     if (!ticket || !draft.trim()) return;
     const text = draft.trim();
     setDraft('');
+    setBusy(true);
     try {
       const t = await api.post<Ticket>(
         `/api/v1/support/tickets/${ticket.id}/messages`,
@@ -249,9 +272,41 @@ export function SupportChatWidget() {
         { accessToken: accessToken ?? undefined },
       );
       setTicket(t);
+
+      // ROUL — AI Support Manager — answers first, 24/7.
+      const history = t.messages.map((m) => ({
+        role: m.senderType === 'agent' ? ('assistant' as const) : ('user' as const),
+        content: m.body,
+      }));
+      const isOnboarding = /onboard|sign\s?up|profile|verif|login|log in|password|photo|video|upload/i.test(text);
+      const r = await api.post<{ answer: string; escalated: boolean }>(
+        '/api/v1/support/roul',
+        { question: text, history, ticketId: ticket.id, isOnboarding },
+        { accessToken: accessToken ?? undefined },
+      );
+      if (r?.answer) {
+        setTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                messages: [
+                  ...prev.messages,
+                  {
+                    id: `roul-${prev.messages.length}-${text.length}`,
+                    senderType: 'agent',
+                    body: r.answer,
+                    createdAt: new Date().toISOString(),
+                  },
+                ],
+              }
+            : prev,
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Message failed - try again.');
       setDraft(text);
+    } finally {
+      setBusy(false);
     }
   }
 
