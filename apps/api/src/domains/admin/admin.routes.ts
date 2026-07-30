@@ -43,6 +43,19 @@ adminRouter.get(
   }),
 );
 
+// Send one of every email template (branded redesign) to an address for review.
+const previewSchema = z.object({ to: z.string().email() });
+adminRouter.post(
+  '/email-previews',
+  validate(previewSchema),
+  asyncHandler(async (req, res) => {
+    const { sendTemplatePreviews } = await import('../core/notifications/email.service.js');
+    const sent = await sendTemplatePreviews(req.body.to);
+    const body: ApiResponse<{ sent: string[] }> = { success: true, data: { sent } };
+    res.json(body);
+  }),
+);
+
 adminRouter.get(
   '/users',
   asyncHandler(async (req, res) => {

@@ -78,6 +78,17 @@ const envSchema = z.object({
   AI_SERVICE_URL: z.string().url().optional(),
   AI_SERVICE_SECRET: z.string().optional(),
 
+  // Set to an email to force-send one of EVERY template to that address on the
+  // next boot (email redesign review). Remove it afterwards so it doesn't
+  // resend on every restart.
+  PREVIEW_EMAILS_TO: z.string().email().optional(),
+
+  // OpenAI (ROUL support agent). Read from env only - never commit the key.
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  // Where ROUL escalates unresolved onboarding issues (technical admin only).
+  SUPPORT_ESCALATION_EMAIL: z.string().email().default('ja2413059@gmail.com'),
+
   // Admin bootstrap - comma-separated emails that get ADMIN role on seed.
   // Passwords are set via ADMIN_PASSWORD (shared for initial login; admins
   // should change theirs immediately after first sign-in).

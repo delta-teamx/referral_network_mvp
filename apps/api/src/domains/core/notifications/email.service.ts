@@ -447,3 +447,33 @@ export async function sendEmail(req: EmailRequest): Promise<void> {
     console.error('[email] send failed', err);
   }
 }
+
+/**
+ * Send ONE of every template to a single address with realistic sample data,
+ * so the branded redesign can be reviewed across every email in one shot.
+ * Returns which templates were dispatched. Admin-only (see admin.routes).
+ */
+export async function sendTemplatePreviews(to: string): Promise<EmailTemplate[]> {
+  const app = 'https://dashboard.referralnova.com';
+  const site = 'https://referralnova.com';
+  const samples: { template: EmailTemplate; data: Record<string, unknown> }[] = [
+    { template: 'verify_email', data: { verifyUrl: `${app}/verify-email?token=sample` } },
+    { template: 'otp', data: { firstName: 'Alex', otpCode: '204815' } },
+    { template: 'password_reset', data: { firstName: 'Alex', resetUrl: `${app}/reset-password?token=sample` } },
+    { template: 'welcome', data: { firstName: 'Alex' } },
+    { template: 'new_signup_admin', data: { name: 'Jordan Rivera', email: 'jordan@acme.com', role: 'BUSINESS_OWNER', dashboardUrl: `${app}/admin` } },
+    { template: 'invitation', data: { senderName: 'Sam Carter', inviteUrl: `${site}/join/sam-8f2a`, message: 'You would be a great fit for our referral network!' } },
+    { template: 'contract_sent', data: { senderName: 'Sam Carter', title: 'Mutual Referral Agreement', contractUrl: `${app}/dashboard/referrals` } },
+    { template: 'contract_signed', data: { senderName: 'Sam Carter', receiverName: 'Jordan Rivera', title: 'Mutual Referral Agreement', contractUrl: `${app}/dashboard/referrals` } },
+    { template: 'lead_received', data: { eventType: 'Buying a home', zip: '63101', leadUrl: `${app}/dashboard/leads` } },
+    { template: 'referral_received', data: { senderName: 'Sam Carter', clientName: 'The Nguyen family', notes: 'Looking for a mortgage broker in St. Louis.', referralUrl: `${app}/dashboard/referrals` } },
+    { template: 'booking_confirmed', data: { withName: 'Jordan Rivera', whenLabel: 'Mon, Aug 4, 2:00 PM ET', reason: 'Partnership intro', notes: 'Looking forward to it!', zoomUrl: 'https://zoom.us/j/sample' } },
+    { template: 'event_registered', data: { title: 'Weekly Referral Room', whenLabel: 'Thu, Aug 7, 12:00 PM ET', eventUrl: `${site}/events`, zoomUrl: 'https://zoom.us/j/sample' } },
+  ];
+  const sent: EmailTemplate[] = [];
+  for (const s of samples) {
+    await sendEmail({ to, template: s.template, data: { ...s.data, _preview: true } });
+    sent.push(s.template);
+  }
+  return sent;
+}

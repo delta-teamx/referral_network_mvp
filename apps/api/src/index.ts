@@ -111,6 +111,23 @@ registerTrustSubscribers(eventBus);
 registerReferralTrackingSubscribers(eventBus);
 registerGroupSubscribers(eventBus);
 
+// One-shot email-preview trigger: when PREVIEW_EMAILS_TO is set, send one of
+// every template to that address on boot (branded-redesign review). Remove the
+// env var afterwards so it doesn't resend on each restart.
+if (env.PREVIEW_EMAILS_TO) {
+  const to = env.PREVIEW_EMAILS_TO;
+  void import('./domains/core/notifications/email.service.js')
+    .then(({ sendTemplatePreviews }) => sendTemplatePreviews(to))
+    .then((sent) => {
+      // eslint-disable-next-line no-console
+      console.log(`[email-preview] sent ${sent.length} template previews to ${to}`);
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('[email-preview] failed', err);
+    });
+}
+
 // ---- Email verification gate ------------------------------------------------
 // Write operations on content-creation routes require a verified email.
 // Read routes (GET) are unaffected so unverified users can still browse.
