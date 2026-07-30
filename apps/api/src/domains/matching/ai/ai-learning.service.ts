@@ -74,7 +74,17 @@ export async function retrainFromOutcomes(): Promise<{
   introsProcessed: number;
   newWeights: WeightConfig;
 }> {
-  const since = new Date(Date.now() - 30 * 86400_000);
+  // Watermark: only process intros completed AFTER the last retrain, not the
+  // whole trailing 30 days every run - otherwise each intro's adjustment was
+  // re-applied on every nightly pass and the weights saturated at the bounds.
+  const lastRun = await prisma.domainEvent.findFirst({
+    where: { type: 'ai.weights_updated' },
+    orderBy: { publishedAt: 'desc' },
+    select: { publishedAt: true },
+  });
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000);
+  const since =
+    lastRun && lastRun.publishedAt > thirtyDaysAgo ? lastRun.publishedAt : thirtyDaysAgo;
 
   const intros = await prisma.introduction.findMany({
     where: {

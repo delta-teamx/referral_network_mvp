@@ -10,7 +10,7 @@ Four engines:
 Called by the Express API via HTTP. Runs as a standalone FastAPI service.
 """
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -48,10 +48,15 @@ async def verify_secret(x_ai_secret: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Invalid AI service secret")
 
 
-app.include_router(matching_router, prefix="/matching", tags=["Matching"])
-app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
-app.include_router(nlp_router, prefix="/nlp", tags=["NLP"])
-app.include_router(recommendations_router, prefix="/recommendations", tags=["Recommendations"])
+# Every router requires the shared secret (X-AI-Secret header) - the Express
+# API sends it. Without this the service exposed member PII to anyone who could
+# reach it. If API_SECRET is unset (local dev), verify_secret still runs but an
+# empty configured secret means the header must also be empty.
+_auth = [Depends(verify_secret)]
+app.include_router(matching_router, prefix="/matching", tags=["Matching"], dependencies=_auth)
+app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"], dependencies=_auth)
+app.include_router(nlp_router, prefix="/nlp", tags=["NLP"], dependencies=_auth)
+app.include_router(recommendations_router, prefix="/recommendations", tags=["Recommendations"], dependencies=_auth)
 
 
 @app.get("/health")
@@ -61,4 +66,7 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
+    import os
+    # reload is a dev-only convenience (file watcher); never in production.
+    dev = os.environ.get("ENV", "production").lower() in ("dev", "development", "local")
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=dev)

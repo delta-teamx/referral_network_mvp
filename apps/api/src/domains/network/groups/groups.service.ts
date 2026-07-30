@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
+import { TIERS, type Tier } from '../../billing/billing.tiers.js';
 
 /**
  * Groups - BNI-style local networking circles. A group is public-discoverable
@@ -217,6 +218,19 @@ export async function joinGroup(groupId: string, userId: string) {
     const count = await tx.groupMember.count({ where: { groupId } });
     if (count >= group.maxMembers) {
       throw AppError.badRequest('This group is at capacity.');
+    }
+
+    // Enforce the joiner's plan cap on how many groups they can belong to.
+    const joiner = await tx.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionTier: true },
+    });
+    const caps = TIERS[(joiner?.subscriptionTier ?? 'FREE') as Tier];
+    const myGroups = await tx.groupMember.count({ where: { userId } });
+    if (myGroups >= caps.maxGroupMemberships) {
+      throw AppError.forbidden(
+        `Your ${caps.name} plan allows joining ${caps.maxGroupMemberships} groups. Upgrade to join more.`,
+      );
     }
 
     await tx.groupMember.create({ data: { groupId, userId, role: 'MEMBER' } });

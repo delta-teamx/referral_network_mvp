@@ -4,6 +4,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { geocodeZip } from '../../search/geocoding.service.js';
+import { TIERS, type Tier } from '../../billing/billing.tiers.js';
 
 /**
  * Listings service - directory read/write.
@@ -184,6 +185,19 @@ export async function createListing(userId: string, input: CreateListingInput) {
     select: { id: true },
   });
   if (!category) throw AppError.badRequest('Invalid category');
+
+  // Enforce the plan's listing cap (FREE 1, PRO 3, PREMIUM 10).
+  const owner = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true },
+  });
+  const caps = TIERS[(owner?.subscriptionTier ?? 'FREE') as Tier];
+  const currentListings = await prisma.listing.count({ where: { userId, deletedAt: null } });
+  if (currentListings >= caps.maxListings) {
+    throw AppError.forbidden(
+      `Your ${caps.name} plan allows ${caps.maxListings} listing${caps.maxListings === 1 ? '' : 's'}. Upgrade to add more.`,
+    );
+  }
 
   const slug = await uniqueSlug(input.name);
 

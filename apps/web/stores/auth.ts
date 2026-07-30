@@ -170,10 +170,12 @@ export const useAuthStore = create<AuthState>()(
       // stays HttpOnly. hydrate() still validates expiry and refreshes on time.
       name: 'rn-auth',
       storage: createJSONStorage(() => localStorage),
+      // SECURITY: do NOT persist the access token to localStorage (any script
+      // on the origin could read it). Only the user object is persisted for a
+      // fast first paint; on reload the access token is re-minted from the
+      // HttpOnly refresh cookie via hydrate(). The token lives in memory only.
       partialize: (s) => ({
         user: s.user,
-        accessToken: s.accessToken,
-        accessTokenExpiresAt: s.accessTokenExpiresAt,
       }),
       onRehydrateStorage: () => (state) => {
         // A still-valid persisted token means we're authenticated right away —
