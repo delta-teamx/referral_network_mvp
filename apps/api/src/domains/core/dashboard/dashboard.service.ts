@@ -40,7 +40,7 @@ export async function getAnalytics(userId: string) {
   const [leads, referrals, reviews, messages, bookings, intros, pipeline, wonCards] = await Promise.all([
     prisma.consumerLead.findMany({
       where: { listing: { userId, deletedAt: null }, createdAt: { gte: since } },
-      select: { createdAt: true, status: true },
+      select: { createdAt: true, status: true, convertedAt: true },
     }),
     prisma.referral.findMany({
       where: { receiverId: userId, createdAt: { gte: since } },
@@ -117,9 +117,20 @@ export async function getAnalytics(userId: string) {
     labels: buckets.map((b) => b.label),
     series: {
       leads: bucketize(leads),
-      leadsConverted: bucketize(leads, (l) => l.status === 'CONVERTED'),
+      // Converted series bucket by WHEN they converted (convertedAt), not when
+      // the lead/referral was first created - otherwise a conversion shows up
+      // in the wrong week.
+      leadsConverted: bucketize(
+        leads
+          .filter((l) => l.status === 'CONVERTED' && l.convertedAt)
+          .map((l) => ({ createdAt: l.convertedAt as Date })),
+      ),
       referrals: bucketize(referrals),
-      referralsConverted: bucketize(referrals, (r) => r.status === 'CONVERTED'),
+      referralsConverted: bucketize(
+        referrals
+          .filter((r) => r.status === 'CONVERTED' && r.convertedAt)
+          .map((r) => ({ createdAt: r.convertedAt as Date })),
+      ),
       reviews: bucketize(reviews),
       messages: bucketize(messages),
       bookings: bucketize(bookings),

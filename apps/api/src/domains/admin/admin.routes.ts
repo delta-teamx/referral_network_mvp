@@ -46,8 +46,8 @@ adminRouter.get(
 adminRouter.get(
   '/users',
   asyncHandler(async (req, res) => {
-    const page = Number(req.query.page ?? 1);
-    const limit = Math.min(100, Number(req.query.limit ?? 25));
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 25) || 25));
     const q = typeof req.query.q === 'string' ? req.query.q : undefined;
     const data = await listAllUsers(page, limit, q);
     const body: ApiResponse<typeof data> = { success: true, data };
@@ -135,8 +135,8 @@ adminRouter.get(
 adminRouter.get(
   '/listings',
   asyncHandler(async (req, res) => {
-    const page = Number(req.query.page ?? 1);
-    const limit = Math.min(100, Number(req.query.limit ?? 25));
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 25) || 25));
     const q = typeof req.query.q === 'string' ? req.query.q : undefined;
     const data = await listAllListings(page, limit, q);
     const body: ApiResponse<typeof data> = { success: true, data };

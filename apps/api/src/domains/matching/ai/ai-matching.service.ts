@@ -262,12 +262,14 @@ export async function refreshSuggestionsForUser(
 
   let created = 0;
   for (const match of matches) {
-    // Skip if we already have a pending/active suggestion for this pair
+    // Skip if we already have ANY prior intro for this pair - including
+    // declined/completed ones. Previously only pending/active states were
+    // skipped, so a declined suggestion resurfaced every 6h scheduler run
+    // (nagging users and growing the Introduction table unboundedly).
     const existing = await prisma.introduction.findFirst({
       where: {
         senderId: userId,
         targetId: match.targetUserId,
-        status: { in: ['suggested', 'requested', 'accepted'] },
       },
       select: { id: true },
     });

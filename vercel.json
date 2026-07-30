@@ -5,11 +5,13 @@
   "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_APP_NAME": "ReferralNova"
+    "NEXT_PUBLIC_APP_NAME": "ReferralNova",
+    "NEXT_PUBLIC_API_URL": "https://api.referralnova.com"
   },
   "build": {
     "env": {
-      "NEXT_TELEMETRY_DISABLED": "1"
+      "NEXT_TELEMETRY_DISABLED": "1",
+      "NEXT_PUBLIC_API_URL": "https://api.referralnova.com"
     }
   }
 }

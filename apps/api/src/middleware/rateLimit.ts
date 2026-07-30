@@ -56,6 +56,13 @@ export function rateLimit(opts: Options) {
 
     const ip = extractIp(req);
     const now = Date.now();
+
+    // Opportunistically evict expired buckets so the in-memory map doesn't grow
+    // unbounded across the process lifetime (one sweep per ~1000 requests).
+    if (store.size > 0 && Math.floor(now / 1000) % 1000 === 0) {
+      for (const [k, v] of store) if (v.resetAt <= now) store.delete(k);
+    }
+
     const bucket = store.get(ip);
 
     if (!bucket || bucket.resetAt <= now) {

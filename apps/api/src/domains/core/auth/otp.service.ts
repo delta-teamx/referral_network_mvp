@@ -8,7 +8,8 @@ const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_LENGTH = 6;
 
 function generateOtp(): string {
-  return crypto.randomInt(100000, 999999).toString();
+  // Upper bound is EXCLUSIVE, so use 1000000 to include 999999 in the range.
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 export async function sendOtp(email: string): Promise<void> {

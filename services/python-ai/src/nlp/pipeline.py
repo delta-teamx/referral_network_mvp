@@ -10,7 +10,7 @@ Capabilities:
 """
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import re
 from typing import Optional
 
@@ -33,8 +33,10 @@ def get_nlp():
 
 
 class ExtractRequest(BaseModel):
-    text: str
-    maxKeywords: int = 15
+    # Bound the input so a multi-megabyte payload can't drive spaCy into an
+    # OOM/CPU DoS.
+    text: str = Field(max_length=20000)
+    maxKeywords: int = Field(default=15, ge=1, le=100)
 
 
 class ProfileAnalysisRequest(BaseModel):

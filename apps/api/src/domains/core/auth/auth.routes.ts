@@ -179,15 +179,21 @@ authRouter.post(
 // survives process restarts and redeployments.
 import jwt from 'jsonwebtoken';
 
+function oauthStateSecret(): string {
+  // No hardcoded fallback: a known constant would let anyone forge a valid CSRF
+  // state token. If the secret isn't configured, OAuth is simply unavailable.
+  const secret = env.JWT_ACCESS_SECRET;
+  if (!secret) throw AppError.badRequest('OAuth is not configured.');
+  return secret;
+}
+
 function createOAuthState(): string {
-  const secret = env.JWT_ACCESS_SECRET ?? 'oauth-fallback-secret';
-  return jwt.sign({ nonce: generateStateToken() }, secret, { expiresIn: '10m' });
+  return jwt.sign({ nonce: generateStateToken() }, oauthStateSecret(), { expiresIn: '10m' });
 }
 
 function verifyOAuthState(state: string): boolean {
   try {
-    const secret = env.JWT_ACCESS_SECRET ?? 'oauth-fallback-secret';
-    jwt.verify(state, secret, { algorithms: ['HS256'] });
+    jwt.verify(state, oauthStateSecret(), { algorithms: ['HS256'] });
     return true;
   } catch {
     return false;
