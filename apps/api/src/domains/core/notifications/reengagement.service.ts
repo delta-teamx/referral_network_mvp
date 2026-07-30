@@ -50,7 +50,10 @@ export async function runReengagementSweep(
       deletedAt: null,
       role: { not: 'ADMIN' },
       email: { not: { endsWith: '@vpn-demo.com' } },
-      // Inactive for at least 3 days (never-logged-in falls back to createdAt).
+      // FOLLOW-UP ONLY for members who already set up a profile and then went
+      // quiet - not people who never finished. They must have a MemberProfile.
+      memberProfile: { isNot: null },
+      // Inactive for at least 3 days (never-returned falls back to createdAt).
       OR: [
         { lastLoginAt: { lte: threeDaysAgo } },
         { lastLoginAt: null, createdAt: { lte: threeDaysAgo } },

@@ -210,35 +210,77 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
       const firstName = String(d.firstName ?? 'there');
       const stage = Number(d.stage ?? 3);
       const dashUrl = `${BRAND.app}/dashboard`;
-      const onboardUrl = `${BRAND.app}/onboarding`;
-      // Escalating nudges: day 3 gentle, day 7 value-led, day 14 last-call.
-      const copy: Record<number, { subject: string; heading: string; body: string }> = {
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      // Follow-up for members who set up their profile and then went quiet.
+      // They are already onboarded - the goal is to bring them BACK, not to
+      // ask them to finish setup. Escalating warmth: day 3 -> 7 -> 14.
+      const copy: Record<
+        number,
+        { subject: string; heading: string; bodyText: string; bodyHtml: string; cta: string }
+      > = {
         3: {
-          subject: 'Your Referral Nova network is waiting',
-          heading: `You're almost set up, ${escapeHtml(firstName)}`,
-          body: `You created your Referral Nova account but haven't finished setting up. Members with a complete profile and a 60-second intro get matched first - it takes about 5 minutes. Pick up where you left off:`,
+          subject: 'Your Referral Nova network has been busy without you',
+          heading: `We've missed you, ${escapeHtml(firstName)}`,
+          cta: 'Return to your dashboard',
+          bodyText:
+            `Hi ${firstName},\n\n` +
+            `A few days ago you set up your profile on Referral Nova, and we wanted to reach out personally. Getting your profile live is the hard part, and you're already past it - but the real value starts when you come back and engage with the network you've joined.\n\n` +
+            `Since you signed up, our AI matching engine has been quietly working in the background, looking for business owners whose needs line up with what you do and who you want to meet. Referral Nova was built to turn your network into a steady source of warm, qualified referrals - flowing in both directions, week after week - rather than something you have to chase.\n\n` +
+            `Right now, all of that is waiting for you inside your dashboard: the members you should meet, the introductions you can request, and the businesses ready to send work your way. It only takes a few minutes to log back in, review your suggested matches, and start a conversation or two.\n\n` +
+            `Your seat is still here, and so is everything you set up. Come see who's waiting to meet you.`,
+          bodyHtml:
+            P(`Hi ${escapeHtml(firstName)},`) +
+            P(`A few days ago you set up your profile on Referral Nova, and we wanted to reach out personally. Getting your profile live is the hard part, and you're already past it &mdash; but the real value starts when you come back and engage with the network you've joined.`) +
+            P(`Since you signed up, our AI matching engine has been quietly working in the background, looking for business owners whose needs line up with what you do and who you want to meet. Referral Nova was built to turn your network into a steady source of warm, qualified referrals &mdash; flowing in both directions, week after week &mdash; rather than something you have to chase.`) +
+            P(`Right now, all of that is waiting for you inside your dashboard: the members you should meet, the introductions you can request, and the businesses ready to send work your way. It only takes a few minutes to log back in, review your suggested matches, and start a conversation or two.`) +
+            P(`Your seat is still here, and so is everything you set up. Come see who's waiting to meet you.`),
         },
         7: {
-          subject: "Here's what you're missing on Referral Nova",
-          heading: `Your matches are ready when you are`,
-          body: `Our AI is already spotting businesses you should meet - but it can only introduce you once your profile is complete. Founding members get lifetime Premium free while spots last. Finish setting up and start getting warm introductions:`,
+          subject: "Introductions are waiting for you on Referral Nova",
+          heading: `Here's what's happening in your network, ${escapeHtml(firstName)}`,
+          cta: 'See my matches',
+          bodyText:
+            `Hi ${firstName},\n\n` +
+            `It's been about a week since you last visited Referral Nova, and we wanted to follow up because you're genuinely missing out on the reason you joined.\n\n` +
+            `Referrals are the highest-converting business you can get - a warm introduction from a trusted peer closes far more often than any cold lead or ad. That's exactly what Referral Nova is designed to generate for you on a recurring basis: our AI identifies the right partners, suggests introductions with a clear reason for the match, and gives you the tools to meet over Zoom, track referrals, and even sign simple referral agreements on-platform.\n\n` +
+            `While you've been away, the network has kept moving. Members are being matched, introductions are being made, and referrals are being exchanged. Every week you're not active is a week those introductions are going to someone else. As a reminder, founding members hold lifetime Premium at no cost while spots last - a benefit that only pays off if you're in the network using it.\n\n` +
+            `Take five minutes to log back in, review the matches our AI has lined up for you, and send your first introduction request. We think you'll be glad you did.`,
+          bodyHtml:
+            P(`Hi ${escapeHtml(firstName)},`) +
+            P(`It's been about a week since you last visited Referral Nova, and we wanted to follow up because you're genuinely missing out on the reason you joined.`) +
+            P(`Referrals are the highest-converting business you can get &mdash; a warm introduction from a trusted peer closes far more often than any cold lead or ad. That's exactly what Referral Nova is designed to generate for you on a recurring basis: our AI identifies the right partners, suggests introductions with a clear reason for the match, and gives you the tools to meet over Zoom, track referrals, and even sign simple referral agreements on-platform.`) +
+            P(`While you've been away, the network has kept moving. Members are being matched, introductions are being made, and referrals are being exchanged. Every week you're not active is a week those introductions are going to someone else. As a reminder, founding members hold lifetime Premium at no cost while spots last &mdash; a benefit that only pays off if you're in the network using it.`) +
+            P(`Take five minutes to log back in, review the matches our AI has lined up for you, and send your first introduction request. We think you'll be glad you did.`),
         },
         14: {
-          subject: 'Still keen? Your Referral Nova spot is open',
-          heading: `One last nudge, ${escapeHtml(firstName)}`,
-          body: `We'd hate for you to miss out. Complete your profile to unlock AI-matched partners, referral tracking, and Zoom intros. It takes 5 minutes and it's free to start:`,
+          subject: 'A final check-in from the Referral Nova team',
+          heading: `Still growing through referrals, ${escapeHtml(firstName)}?`,
+          cta: 'Come back to Referral Nova',
+          bodyText:
+            `Hi ${firstName},\n\n` +
+            `We noticed it's been two weeks since you set up your profile and stepped away, so this will be our last nudge for now - we don't want to fill your inbox.\n\n` +
+            `Before you go, we wanted to be clear about what's still here for you. Your profile, your matches, and (if you're one of our founding members) your lifetime Premium benefits are all intact and waiting. Nothing has been lost. Referral Nova exists to make referrals happen on purpose instead of by luck, and that only works when you're an active part of the network - meeting the partners our AI surfaces for you and exchanging introductions with people who can genuinely move your business forward.\n\n` +
+            `If now simply isn't the right time, we completely understand, and your account will be here whenever you're ready to pick it back up. But if you've been meaning to give it a proper look, this is the moment: log in, spend ten minutes reviewing your matches, and start one conversation. That single step is usually what turns a quiet account into real referrals.\n\n` +
+            `Thank you for giving Referral Nova a try. We'd love to see you back.\n\n` +
+            `- The Referral Nova Team`,
+          bodyHtml:
+            P(`Hi ${escapeHtml(firstName)},`) +
+            P(`We noticed it's been two weeks since you set up your profile and stepped away, so this will be our last nudge for now &mdash; we don't want to fill your inbox.`) +
+            P(`Before you go, we wanted to be clear about what's still here for you. Your profile, your matches, and (if you're one of our founding members) your lifetime Premium benefits are all intact and waiting. Nothing has been lost. Referral Nova exists to make referrals happen on purpose instead of by luck, and that only works when you're an active part of the network &mdash; meeting the partners our AI surfaces for you and exchanging introductions with people who can genuinely move your business forward.`) +
+            P(`If now simply isn't the right time, we completely understand, and your account will be here whenever you're ready to pick it back up. But if you've been meaning to give it a proper look, this is the moment: log in, spend ten minutes reviewing your matches, and start one conversation. That single step is usually what turns a quiet account into real referrals.`) +
+            P(`Thank you for giving Referral Nova a try. We'd love to see you back.`) +
+            `<p style="margin:0 0 4px;color:${BRAND.gray};">&mdash; The Referral Nova Team</p>`,
         },
       };
       const c = copy[stage] ?? copy[3]!;
+      const footNote =
+        stage === 14
+          ? `<p style="margin-top:18px;font-size:12px;color:${BRAND.gray};">Prefer not to receive these check-ins? Just reply to this email and let us know.</p>`
+          : '';
       return {
         subject: c.subject,
-        text: `${c.heading}\n\n${c.body}\n\nFinish setup: ${onboardUrl}\nGo to dashboard: ${dashUrl}`,
-        html: brandedLayout(
-          c.heading,
-          `<p>${c.body}</p>
-           ${button('Finish setting up', onboardUrl)}
-           <p style="margin-top:8px;font-size:13px;color:${BRAND.gray};">Already active? <a href="${escapeAttr(dashUrl)}" style="color:${BRAND.blue};">Open your dashboard</a>.</p>`,
-        ),
+        text: `${c.bodyText}\n\n${c.cta}: ${dashUrl}`,
+        html: brandedLayout(c.heading, `${c.bodyHtml}${button(c.cta, dashUrl)}${footNote}`),
       };
     }
     case 'support_escalation':
