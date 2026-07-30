@@ -129,19 +129,23 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         ),
       };
     }
-    case 'new_signup_admin':
+    case 'new_signup_admin': {
+      const industry = String(d.industry ?? 'Not specified');
       return {
-        subject: `New ${appName} sign-up: ${d.name}`,
-        text: `New sign-up on ${appName}: ${d.name} (${d.email}) as ${d.role}. Admin: ${d.dashboardUrl}`,
-        html: basicLayout(
-          'New member sign-up',
-          `<p>A new member just joined <strong>${appName}</strong>:</p>
+        subject: `New ${appName} member: ${d.name} (${industry})`,
+        text: `New member on ${appName}: ${d.name} (${d.email}) - Industry: ${industry}. Admin: ${d.dashboardUrl}`,
+        html: brandedLayout(
+          'New member joined',
+          `<p>A new member just completed onboarding on <strong>${appName}</strong>:</p>
            <p><strong>Name:</strong> ${escapeHtml(String(d.name ?? ''))}<br>
            <strong>Email:</strong> ${escapeHtml(String(d.email ?? ''))}<br>
-           <strong>Type:</strong> ${escapeHtml(String(d.role ?? ''))}</p>
+           <strong>Industry:</strong> ${escapeHtml(industry)}${
+             d.businessName ? `<br><strong>Business:</strong> ${escapeHtml(String(d.businessName))}` : ''
+           }</p>
            ${cta('Open admin console', String(d.dashboardUrl ?? '#'))}`,
         ),
       };
+    }
     case 'invitation':
       return {
         subject: `${d.senderName ?? 'A peer'} invited you to ${appName}`,
@@ -345,24 +349,39 @@ const BRAND = {
   app: 'https://dashboard.referralnova.com',
 };
 
-/** Branded, mobile-safe, table-based layout shared by every email. */
+/** Branded, mobile-responsive, table-based layout shared by every email. */
 function brandedLayout(heading: string, bodyHtml: string): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<style>
+  /* Mobile: tighten padding and scale text so the email is comfortable on phones. */
+  @media only screen and (max-width:600px) {
+    .rn-shell { padding: 12px 8px !important; }
+    .rn-head { padding: 18px 18px !important; }
+    .rn-card { padding: 24px 18px !important; }
+    .rn-foot { padding: 18px 18px 24px !important; }
+    .rn-h1 { font-size: 20px !important; line-height: 1.3 !important; }
+    .rn-body { font-size: 15px !important; }
+  }
+</style>
+</head>
 <body style="margin:0;padding:0;background:${BRAND.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bg};padding:24px 12px;"><tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bg};"><tr><td align="center" class="rn-shell" style="padding:24px 12px;">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-      <tr><td style="background:${BRAND.blue};border-radius:14px 14px 0 0;padding:22px 28px;">
+      <tr><td class="rn-head" style="background:${BRAND.blue};border-radius:14px 14px 0 0;padding:22px 28px;">
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
           <td style="vertical-align:middle;"><span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;background:#ffffff;color:${BRAND.blue};border-radius:9px;font-weight:800;font-size:15px;">RN</span></td>
           <td style="vertical-align:middle;padding-left:12px;"><span style="color:#ffffff;font-weight:800;font-size:18px;">Referral Nova</span></td>
         </tr></table>
       </td></tr>
-      <tr><td style="background:#ffffff;padding:32px 28px;">
-        <h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:${BRAND.ink};">${heading}</h1>
-        <div style="font-size:15px;line-height:1.6;color:#374151;">${bodyHtml}</div>
+      <tr><td class="rn-card" style="background:#ffffff;padding:32px 28px;">
+        <h1 class="rn-h1" style="margin:0 0 18px;font-size:22px;line-height:1.3;color:${BRAND.ink};">${heading}</h1>
+        <div class="rn-body" style="font-size:15px;line-height:1.6;color:#374151;">${bodyHtml}</div>
       </td></tr>
-      <tr><td style="background:#ffffff;border-radius:0 0 14px 14px;border-top:1px solid ${BRAND.line};padding:20px 28px 28px;">${legalFooter()}</td></tr>
+      <tr><td class="rn-foot" style="background:#ffffff;border-radius:0 0 14px 14px;border-top:1px solid ${BRAND.line};padding:20px 28px 28px;">${legalFooter()}</td></tr>
     </table>
   </td></tr></table>
 </body></html>`;
@@ -394,14 +413,15 @@ function cta(label: string, url: string): string {
   return button(label, url);
 }
 
-/** Row of small secondary (outline) buttons, e.g. legal links. */
+/** Small secondary (outline) buttons that WRAP on narrow screens (inline-block,
+ *  not fixed table cells) so they never overflow on mobile. */
 function secondaryButtons(items: { label: string; url: string }[]): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;"><tr>${items
+  return `<div style="margin:8px 0 4px;line-height:2.4;">${items
     .map(
       (i) =>
-        `<td style="padding-right:8px;"><a href="${escapeAttr(i.url)}" style="display:inline-block;padding:8px 14px;border:1px solid ${BRAND.line};border-radius:8px;color:${BRAND.blue};text-decoration:none;font-weight:600;font-size:13px;">${escapeHtml(i.label)}</a></td>`,
+        `<a href="${escapeAttr(i.url)}" style="display:inline-block;margin:0 8px 8px 0;padding:8px 14px;border:1px solid ${BRAND.line};border-radius:8px;color:${BRAND.blue};text-decoration:none;font-weight:600;font-size:13px;">${escapeHtml(i.label)}</a>`,
     )
-    .join('')}</tr></table>`;
+    .join('')}</div>`;
 }
 
 /** Labeled link list (label + one-line description), for getting-started items. */

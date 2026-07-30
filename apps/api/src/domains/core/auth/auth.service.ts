@@ -110,7 +110,8 @@ export async function notifyAdminsOfSignup(user: {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
+  industry?: string | null;
+  businessName?: string | null;
 }): Promise<void> {
   try {
     const admins = await prisma.user.findMany({
@@ -127,7 +128,9 @@ export async function notifyAdminsOfSignup(user: {
           data: {
             name: `${user.firstName} ${user.lastName}`.trim(),
             email: user.email,
-            role: user.role,
+            // Show the member's INDUSTRY (not their account role).
+            industry: user.industry ?? 'Not specified',
+            businessName: user.businessName ?? null,
             dashboardUrl,
           },
         }),
