@@ -31,8 +31,14 @@ export async function countFoundingMembers(): Promise<number> {
 /**
  * Tier a brand-new account should be created with. Call this BEFORE inserting
  * the new user (the count reflects spots already taken).
+ *
+ * Only genuine BUSINESS accounts can claim a founding spot. Consumers and
+ * admins are always FREE - previously ANY new account (incl. every Google/
+ * consumer signup) was granted PREMIUM while not counting toward the 200, so
+ * the promo leaked unlimited free Premium and never closed for consumers.
  */
-export async function resolveSignupTier(): Promise<'PREMIUM' | 'FREE'> {
+export async function resolveSignupTier(role: string): Promise<'PREMIUM' | 'FREE'> {
+  if (role === 'CONSUMER' || role === 'ADMIN') return 'FREE';
   const taken = await countFoundingMembers();
   return taken < FOUNDING_LIMIT ? FOUNDING_TIER : 'FREE';
 }

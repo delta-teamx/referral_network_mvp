@@ -98,16 +98,30 @@ export async function getEvent(eventId: string, viewerId?: string) {
 export async function registerForEvent(eventId: string, userId: string) {
   const event = await prisma.networkingEvent.findUnique({
     where: { id: eventId },
-    select: { id: true, status: true, maxAttendees: true, _count: { select: { registrations: true } } },
+    select: { id: true, status: true, maxAttendees: true },
   });
   if (!event) throw AppError.notFound('Event not found');
   if (event.status !== 'scheduled' && event.status !== 'live') throw AppError.badRequest('Event is not open for registration');
-  if (event._count.registrations >= event.maxAttendees) throw AppError.badRequest('Event is at capacity');
-  const existing = await prisma.eventRegistration.findUnique({ where: { eventId_userId: { eventId, userId } }, select: { id: true } });
-  if (existing) return { alreadyRegistered: true };
-  await prisma.eventRegistration.create({ data: { eventId, userId } });
-  await eventBus.publish('networking_event.registered', { eventId, userId });
-  return { alreadyRegistered: false };
+
+  // Atomic capacity check under a per-event advisory lock so simultaneous
+  // registrations can't push attendance past maxAttendees.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`event:${eventId}`}))`;
+    const existing = await tx.eventRegistration.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+      select: { id: true },
+    });
+    if (existing) return { alreadyRegistered: true as const };
+    const count = await tx.eventRegistration.count({ where: { eventId } });
+    if (count >= event.maxAttendees) throw AppError.badRequest('Event is at capacity');
+    await tx.eventRegistration.create({ data: { eventId, userId } });
+    return { alreadyRegistered: false as const };
+  });
+
+  if (!result.alreadyRegistered) {
+    await eventBus.publish('networking_event.registered', { eventId, userId });
+  }
+  return result;
 }
 
 export async function unregister(eventId: string, userId: string) {

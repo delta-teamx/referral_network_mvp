@@ -53,7 +53,7 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   // Never let the promo lookup block a signup - default to FREE if it fails.
   let subscriptionTier: 'PREMIUM' | 'FREE' = 'FREE';
   try {
-    subscriptionTier = await resolveSignupTier();
+    subscriptionTier = await resolveSignupTier(input.role);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[signup] founding-tier lookup failed; defaulting to FREE', err);

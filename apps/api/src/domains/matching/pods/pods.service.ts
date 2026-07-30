@@ -32,7 +32,41 @@ interface MemberProfile {
 // until the platform has this many active members, then resume automatically.
 const MIN_MEMBERS_FOR_PODS = 30;
 
-export async function runDailyMatchmaking(): Promise<{ podsCreated: number; membersMatched: number }> {
+/** ISO-8601 week number (1-53) for weekly run keys. */
+function isoWeek(d: Date): string {
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `W${String(week).padStart(2, '0')}`;
+}
+
+export async function runDailyMatchmaking(
+  opts: { force?: boolean } = {},
+): Promise<{ podsCreated: number; membersMatched: number }> {
+  // Multi-instance guard: claim a once-per-ISO-week marker atomically. If two
+  // API instances' schedulers both fire at Monday 14:00, only the one that
+  // inserts the DomainEvent row proceeds; the others see the unique-violation
+  // and skip - preventing duplicate pods, Zoom meetings and invitation emails.
+  // A manual admin trigger passes force:true to bypass the weekly guard.
+  if (!opts.force) {
+    const now = new Date();
+    const weekKey = `matchmaking:${now.getUTCFullYear()}-${isoWeek(now)}`;
+    try {
+      await prisma.domainEvent.create({
+        data: { id: weekKey, type: 'matchmaking.run', aggregateId: weekKey, payload: {} },
+      });
+    } catch (err) {
+      if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') {
+        // eslint-disable-next-line no-console
+        console.log('[matchmaking] already ran this week on another instance - skipping');
+        return { podsCreated: 0, membersMatched: 0 };
+      }
+      throw err;
+    }
+  }
+
   const activeMembers = await prisma.user.count({
     where: { deletedAt: null, role: { not: 'ADMIN' } },
   });

@@ -15,7 +15,8 @@ podsRouter.post(
   authenticate,
   asyncHandler(async (req, res) => {
     if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
-    const result = await runDailyMatchmaking();
+    // Manual admin run bypasses the once-per-week guard.
+    const result = await runDailyMatchmaking({ force: true });
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),

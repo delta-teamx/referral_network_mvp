@@ -195,28 +195,38 @@ export async function getGroupBySlug(slug: string, viewerId?: string) {
 export async function joinGroup(groupId: string, userId: string) {
   const group = await prisma.group.findFirst({
     where: { id: groupId, status: 'active' },
-    include: { _count: { select: { members: true } } },
+    select: { id: true, isPublic: true, maxMembers: true },
   });
   if (!group) throw AppError.notFound('Group not found');
   if (!group.isPublic) {
     throw AppError.badRequest('This group is invite-only. Ask a leader to add you.');
   }
-  if (group._count.members >= group.maxMembers) {
-    throw AppError.badRequest('This group is at capacity.');
+
+  // Serialize concurrent joins for THIS group with a transaction-scoped
+  // advisory lock, so the capacity count-then-insert is atomic and the roster
+  // can't be pushed over maxMembers by simultaneous requests.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`group:${groupId}`}))`;
+
+    const existing = await tx.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+      select: { id: true },
+    });
+    if (existing) return { alreadyMember: true as const };
+
+    const count = await tx.groupMember.count({ where: { groupId } });
+    if (count >= group.maxMembers) {
+      throw AppError.badRequest('This group is at capacity.');
+    }
+
+    await tx.groupMember.create({ data: { groupId, userId, role: 'MEMBER' } });
+    return { alreadyMember: false as const };
+  });
+
+  if (!result.alreadyMember) {
+    await eventBus.publish('group.member_joined', { groupId, userId });
   }
-
-  const existing = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId } },
-    select: { id: true },
-  });
-  if (existing) return { alreadyMember: true };
-
-  await prisma.groupMember.create({
-    data: { groupId, userId, role: 'MEMBER' },
-  });
-
-  await eventBus.publish('group.member_joined', { groupId, userId });
-  return { alreadyMember: false };
+  return result;
 }
 
 export async function leaveGroup(groupId: string, userId: string) {

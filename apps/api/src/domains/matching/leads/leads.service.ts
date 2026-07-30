@@ -2,7 +2,7 @@ import type { EventType } from '@refnet/shared';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
-import { canReceiveMoreLeads } from '../../billing/billing.tiers.js';
+import { TIERS, type Tier } from '../../billing/billing.tiers.js';
 
 /**
  * Consumer leads - created when a consumer clicks "Connect" on a matched
@@ -26,30 +26,44 @@ export async function createLead(input: CreateLeadInput) {
   });
   if (!listing) throw AppError.notFound('Listing not found');
 
-  // Tier cap: FREE businesses get 3 leads/month, PRO 30, PREMIUM unlimited.
-  // Over-cap leads fall through to a higher-tier peer if one is available;
-  // for now we just reject so consumers know to pick another pro.
-  const quota = await canReceiveMoreLeads(listing.userId);
-  if (!quota.allowed) {
-    throw AppError.tooMany(
-      `This business has reached its monthly lead quota (${quota.used}/${quota.cap}). Try another pro.`,
-    );
-  }
-
-  const lead = await prisma.consumerLead.create({
-    data: {
-      consumerId: input.consumerId,
-      listingId: listing.id,
-      eventType: input.eventType,
-      notes: input.notes ?? null,
-    },
-    select: {
-      id: true,
-      status: true,
-      eventType: true,
-      createdAt: true,
-      listing: { select: { slug: true, name: true } },
-    },
+  // Tier cap (FREE 3/mo, PRO 30, PREMIUM unlimited), enforced atomically: a
+  // per-owner advisory lock serializes concurrent leads so two simultaneous
+  // requests can't both pass the count check and exceed the cap.
+  const ownerId = listing.userId;
+  const lead = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`leadquota:${ownerId}`}))`;
+    const owner = await tx.user.findUnique({
+      where: { id: ownerId },
+      select: { subscriptionTier: true },
+    });
+    const caps = TIERS[(owner?.subscriptionTier ?? 'FREE') as Tier];
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+    const used = await tx.consumerLead.count({
+      where: { listing: { userId: ownerId }, createdAt: { gte: startOfMonth } },
+    });
+    if (used >= caps.maxLeadsPerMonth) {
+      const cap = Number.isFinite(caps.maxLeadsPerMonth) ? caps.maxLeadsPerMonth : '∞';
+      throw AppError.tooMany(
+        `This business has reached its monthly lead quota (${used}/${cap}). Try another pro.`,
+      );
+    }
+    return tx.consumerLead.create({
+      data: {
+        consumerId: input.consumerId,
+        listingId: listing.id,
+        eventType: input.eventType,
+        notes: input.notes ?? null,
+      },
+      select: {
+        id: true,
+        status: true,
+        eventType: true,
+        createdAt: true,
+        listing: { select: { slug: true, name: true } },
+      },
+    });
   });
 
   await eventBus.publish('consumer_lead.created', {
