@@ -2,7 +2,10 @@ import { env } from '../../../config/env.js';
 import { recomputeAllTrustScores } from '../trust/trust.service.js';
 import { refreshAllSuggestions } from '../../matching/ai/ai-matching.service.js';
 import { retrainFromOutcomes } from '../../matching/ai/ai-learning.service.js';
-import { runReengagementSweep } from '../notifications/reengagement.service.js';
+import {
+  runReengagementSweep,
+  runProfileCompletionReminders,
+} from '../notifications/reengagement.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -73,6 +76,18 @@ const JOBS: JobDefinition[] = [
       // eslint-disable-next-line no-console
       console.log(
         `[jobs] reengagement-emails: scanned ${result.scanned}, sent ${result.sent}`,
+      );
+      return result;
+    },
+  },
+  {
+    name: 'profile-completion-reminders',
+    intervalMs: 3 * 60 * 60 * 1000, // Every 3 hours (so the ~24h reminder is timely)
+    handler: async () => {
+      const result = await runProfileCompletionReminders();
+      // eslint-disable-next-line no-console
+      console.log(
+        `[jobs] profile-completion-reminders: scanned ${result.scanned}, sent ${result.sent}`,
       );
       return result;
     },

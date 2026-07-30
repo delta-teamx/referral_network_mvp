@@ -57,6 +57,20 @@ adminRouter.post(
   }),
 );
 
+// Run (or dry-run) the 24h profile-completion reminder sweep on demand.
+adminRouter.post(
+  '/profile-reminders',
+  validate(reengageSchema),
+  asyncHandler(async (req, res) => {
+    const { runProfileCompletionReminders } = await import(
+      '../core/notifications/reengagement.service.js'
+    );
+    const result = await runProfileCompletionReminders({ dryRun: req.body.dryRun === true });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
 // Send one of every email template (branded redesign) to an address for review.
 const previewSchema = z.object({ to: z.string().email() });
 adminRouter.post(

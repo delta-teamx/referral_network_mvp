@@ -50,9 +50,10 @@ export async function runReengagementSweep(
       deletedAt: null,
       role: { not: 'ADMIN' },
       email: { not: { endsWith: '@vpn-demo.com' } },
-      // FOLLOW-UP ONLY for members who already set up a profile and then went
-      // quiet - not people who never finished. They must have a MemberProfile.
-      memberProfile: { isNot: null },
+      // FOLLOW-UP ONLY for members who FULLY set up (profile + photo) and then
+      // went quiet. Requiring a photo keeps this cleanly separate from the
+      // profile-completion reminder below (which targets incomplete profiles).
+      memberProfile: { photoUrl: { not: null } },
       // Inactive for at least 3 days (never-returned falls back to createdAt).
       OR: [
         { lastLoginAt: { lte: threeDaysAgo } },
@@ -105,5 +106,63 @@ export async function runReengagementSweep(
     // eslint-disable-next-line no-console
     console.log(`[reengagement] hit the ${BATCH} batch cap - more may remain for next sweep`);
   }
+  return { scanned: candidates.length, sent, ...(opts.dryRun ? { preview } : {}) };
+}
+
+/**
+ * Profile-completion reminder: a single nudge ~24 hours after signup to members
+ * who have NOT finished their profile (no profile row, or a profile with no
+ * photo). Sent once per member. Separate audience from the re-engagement
+ * sequence above (which only targets fully set-up, then-inactive members).
+ */
+export async function runProfileCompletionReminders(
+  opts: { dryRun?: boolean } = {},
+): Promise<{ scanned: number; sent: number; preview?: { email: string; hoursOld: number }[] }> {
+  const now = Date.now();
+  const dayAgo = new Date(now - 1 * DAY); // signed up at least 24h ago
+  const fourteenDaysAgo = new Date(now - 14 * DAY); // ...but not older than 14d
+
+  const candidates = await prisma.user.findMany({
+    where: {
+      deletedAt: null,
+      role: { not: 'ADMIN' },
+      email: { not: { endsWith: '@vpn-demo.com' } },
+      createdAt: { lte: dayAgo, gte: fourteenDaysAgo },
+      // Incomplete = no profile at all, OR a profile with no photo.
+      OR: [{ memberProfile: { is: null } }, { memberProfile: { photoUrl: null } }],
+    },
+    select: { id: true, email: true, firstName: true, createdAt: true },
+    take: BATCH,
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const preview: { email: string; hoursOld: number }[] = [];
+  let sent = 0;
+  for (const u of candidates) {
+    const hoursOld = Math.floor((now - u.createdAt.getTime()) / (60 * 60 * 1000));
+    const markerId = `complete_profile:${u.id}`;
+
+    if (opts.dryRun) {
+      const already = await prisma.domainEvent.findUnique({
+        where: { id: markerId },
+        select: { id: true },
+      });
+      if (!already) preview.push({ email: u.email, hoursOld });
+      continue;
+    }
+
+    try {
+      await prisma.domainEvent.create({
+        data: { id: markerId, type: 'email.complete_profile', aggregateId: u.id, payload: {} },
+      });
+    } catch (err) {
+      if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') continue;
+      throw err;
+    }
+
+    await sendEmail({ to: u.email, template: 'complete_profile', data: { firstName: u.firstName } });
+    sent += 1;
+  }
+
   return { scanned: candidates.length, sent, ...(opts.dryRun ? { preview } : {}) };
 }

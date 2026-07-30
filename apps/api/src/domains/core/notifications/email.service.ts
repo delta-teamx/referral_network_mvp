@@ -25,7 +25,8 @@ export type EmailTemplate =
   | 'booking_confirmed'
   | 'event_registered'
   | 'support_escalation'
-  | 'reengagement';
+  | 'reengagement'
+  | 'complete_profile';
 
 export interface EmailAttachment {
   filename: string;
@@ -206,6 +207,27 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p style="color:#888;font-size:12px">A calendar invite is attached - open it to add this to your calendar.</p>`,
         ),
       };
+    case 'complete_profile': {
+      const firstName = String(d.firstName ?? 'there');
+      const onboardUrl = `${BRAND.app}/onboarding`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const paras = [
+        `Hi ${escapeHtml(firstName)},`,
+        `Thank you for joining Referral Nova. We noticed you have not finished setting up your profile yet, and we wanted to help you get the most out of your account.`,
+        `Your profile is what our AI uses to match you with the right partners. Members who add their business details and a clear profile photo get matched first and receive far more introductions, because people connect more readily with a business they can actually see and understand. It only takes about five minutes.`,
+        `To finish, add your business details, tell us who you want to meet and who you can refer, and upload a profile photo. As soon as your profile is complete, our AI will start suggesting introductions for you right away.`,
+        `Pick up where you left off and complete your profile below.`,
+      ];
+      return {
+        subject: 'Finish setting up your Referral Nova profile',
+        text:
+          `${paras.join('\n\n')}\n\nComplete your profile: ${onboardUrl}`,
+        html: brandedLayout(
+          `You're one step away, ${escapeHtml(firstName)}`,
+          paras.map(P).join('') + button('Complete my profile', onboardUrl),
+        ),
+      };
+    }
     case 'reengagement': {
       const firstName = String(d.firstName ?? 'there');
       const stage = Number(d.stage ?? 3);
