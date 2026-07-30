@@ -3,6 +3,19 @@
 import { useEffect, useState } from 'react';
 
 /**
+ * Cache-buster for our media-proxy image URLs. A bad media response was briefly
+ * served with a 1-hour cache, so browsers hold the broken image. Bumping this
+ * appends a new query param, changing the cache key so every browser refetches
+ * the (now working) image immediately - no user cache-clear needed. Bump again
+ * if we ever need to force-refresh media.
+ */
+const MEDIA_CACHE_BUST = '2';
+function bustMediaCache(url: string): string {
+  if (!url.includes('/attachments/file')) return url; // leave external/data URIs alone
+  return url + (url.includes('?') ? '&' : '?') + `cb=${MEDIA_CACHE_BUST}`;
+}
+
+/**
  * Profile image with automatic fallback: when there is no photo, or the photo
  * URL fails to load (dead link, storage hiccup), clean initials render
  * instead of the browser's broken-image glyph.
@@ -36,6 +49,6 @@ export function Avatar({
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={name} className={className} onError={() => setBroken(true)} />
+    <img src={bustMediaCache(src)} alt={name} className={className} onError={() => setBroken(true)} />
   );
 }
