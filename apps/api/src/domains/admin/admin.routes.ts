@@ -43,6 +43,20 @@ adminRouter.get(
   }),
 );
 
+// Run (or dry-run) the re-engagement sweep on demand. dryRun returns who WOULD
+// be emailed without sending; omit it to send for real.
+const reengageSchema = z.object({ dryRun: z.boolean().optional() });
+adminRouter.post(
+  '/reengagement',
+  validate(reengageSchema),
+  asyncHandler(async (req, res) => {
+    const { runReengagementSweep } = await import('../core/notifications/reengagement.service.js');
+    const result = await runReengagementSweep({ dryRun: req.body.dryRun === true });
+    const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
 // Send one of every email template (branded redesign) to an address for review.
 const previewSchema = z.object({ to: z.string().email() });
 adminRouter.post(

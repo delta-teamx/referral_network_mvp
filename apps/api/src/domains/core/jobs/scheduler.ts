@@ -2,6 +2,7 @@ import { env } from '../../../config/env.js';
 import { recomputeAllTrustScores } from '../trust/trust.service.js';
 import { refreshAllSuggestions } from '../../matching/ai/ai-matching.service.js';
 import { retrainFromOutcomes } from '../../matching/ai/ai-learning.service.js';
+import { runReengagementSweep } from '../notifications/reengagement.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -60,6 +61,18 @@ const JOBS: JobDefinition[] = [
       // eslint-disable-next-line no-console
       console.log(
         `[jobs] retrain-ai-weights: processed ${result.introsProcessed} intros`,
+      );
+      return result;
+    },
+  },
+  {
+    name: 'reengagement-emails',
+    intervalMs: 6 * 60 * 60 * 1000, // Every 6 hours
+    handler: async () => {
+      const result = await runReengagementSweep();
+      // eslint-disable-next-line no-console
+      console.log(
+        `[jobs] reengagement-emails: scanned ${result.scanned}, sent ${result.sent}`,
       );
       return result;
     },

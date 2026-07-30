@@ -179,6 +179,16 @@ export async function refresh(refreshTokenRaw: string): Promise<AuthResult> {
   if (typeof claims.tv === 'number' && claims.tv !== user.tokenVersion) {
     throw AppError.unauthorized('Session has been revoked. Please log in again.');
   }
+  // Throttled activity stamp: keeps lastLoginAt current for members who are
+  // actively using the app (they refresh tokens even without re-logging in), so
+  // the re-engagement sweep never emails someone who's genuinely active - but
+  // without a DB write on every single refresh.
+  const ONE_HOUR = 60 * 60 * 1000;
+  if (!user.lastLoginAt || Date.now() - user.lastLoginAt.getTime() > ONE_HOUR) {
+    await prisma.user
+      .update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+      .catch(() => undefined);
+  }
   return buildAuthSuccess(user);
 }
 

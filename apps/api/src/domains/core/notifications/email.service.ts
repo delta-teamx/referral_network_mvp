@@ -24,7 +24,8 @@ export type EmailTemplate =
   | 'referral_received'
   | 'booking_confirmed'
   | 'event_registered'
-  | 'support_escalation';
+  | 'support_escalation'
+  | 'reengagement';
 
 export interface EmailAttachment {
   filename: string;
@@ -205,6 +206,41 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
            <p style="color:#888;font-size:12px">A calendar invite is attached - open it to add this to your calendar.</p>`,
         ),
       };
+    case 'reengagement': {
+      const firstName = String(d.firstName ?? 'there');
+      const stage = Number(d.stage ?? 3);
+      const dashUrl = `${BRAND.app}/dashboard`;
+      const onboardUrl = `${BRAND.app}/onboarding`;
+      // Escalating nudges: day 3 gentle, day 7 value-led, day 14 last-call.
+      const copy: Record<number, { subject: string; heading: string; body: string }> = {
+        3: {
+          subject: 'Your Referral Nova network is waiting',
+          heading: `You're almost set up, ${escapeHtml(firstName)}`,
+          body: `You created your Referral Nova account but haven't finished setting up. Members with a complete profile and a 60-second intro get matched first - it takes about 5 minutes. Pick up where you left off:`,
+        },
+        7: {
+          subject: "Here's what you're missing on Referral Nova",
+          heading: `Your matches are ready when you are`,
+          body: `Our AI is already spotting businesses you should meet - but it can only introduce you once your profile is complete. Founding members get lifetime Premium free while spots last. Finish setting up and start getting warm introductions:`,
+        },
+        14: {
+          subject: 'Still keen? Your Referral Nova spot is open',
+          heading: `One last nudge, ${escapeHtml(firstName)}`,
+          body: `We'd hate for you to miss out. Complete your profile to unlock AI-matched partners, referral tracking, and Zoom intros. It takes 5 minutes and it's free to start:`,
+        },
+      };
+      const c = copy[stage] ?? copy[3]!;
+      return {
+        subject: c.subject,
+        text: `${c.heading}\n\n${c.body}\n\nFinish setup: ${onboardUrl}\nGo to dashboard: ${dashUrl}`,
+        html: brandedLayout(
+          c.heading,
+          `<p>${c.body}</p>
+           ${button('Finish setting up', onboardUrl)}
+           <p style="margin-top:8px;font-size:13px;color:${BRAND.gray};">Already active? <a href="${escapeAttr(dashUrl)}" style="color:${BRAND.blue};">Open your dashboard</a>.</p>`,
+        ),
+      };
+    }
     case 'support_escalation':
       return {
         subject: `⚠️ ROUL escalation: ${d.name ?? 'a user'} stuck on onboarding`,
