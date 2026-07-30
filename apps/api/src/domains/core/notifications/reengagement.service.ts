@@ -20,6 +20,17 @@ const STAGE_DAYS = [3, 7, 14] as const;
 const STOP_AFTER_DAYS = 28;
 const BATCH = 2000;
 
+/**
+ * Nurture emails go to real members ONLY - never to admins, staff, or demo/test
+ * accounts. Admins are excluded by role; internal/demo email domains are
+ * excluded here too as a second guard.
+ */
+const INTERNAL_DOMAINS = ['@vpn-demo.com', '@virtualpros.com', '@referralnova.com'];
+const AUDIENCE_GUARD = {
+  role: { not: 'ADMIN' as const },
+  NOT: { OR: INTERNAL_DOMAINS.map((d) => ({ email: { endsWith: d } })) },
+};
+
 type Stage = (typeof STAGE_DAYS)[number];
 
 /** Which stage a member with `daysInactive` should currently receive (or null). */
@@ -48,8 +59,7 @@ export async function runReengagementSweep(
   const candidates = await prisma.user.findMany({
     where: {
       deletedAt: null,
-      role: { not: 'ADMIN' },
-      email: { not: { endsWith: '@vpn-demo.com' } },
+      ...AUDIENCE_GUARD, // members only - no admins/staff/demo
       // FOLLOW-UP ONLY for members who FULLY set up (profile + photo) and then
       // went quiet. Requiring a photo keeps this cleanly separate from the
       // profile-completion reminder below (which targets incomplete profiles).
@@ -125,8 +135,7 @@ export async function runProfileCompletionReminders(
   const candidates = await prisma.user.findMany({
     where: {
       deletedAt: null,
-      role: { not: 'ADMIN' },
-      email: { not: { endsWith: '@vpn-demo.com' } },
+      ...AUDIENCE_GUARD, // members only - no admins/staff/demo
       createdAt: { lte: dayAgo, gte: fourteenDaysAgo },
       // Incomplete = no profile at all, OR a profile with no photo.
       OR: [{ memberProfile: { is: null } }, { memberProfile: { photoUrl: null } }],
