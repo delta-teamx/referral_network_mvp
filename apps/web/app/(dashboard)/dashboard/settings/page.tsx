@@ -24,6 +24,7 @@ interface Profile {
   bio: string | null;
   photoUrl: string | null;
   linkedinUrl: string | null;
+  website: string | null;
   keywords: string[];
   servicesOffered: string[];
   yearsInBusiness: number | null;
@@ -159,6 +160,7 @@ export default function SettingsPage() {
         headline: String(form.get('headline') ?? '') || undefined,
         // '' clears the stored link server-side; undefined would leave it.
         linkedinUrl: String(form.get('linkedinUrl') ?? '').trim(),
+        website: String(form.get('website') ?? '').trim(),
         bio: String(form.get('bio') ?? '') || undefined,
         keywords: String(form.get('keywords') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
         servicesOffered: String(form.get('servicesOffered') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
@@ -302,6 +304,13 @@ export default function SettingsPage() {
                 placeholder="linkedin.com/in/yourname"
                 hint="Optional - shown on your public profile."
                 defaultValue={profile.linkedinUrl ?? ''}
+              />
+              <FormField
+                label="Business website"
+                name="website"
+                placeholder="yourbusiness.com"
+                hint="Optional - shown on your public profile."
+                defaultValue={profile.website ?? ''}
               />
               <div><label className="mb-1 block text-sm font-medium text-gray-900">Bio</label><textarea name="bio" defaultValue={profile.bio ?? ''} rows={4} maxLength={2000} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></div>
               <FormField label="Services (comma-separated)" name="servicesOffered" defaultValue={profile.servicesOffered.join(', ')} />

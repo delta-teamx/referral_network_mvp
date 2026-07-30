@@ -158,6 +158,7 @@ model MemberProfile {
   bio             String?
   photoUrl        String?
   linkedinUrl     String?
+  website         String?  // Business website URL, shown on the member's profile
   keywords        String[]
   servicesOffered String[] // ["roof repair", "new construction", "inspections"]
   yearsInBusiness Int?
@@ -787,7 +788,7 @@ model Availability {
   dayOfWeek Int      // 0 = Sunday, 6 = Saturday
   startMin  Int      // Minutes since midnight (e.g. 9*60 = 540)
   endMin    Int      // Exclusive (e.g. 17*60 = 1020)
-  timezone  String   @default("America/Chicago")
+  timezone  String   @default("America/New_York")
   createdAt DateTime @default(now())
 
   user User @relation("UserAvailability", fields: [userId], references: [id], onDelete: Cascade)

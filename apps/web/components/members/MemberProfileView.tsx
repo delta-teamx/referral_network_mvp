@@ -10,6 +10,7 @@ import {
   Crown,
   Film,
   HandCoins,
+  Globe,
   Linkedin,
   Mail,
   MapPin,
@@ -31,6 +32,7 @@ interface PublicProfile {
   bio: string | null;
   photoUrl: string | null;
   linkedinUrl: string | null;
+  website: string | null;
   videoUrl: string | null;
   servicesOffered: string[];
   yearsInBusiness: number | null;
@@ -290,6 +292,16 @@ export function MemberProfileView({ id }: { id: string }) {
                   className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
                 >
                   <Linkedin size={14} /> LinkedIn
+                </a>
+              )}
+              {profile.website && (
+                <a
+                  href={profile.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                >
+                  <Globe size={14} /> Website
                 </a>
               )}
               {profile.yearsInBusiness !== null && profile.yearsInBusiness > 0 && (

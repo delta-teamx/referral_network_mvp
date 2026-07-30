@@ -26,6 +26,54 @@ export type BookingReason = (typeof BOOKING_REASONS)[number];
 const SLOT_MINUTES = 30;
 const DEFAULT_LOOKAHEAD_DAYS = 14;
 
+// Availability windows are declared in Eastern time. We expand them in this
+// zone so a host's "9-5" means 9-5 Eastern regardless of the server's clock,
+// and DST is handled correctly (offset is resolved per-instant below).
+const BOOKING_TZ = 'America/New_York';
+
+/** The wall-clock parts (in `tz`) of a given UTC instant. */
+function zonedParts(date: Date, tz: string) {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hourCycle: 'h23',
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((a, x) => ((a[x.type] = x.value), a), {});
+  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: Number(p.year),
+    month: Number(p.month), // 1-12
+    day: Number(p.day),
+    dow: dowMap[p.weekday ?? 'Sun'] ?? 0,
+    minutes: Number(p.hour) * 60 + Number(p.minute),
+  };
+}
+
+/** Convert a wall-clock time in `tz` (given y/m/d + minutes-from-midnight) to the UTC instant. */
+function zonedWallClockToUtc(
+  year: number,
+  month1: number,
+  day: number,
+  minutes: number,
+  tz: string,
+): Date {
+  // First guess: treat the wall clock as if it were UTC.
+  const guess = new Date(Date.UTC(year, month1 - 1, day, 0, 0, 0) + minutes * 60_000);
+  // Measure the zone's offset at that instant and correct for it (one pass
+  // resolves all but the ~1hr DST-transition ambiguity, which is acceptable).
+  const parts = zonedParts(guess, tz);
+  const wallAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0) + parts.minutes * 60_000;
+  const offset = wallAsUtc - guess.getTime();
+  return new Date(guess.getTime() - offset);
+}
+
 export interface AvailabilityWindow {
   id?: string;
   dayOfWeek: number;
@@ -82,7 +130,8 @@ export async function getAvailableSlots(
   opts: { days?: number; from?: Date } = {},
 ): Promise<TimeSlot[]> {
   const days = Math.min(opts.days ?? DEFAULT_LOOKAHEAD_DAYS, 60);
-  const from = opts.from ?? new Date();
+  // Clone so we never mutate the caller's Date (opts.from).
+  const from = new Date(opts.from ?? new Date());
   from.setMinutes(Math.ceil(from.getMinutes() / SLOT_MINUTES) * SLOT_MINUTES, 0, 0);
 
   const windows = await prisma.availability.findMany({
@@ -102,16 +151,15 @@ export async function getAvailableSlots(
 
   const slots: TimeSlot[] = [];
   for (let d = 0; d < days; d++) {
-    const dayStart = new Date(from);
-    dayStart.setDate(dayStart.getDate() + d);
-    dayStart.setHours(0, 0, 0, 0);
-    const dow = dayStart.getDay();
-    const todaysWindows = windows.filter((w) => w.dayOfWeek === dow);
+    // The Eastern calendar date d days out from `from`.
+    const dayParts = zonedParts(new Date(from.getTime() + d * 86400_000), BOOKING_TZ);
+    const todaysWindows = windows.filter((w) => w.dayOfWeek === dayParts.dow);
 
     for (const w of todaysWindows) {
       for (let m = w.startMin; m + SLOT_MINUTES <= w.endMin; m += SLOT_MINUTES) {
-        const start = new Date(dayStart.getTime() + m * 60_000);
-        if (start < from) continue; // past slot on today
+        // Convert the Eastern wall-clock slot time to the real UTC instant.
+        const start = zonedWallClockToUtc(dayParts.year, dayParts.month, dayParts.day, m, BOOKING_TZ);
+        if (start < from) continue; // past slot
         const end = new Date(start.getTime() + SLOT_MINUTES * 60_000);
         const overlap = busy.some(
           ([bs, be]) => !(end.getTime() <= bs || start.getTime() >= be),
@@ -123,6 +171,26 @@ export async function getAvailableSlots(
     }
   }
   return slots.slice(0, 200);
+}
+
+/**
+ * True when [startsAt, endsAt) falls entirely inside one of the host's declared
+ * Eastern availability windows. Used to reject bookings for arbitrary times.
+ */
+async function isWithinAvailability(hostUserId: string, startsAt: Date, endsAt: Date): Promise<boolean> {
+  const windows = await prisma.availability.findMany({ where: { userId: hostUserId } });
+  if (windows.length === 0) return false;
+  const s = zonedParts(startsAt, BOOKING_TZ);
+  const e = zonedParts(endsAt, BOOKING_TZ);
+  // Reject slots that cross a day boundary in Eastern time.
+  if (s.year !== e.year || s.month !== e.month || s.day !== e.day) {
+    // endsAt at exactly midnight is fine if it equals the window end.
+    if (!(e.minutes === 0)) return false;
+  }
+  const endMinutes = e.minutes === 0 && (s.day !== e.day) ? 24 * 60 : e.minutes;
+  return windows.some(
+    (w) => w.dayOfWeek === s.dow && s.minutes >= w.startMin && endMinutes <= w.endMin,
+  );
 }
 
 export interface CreateBookingInput {
@@ -147,6 +215,14 @@ export async function createBooking(input: CreateBookingInput) {
   }
   if (!BOOKING_REASONS.includes(input.reason)) {
     throw AppError.badRequest('Invalid booking reason');
+  }
+  // Reject bookings in the past (with a small grace for clock skew).
+  if (input.startsAt.getTime() < Date.now() - 60_000) {
+    throw AppError.badRequest('That time is in the past. Please pick an upcoming slot.');
+  }
+  // Reject times outside the host's declared availability windows.
+  if (!(await isWithinAvailability(input.hostUserId, input.startsAt, input.endsAt))) {
+    throw AppError.badRequest("That time isn't within the host's available hours.");
   }
 
   const [host, guest] = await Promise.all([
@@ -180,19 +256,30 @@ export async function createBooking(input: CreateBookingInput) {
 
   // A booking is a REQUEST: the host must accept before it's confirmed and a
   // meeting link is provisioned - nobody gets a call on their calendar without
-  // prior notice.
-  const booking = await prisma.bookingCall.create({
-    data: {
-      hostId: input.hostUserId,
-      guestId: input.guestUserId,
-      reason: input.reason,
-      notes: input.notes?.trim() || null,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      status: 'pending',
-    },
-    select: bookingSelect,
-  });
+  // prior notice. The DB exclusion constraint (BookingCall_no_overlap) is the
+  // real guard against the check-then-insert race - if two requests land at
+  // once, one insert violates it and we surface a clean conflict.
+  let booking;
+  try {
+    booking = await prisma.bookingCall.create({
+      data: {
+        hostId: input.hostUserId,
+        guestId: input.guestUserId,
+        reason: input.reason,
+        notes: input.notes?.trim() || null,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        status: 'pending',
+      },
+      select: bookingSelect,
+    });
+  } catch (err) {
+    const msg = String((err as { message?: string })?.message ?? err);
+    if (msg.includes('BookingCall_no_overlap') || msg.includes('23P01')) {
+      throw AppError.conflict('That time slot is no longer available.');
+    }
+    throw err;
+  }
 
   // Alert the host in-app (best-effort).
   void createNotification({

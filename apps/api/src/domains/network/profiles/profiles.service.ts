@@ -10,6 +10,7 @@ export interface UpsertProfileInput {
   bio?: string;
   photoUrl?: string;
   linkedinUrl?: string;
+  website?: string;
   keywords?: string[];
   servicesOffered?: string[];
   yearsInBusiness?: number;
@@ -30,6 +31,14 @@ export interface UpsertProfileInput {
   barterNotes?: string;
 }
 
+/** Normalize a user-entered website: trim, drop if empty, add https:// if no scheme. */
+function normalizeUrl(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+  return withScheme.slice(0, 300);
+}
+
 export async function upsertMemberProfile(userId: string, input: UpsertProfileInput) {
   const data = {
     businessName: sanitizeText(input.businessName),
@@ -41,6 +50,10 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
     ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl || null } : {}),
     // Same guard for LinkedIn: undefined = leave as-is, '' = clear.
     ...(input.linkedinUrl !== undefined ? { linkedinUrl: input.linkedinUrl || null } : {}),
+    // Business website - same undefined/'' guard.
+    ...(input.website !== undefined
+      ? { website: normalizeUrl(input.website) }
+      : {}),
     bio: input.bio ? sanitizeText(input.bio) || null : null,
     keywords: sanitizeArray((input.keywords ?? []).map((k) => k.toLowerCase())),
     servicesOffered: sanitizeArray(input.servicesOffered ?? []),
@@ -203,7 +216,7 @@ export async function setVideoTranscript(userId: string, transcript: string) {
 }
 
 const profileSelect = {
-  id: true, userId: true, businessName: true, industry: true, headline: true, bio: true, photoUrl: true, linkedinUrl: true,
+  id: true, userId: true, businessName: true, industry: true, headline: true, bio: true, photoUrl: true, linkedinUrl: true, website: true,
   keywords: true, servicesOffered: true, yearsInBusiness: true, icpIndustries: true, icpRoles: true,
   icpProblems: true, icpDealSize: true, canReferIndustries: true, canReferTypes: true,
   videoUrl: true, videoDurationSec: true, videoTranscript: true, videoProcessed: true,

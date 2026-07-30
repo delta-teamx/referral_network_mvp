@@ -322,6 +322,21 @@ async function ensureRuntimeSchema(): Promise<void> {
       `UPDATE "User" SET "emailVerified" = true WHERE "emailVerified" = false;`,
       // Members can link their LinkedIn profile.
       `ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT;`,
+      // Members can show their business website.
+      `ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "website" TEXT;`,
+      // Default availability timezone moved to Eastern.
+      `ALTER TABLE "Availability" ALTER COLUMN "timezone" SET DEFAULT 'America/New_York';`,
+      // Indexes on soft-delete columns filtered on every hot query path.
+      `CREATE INDEX IF NOT EXISTS "User_deletedAt_idx" ON "User" ("deletedAt");`,
+      `CREATE INDEX IF NOT EXISTS "Listing_deletedAt_idx" ON "Listing" ("deletedAt");`,
+      // Prevent double-booking at the DB level: no two pending/confirmed calls
+      // for the same host may overlap in time (closes the check-then-insert race).
+      `CREATE EXTENSION IF NOT EXISTS btree_gist;`,
+      `DO $$ BEGIN
+         ALTER TABLE "BookingCall" ADD CONSTRAINT "BookingCall_no_overlap"
+           EXCLUDE USING gist ("hostId" WITH =, tsrange("startsAt", "endsAt") WITH &&)
+           WHERE ("status" IN ('pending','confirmed'));
+       EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN others THEN NULL; END $$;`,
       // Short, shareable invite codes for referralnova.com/join/<code> links.
       `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "referralCode" TEXT;`,
       `CREATE UNIQUE INDEX IF NOT EXISTS "User_referralCode_key" ON "User" ("referralCode");`,

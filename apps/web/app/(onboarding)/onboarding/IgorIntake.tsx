@@ -70,6 +70,7 @@ export function IgorIntake() {
   const [bio, setBio] = useState('');
   const [keywords, setKeywords] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [website, setWebsite] = useState('');
   const [services, setServices] = useState('');
   const [years, setYears] = useState('');
   const [city, setCity] = useState('');
@@ -144,6 +145,7 @@ export function IgorIntake() {
               : industry,
           headline: headline.trim().slice(0, 200) || undefined,
           linkedinUrl: linkedinUrl.trim().slice(0, 300) || undefined,
+          website: website.trim().slice(0, 300) || undefined,
           bio: bio.trim().slice(0, 2000) || undefined,
           keywords: splitList(keywords, ',', 50, 20),
           servicesOffered: splitList(services, ',', 100, 15),
@@ -294,6 +296,15 @@ export function IgorIntake() {
               hint="Optional - shown on your profile so members can verify who you are."
               value={linkedinUrl}
               onChange={(e) => setLinkedinUrl(e.target.value)}
+            />
+            <FormField
+              label="Business website"
+              name="website"
+              maxLength={300}
+              placeholder="yourbusiness.com"
+              hint="Optional - shown on your profile so members can visit your site."
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
             />
             <div className="mb-4">
               <label className="mb-1 block text-sm font-medium text-gray-900">About your business</label>
