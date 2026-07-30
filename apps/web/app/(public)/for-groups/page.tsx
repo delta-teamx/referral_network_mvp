@@ -339,6 +339,7 @@ export default function ForGroupsPage() {
           ) : (
             <motion.form
               variants={fadeInUp}
+              method="post"
               onSubmit={handleSubmit}
               className="mt-10 space-y-5 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
             >
@@ -348,6 +349,7 @@ export default function ForGroupsPage() {
                 </label>
                 <input
                   id="demo-name"
+                  name="name"
                   type="text"
                   required
                   value={formData.name}
@@ -362,6 +364,7 @@ export default function ForGroupsPage() {
                 </label>
                 <input
                   id="demo-email"
+                  name="email"
                   type="email"
                   required
                   value={formData.email}
@@ -376,6 +379,7 @@ export default function ForGroupsPage() {
                 </label>
                 <input
                   id="demo-org"
+                  name="organization"
                   type="text"
                   required
                   value={formData.orgName}
@@ -390,6 +394,7 @@ export default function ForGroupsPage() {
                 </label>
                 <input
                   id="demo-size"
+                  name="groupSize"
                   type="text"
                   required
                   value={formData.groupSize}
@@ -419,14 +424,14 @@ export default function ForGroupsPage() {
           className="text-center"
         >
           <motion.div variants={fadeInUp} className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <Award size={14} /> Social Proof
+            <Award size={14} /> Who It&rsquo;s For
           </motion.div>
           <motion.h2 variants={fadeInUp} className="text-3xl font-bold text-gray-900 md:text-4xl">
-            Trusted by 20+ networking organizations
+            Built for networking organizations of every kind
           </motion.h2>
           <motion.p variants={fadeInUp} className="mx-auto mt-4 max-w-2xl text-gray-600">
-            From local BNI chapters to national industry associations, group leaders rely on Referral Nova to
-            keep their members engaged and referring.
+            From local BNI-style chapters to chambers and industry associations - Referral Nova is designed
+            for group leaders who want to keep their members engaged and referring.
           </motion.p>
 
           <motion.div

@@ -15,6 +15,8 @@ interface Props {
   background?: string;
   /** If true, titles are left-aligned instead of centered. */
   alignLeft?: boolean;
+  /** Heading element for the title - "h1" when the section opens a page. */
+  titleAs?: 'h1' | 'h2';
 }
 
 /**
@@ -31,6 +33,7 @@ export function SectionShell({
   children,
   background = 'bg-white',
   alignLeft = false,
+  titleAs: TitleTag = 'h2',
 }: Props) {
   return (
     <section id={id} className={`${background} px-6 py-16 md:py-24 ${className}`}>
@@ -52,9 +55,9 @@ export function SectionShell({
               </p>
             )}
             {title && (
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+              <TitleTag className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
                 {title}
-              </h2>
+              </TitleTag>
             )}
             {subtitle && (
               <p

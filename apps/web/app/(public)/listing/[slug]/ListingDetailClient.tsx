@@ -517,7 +517,7 @@ function ReviewModal({
 
   return (
     <ModalShell title="Write a review" onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form method="post" onSubmit={onSubmit} className="space-y-4">
         <div>
           <p className="mb-2 text-sm font-medium text-gray-900">Your rating</p>
           <div className="flex items-center gap-1">
@@ -637,7 +637,7 @@ function ReferralModal({
           <Check size={14} /> Referral sent. We&rsquo;ve notified the business.
         </p>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form method="post" onSubmit={onSubmit} className="space-y-4">
           <p className="text-sm text-gray-600">
             You&rsquo;re referring a client to this business. They&rsquo;ll get an email with the
             client&rsquo;s details and a link to respond.

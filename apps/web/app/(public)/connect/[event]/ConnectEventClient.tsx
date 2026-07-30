@@ -114,7 +114,7 @@ export default function ConnectEventClient() {
           </h1>
           <p className="mb-6 text-base text-gray-600">{meta.description}</p>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
+          <form method="post" onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
             <div className="flex flex-1 items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
               <MapPin size={16} className="text-gray-400" />
               <input

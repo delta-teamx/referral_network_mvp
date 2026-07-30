@@ -117,7 +117,7 @@ export default function AdminEventsPage() {
 
       {formOpen && (
         <form
-          onSubmit={create}
+          method="post" onSubmit={create}
           className="mb-6 space-y-4 rounded-2xl border border-gray-800 bg-gray-900 p-5"
         >
           <FormField label="Title" name="title" required dark />

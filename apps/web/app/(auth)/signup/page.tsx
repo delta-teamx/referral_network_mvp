@@ -105,7 +105,7 @@ export default function SignupPage() {
         <span>{t('auth.orEmail')}</span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
-      <form onSubmit={onSubmit} noValidate>
+      <form method="post" onSubmit={onSubmit} noValidate>
         <div className="grid grid-cols-2 gap-3">
           <FormField
             label={t('auth.firstName')}

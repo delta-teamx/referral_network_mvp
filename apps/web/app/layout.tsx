@@ -14,12 +14,14 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://referralnova.com"),
   title: {
     default: "Referral Nova - AI-Powered Referral Networking Platform",
     template: "%s | Referral Nova",
   },
   description:
-    "Referral Nova is the AI-powered referral networking platform.",
+    "Stop hoping for referrals - build a referral engine. Referral Nova's AI matches your business with trusted partners so qualified referrals flow both ways.",
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

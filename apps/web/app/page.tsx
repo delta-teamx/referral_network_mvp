@@ -101,7 +101,7 @@ export default function HomePage() {
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
                 <Link
-                  href="https://dashboard.referralnova.com/signup"
+                  href="/signup"
                   className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
                 >
                   {t('hero.ctaJoin')} <ArrowRight size={16} />
@@ -639,6 +639,9 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
+              <p className="mt-4 text-center text-[11px] text-gray-400">
+                Illustrative example of an active local network.
+              </p>
             </div>
           </div>
         </div>
@@ -648,9 +651,9 @@ export default function HomePage() {
       <section className="bg-gray-50 py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-14 text-center">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">What members say</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">What to expect</p>
             <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">
-              Real results from real connections
+              Built for results like these
             </h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -688,6 +691,9 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-center text-xs text-gray-400">
+            Illustrative examples of how members use the platform - individual results vary.
+          </p>
         </div>
       </section>
 
@@ -751,7 +757,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="https://dashboard.referralnova.com/signup"
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
             >
               Claim your founding spot <ArrowRight size={16} />

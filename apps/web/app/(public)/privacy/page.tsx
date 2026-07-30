@@ -4,7 +4,7 @@ export default function PrivacyPage() {
       <section className="mx-auto max-w-3xl px-6 py-16">
         <p className="text-sm font-semibold uppercase tracking-wider text-primary">Legal</p>
         <h1 className="mt-2 mb-2 text-4xl font-bold text-gray-900">Privacy Policy</h1>
-        <p className="mb-10 text-sm text-gray-500">Last updated: April 2026</p>
+        <p className="mb-10 text-sm text-gray-500">Last updated: July 2026</p>
 
         <div className="prose prose-lg max-w-none space-y-6 text-gray-700">
           <section>
@@ -27,8 +27,51 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
+          <section id="ai-processing">
+            <h2 className="text-2xl font-bold text-gray-900">3. Video introductions, transcription, and AI processing</h2>
+            <p>
+              If you record or upload an optional video introduction, here is exactly what
+              happens to it:
+            </p>
+            <ul className="list-disc pl-6">
+              <li>
+                <strong>Transcription.</strong> The audio in your video is automatically
+                transcribed to text using speech-to-text technology, which may be provided by
+                third-party AI service providers acting on our behalf.
+              </li>
+              <li>
+                <strong>Indexing for matching.</strong> The transcript - together with your
+                profile fields (business info, &ldquo;who I want to meet,&rdquo; &ldquo;who I can
+                refer&rdquo;) - is indexed and processed by our AI matching engine to suggest
+                relevant introductions. It is used only to power matching and search inside the
+                platform.
+              </li>
+              <li>
+                <strong>Visibility.</strong> Your video is shown to other logged-in members as
+                part of your profile. Transcripts are used internally for matching and are not
+                published as a separate public document.
+              </li>
+              <li>
+                <strong>Retention.</strong> We keep your video and its transcript while your
+                account is active or until you replace or delete the video. Deleting your video
+                from profile settings also removes its transcript from matching, and deleting
+                your account removes both.
+              </li>
+              <li>
+                <strong>Model training.</strong> We use your content to generate your matches -
+                we do not sell it or permit our AI providers to use it to train their own
+                models beyond providing the service to us.
+              </li>
+              <li>
+                <strong>Your controls.</strong> The video is optional. You can record, replace,
+                or delete it at any time from your dashboard settings, or email us for full
+                deletion.
+              </li>
+            </ul>
+          </section>
+
           <section>
-            <h2 className="text-2xl font-bold text-gray-900">3. Information sharing</h2>
+            <h2 className="text-2xl font-bold text-gray-900">4. Information sharing</h2>
             <p>
               We do not sell your personal data. Your public profile (name, business info,
               video) is visible to other logged-in members. We share booking details only with
@@ -39,7 +82,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-gray-900">4. Your rights</h2>
+            <h2 className="text-2xl font-bold text-gray-900">5. Your rights</h2>
             <p>
               You can update or delete your profile at any time from your dashboard settings.
               You can request a full export or deletion of your data by emailing{' '}
@@ -50,7 +93,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-gray-900">5. Cookies</h2>
+            <h2 className="text-2xl font-bold text-gray-900">6. Cookies</h2>
             <p>
               We use an HTTP-only refresh token cookie to keep you logged in across sessions.
               This cookie is not used for tracking or advertising.
@@ -58,7 +101,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-gray-900">6. Contact</h2>
+            <h2 className="text-2xl font-bold text-gray-900">7. Contact</h2>
             <p>
               Questions about this policy? Email{' '}
               <a href="mailto:privacy@referralnova.com" className="font-semibold text-primary">

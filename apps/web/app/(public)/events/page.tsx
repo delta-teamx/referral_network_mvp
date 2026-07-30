@@ -80,8 +80,8 @@ export default function EventsPage() {
             Scheduled Zoom networking events
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600">
-            Weekly sessions, referral rooms, expert panels. Register to save your seat and
-            get the Zoom link emailed to you.
+            Orientation sessions, referral rooms, and expert panels. Register to save your
+            seat and get the Zoom link emailed to you.
           </p>
         </div>
       </section>
@@ -102,10 +102,28 @@ export default function EventsPage() {
         ) : events.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
             <Calendar size={32} className="mx-auto mb-3 text-gray-300" />
-            <p className="font-semibold text-gray-900">No events scheduled yet</p>
-            <p className="mt-1 text-sm text-gray-600">
-              Admins will post recurring Zoom sessions here. Check back soon.
+            <p className="font-semibold text-gray-900">The next founding session is being scheduled</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-gray-600">
+              We run orientation and referral-room sessions as founding members join. Sign up
+              free and we&rsquo;ll email you the Zoom link as soon as the next one is on the
+              calendar.
             </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {!user && (
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
+                >
+                  Join free - get notified
+                </Link>
+              )}
+              <Link
+                href="/groups"
+                className="rounded-full border border-gray-300 px-5 py-2 text-xs font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
+              >
+                Start or join a group
+              </Link>
+            </div>
           </div>
         ) : (
           <motion.div

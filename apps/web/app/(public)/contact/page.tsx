@@ -61,7 +61,7 @@ export default function ContactPage() {
                 <p className="mt-1 text-sm text-gray-600">We&rsquo;ll reply soon.</p>
               </div>
             ) : (
-              <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-gray-200 p-6">
+              <form method="post" onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-gray-200 p-6">
                 <FormField label="Your name" name="name" required />
                 <FormField label="Email" name="email" type="email" required />
                 <div>

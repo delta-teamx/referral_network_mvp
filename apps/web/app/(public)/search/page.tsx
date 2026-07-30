@@ -103,7 +103,7 @@ function SearchInner() {
             AI-matched connections, and booking availability.
           </p>
           <form
-            onSubmit={(e) => {
+            method="post" onSubmit={(e) => {
               e.preventDefault();
               updateUrl();
             }}

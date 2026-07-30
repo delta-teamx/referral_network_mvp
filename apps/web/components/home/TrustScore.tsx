@@ -13,9 +13,10 @@ const FACTORS = [
   { label: 'Network endorsements', weight: 20 },
 ];
 
-export function TrustScore() {
+export function TrustScore({ titleAs = 'h2' }: { titleAs?: 'h1' | 'h2' }) {
   return (
     <SectionShell
+      titleAs={titleAs}
       eyebrow="Our secret sauce"
       title="Trust score - stars don't tell the whole story"
       subtitle="Every business has a score from 0 to 10, updated nightly. It's how we rank, match, and route. Transparent factors, no pay-to-win."

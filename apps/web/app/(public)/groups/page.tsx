@@ -133,12 +133,31 @@ export default function GroupsPage() {
           </div>
         ) : groups.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-            <p className="font-semibold text-gray-900">No groups match.</p>
-            <p className="mt-1 text-sm text-gray-600">
-              {user
-                ? 'Be the first - start a group and invite your peers.'
-                : 'Log in to start a group in your city.'}
+            <p className="font-semibold text-gray-900">
+              {q || state ? 'No groups match your search.' : 'Founding groups are forming now'}
             </p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-gray-600">
+              {q || state
+                ? 'Try a different name or state - or be the first to start a group in your area.'
+                : 'We are onboarding our founding chapters city by city. Claim your seat early: start the group for your city and invite your peers.'}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {user ? (
+                <Link
+                  href="/groups/new"
+                  className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
+                >
+                  Start a group
+                </Link>
+              ) : (
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
+                >
+                  Join free & start a group
+                </Link>
+              )}
+            </div>
           </div>
         ) : (
           <motion.div

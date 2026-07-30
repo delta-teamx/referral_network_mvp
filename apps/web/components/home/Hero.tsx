@@ -84,10 +84,10 @@ export function Hero() {
           variants={fadeInUp}
           className="mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-white/70"
         >
-          <TrustStat value="2,400+" label="Verified businesses" />
-          <TrustStat value="14" label="Life-event matches" />
-          <TrustStat value="$3.2M" label="Referred business in 2025" />
-          <TrustStat value="4.8" label="Avg. trust score" suffix="/10" />
+          <TrustStat value="Verified" label="Business profiles" />
+          <TrustStat value="14" label="Life-event match triggers" />
+          <TrustStat value="Nightly" label="AI matching runs" />
+          <TrustStat value="0-10" label="Transparent trust score" />
         </motion.div>
       </motion.div>
     </section>

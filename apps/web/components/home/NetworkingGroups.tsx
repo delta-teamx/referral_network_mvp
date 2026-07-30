@@ -13,7 +13,7 @@ const GROUPS = [
     description:
       'Weekly peer-learning cohorts. Share case studies, work through challenges, level up together.',
     accent: 'bg-blue-50 text-blue-700',
-    stat: '47 active',
+    stat: 'Weekly',
   },
   {
     icon: MapPin,
@@ -21,7 +21,7 @@ const GROUPS = [
     description:
       'In-person meetups organised by city. Coffee, happy hours, and structured referral swaps.',
     accent: 'bg-emerald-50 text-emerald-700',
-    stat: '22 cities',
+    stat: 'By city',
   },
   {
     icon: Repeat,
@@ -29,7 +29,7 @@ const GROUPS = [
     description:
       'BNI-style accountability - commit to exchanging N referrals/month, track who earned what.',
     accent: 'bg-violet-50 text-violet-700',
-    stat: '310 groups',
+    stat: 'BNI-style',
   },
 ];
 

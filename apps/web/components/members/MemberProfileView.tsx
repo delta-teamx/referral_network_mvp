@@ -111,7 +111,7 @@ function ReferClientForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+    <form method="post" onSubmit={onSubmit} className="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
       <p className="text-sm font-semibold text-gray-900">Refer a client to {targetName}</p>
       <input
         name="clientName"

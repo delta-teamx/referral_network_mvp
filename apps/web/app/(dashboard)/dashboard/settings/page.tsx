@@ -234,7 +234,7 @@ export default function SettingsPage() {
           <button onClick={() => setEditing(false)} className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"><X size={14} /> Cancel</button>
         </div>
         {error && <p className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
-        <form onSubmit={onSubmit} className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <form method="post" onSubmit={onSubmit} className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <section>
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Business identity</h2>
             <div className="space-y-4">

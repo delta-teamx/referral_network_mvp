@@ -70,7 +70,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form method="post" onSubmit={onSubmit} noValidate>
       <FormField
         label="New password"
         name="password"

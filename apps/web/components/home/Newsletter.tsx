@@ -41,7 +41,7 @@ export function Newsletter() {
               🎉 You&rsquo;re on the list. Check your inbox for a confirmation.
             </p>
           ) : (
-            <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
+            <form method="post" onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
               <input
                 name="email"
                 type="email"

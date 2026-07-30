@@ -392,7 +392,7 @@ function GroupChat({
         <div ref={endRef} />
       </div>
       {err && <p className="px-4 text-xs text-danger">{err}</p>}
-      <form onSubmit={send} className="flex items-center gap-2 border-t border-gray-100 p-3">
+      <form method="post" onSubmit={send} className="flex items-center gap-2 border-t border-gray-100 p-3">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

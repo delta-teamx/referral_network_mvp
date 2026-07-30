@@ -52,8 +52,8 @@ export function ForOwners() {
             Stop buying cold leads. Start earning warm ones.
           </h2>
           <p className="mb-8 text-base text-gray-600">
-            Thumbtack sells the same lead to 5 competitors. We route leads to the one pro most
-            likely to win - based on trust, specialty, and proven conversion.
+            Lead marketplaces sell the same lead to several competitors at once. We route each
+            lead to the one pro most likely to win - based on trust, specialty, and conversion.
           </p>
           <div className="space-y-4">
             {OWNER_FEATURES.map((f) => (

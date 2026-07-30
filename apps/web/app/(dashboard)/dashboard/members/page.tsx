@@ -81,7 +81,7 @@ export default function MembersDirectoryPage() {
       </header>
 
       {/* Search */}
-      <form onSubmit={onSearch} className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <form method="post" onSubmit={onSearch} className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative sm:col-span-2 lg:col-span-2">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input

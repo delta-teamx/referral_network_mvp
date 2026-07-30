@@ -47,27 +47,27 @@ export function WhyJoin() {
 
         <motion.div variants={slideInRight} className="grid grid-cols-2 gap-4">
           <StatCard
-            value="2,400+"
-            label="Verified businesses"
-            delta="+184 this month"
+            value="Nightly"
+            label="AI matching runs"
+            delta="Every profile, every night"
             accent="bg-primary-light text-primary"
           />
           <StatCard
-            value="91%"
-            label="Lead conversion"
-            delta="vs. 34% on Thumbtack"
+            value="2-way"
+            label="Referrals flow both directions"
+            delta="Give and receive"
             accent="bg-emerald-50 text-emerald-700"
           />
           <StatCard
-            value="4.8/10"
-            label="Median trust score"
-            delta="Across active members"
+            value="0-10"
+            label="Transparent trust score"
+            delta="Six public factors"
             accent="bg-amber-50 text-amber-700"
           />
           <StatCard
-            value="$3.2M"
-            label="Referred in 2025"
-            delta="+72% YoY"
+            value="Free"
+            label="Founding member access"
+            delta="First 200 businesses"
             accent="bg-rose-50 text-rose-700"
           />
         </motion.div>

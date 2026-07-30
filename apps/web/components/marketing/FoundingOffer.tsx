@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useFoundingStatus } from '../../lib/useFoundingStatus';
 import { useI18n } from '../../lib/i18n';
 
-const SIGNUP_URL = 'https://dashboard.referralnova.com/signup';
+const SIGNUP_URL = '/signup';
 
 /**
  * Founding-member promo, backed by the live /billing/founding-status count.
@@ -52,6 +52,11 @@ export function FoundingOffer({ variant }: { variant: 'bar' | 'card' }) {
       <p className="text-sm font-bold text-primary md:text-base">🎉 {t('founding.cardTitle')}</p>
       <p className="mt-1 text-xs text-gray-600 md:text-sm">
         {t('founding.cardBody')}{spotsLeft} {t('founding.cardAfter')}
+      </p>
+      <p className="mt-1.5 text-[11px] text-gray-500">
+        <Link href="/terms#founding-offer" className="underline hover:text-primary">
+          Founding offer terms
+        </Link>
       </p>
     </div>
   );

@@ -5,7 +5,7 @@ import { FinalCTA } from '../../../components/home/FinalCTA';
 export default function TrustScorePage() {
   return (
     <>
-      <TrustScore />
+      <TrustScore titleAs="h1" />
       <HowItWorks />
       <FinalCTA />
     </>

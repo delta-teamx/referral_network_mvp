@@ -81,7 +81,7 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-gray-500 md:flex-row">
             <div>
-              <p>&copy; {new Date().getFullYear()} Referral Nova. All rights reserved.</p>
+              <p suppressHydrationWarning>&copy; {new Date().getFullYear()} Referral Nova. All rights reserved.</p>
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-gray-300">

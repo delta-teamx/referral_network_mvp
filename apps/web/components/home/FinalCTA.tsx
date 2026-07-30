@@ -11,7 +11,7 @@ export function FinalCTA() {
       <motion.div variants={fadeInUp} className="text-center text-white">
         <h2 className="mb-5 text-3xl font-bold md:text-5xl">Ready to join?</h2>
         <p className="mx-auto mb-10 max-w-2xl text-base text-gray-300 md:text-lg">
-          2,400+ local pros are already in. Free to list, free to get matched, free to exchange
+          Founding spots are open now. Free to list, free to get matched, free to exchange
           referrals. Upgrade only when you&rsquo;re earning.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">

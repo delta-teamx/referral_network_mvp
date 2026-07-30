@@ -347,7 +347,7 @@ export function InvitationsAndContracts({
 
         {builderOpen && (
           <form
-            onSubmit={createContract}
+            method="post" onSubmit={createContract}
             className="mb-4 space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
           >
             <p className="text-sm font-semibold text-gray-900">
@@ -492,7 +492,7 @@ export function InvitationsAndContracts({
                     </pre>
                   )}
                   {signingId === c.id && (
-                    <form onSubmit={(e) => void sign(c.id, e)} className="mt-3 flex flex-wrap gap-2">
+                    <form method="post" onSubmit={(e) => void sign(c.id, e)} className="mt-3 flex flex-wrap gap-2">
                       <input
                         name="signature"
                         required
@@ -531,7 +531,7 @@ export function InvitationsAndContracts({
 
         {inviteOpen && (
           <form
-            onSubmit={sendInvite}
+            method="post" onSubmit={sendInvite}
             className="mb-4 flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
           >
             <input

@@ -493,7 +493,7 @@ function MessagesInner() {
 
             {/* Input */}
             <form
-              onSubmit={(e) => {
+              method="post" onSubmit={(e) => {
                 e.preventDefault();
                 void handleSend();
               }}

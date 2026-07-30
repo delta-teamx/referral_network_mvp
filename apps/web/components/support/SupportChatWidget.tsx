@@ -292,7 +292,7 @@ export function SupportChatWidget() {
 
           {!ticket ? (
             /* ── New ticket form ─────────────────────────────────── */
-            <form onSubmit={startTicket} className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-4">
+            <form method="post" onSubmit={startTicket} className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-4">
               <p className="text-xs text-gray-600">
                 Tell us who you are and what&rsquo;s going on - a real person will pick this up.
               </p>

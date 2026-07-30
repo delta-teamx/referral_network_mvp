@@ -99,7 +99,7 @@ function LoginInner() {
         <span>{t('auth.orEmail')}</span>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
-      <form onSubmit={onSubmit} noValidate>
+      <form method="post" onSubmit={onSubmit} noValidate>
         <FormField
           label={t('auth.email')}
           name="email"
