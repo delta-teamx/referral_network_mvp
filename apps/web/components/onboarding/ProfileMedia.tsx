@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, CircleStop, Image as ImageIcon, RefreshCw, TrendingUp, Upload, Video } from 'lucide-react';
+import { Camera, Check, CircleStop, Image as ImageIcon, RefreshCw, TrendingUp, Upload, Video } from 'lucide-react';
 import { ApiError, apiBaseUrl } from '../../lib/api';
 import { compressImageToJpeg } from '../../lib/image';
 
@@ -62,6 +62,7 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
   const chunksRef = useRef<BlobPart[]>([]);
 
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
   const [videoBusy, setVideoBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordSupported, setRecordSupported] = useState(true);
@@ -93,11 +94,19 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
       return;
     }
     setError(null);
+    setPhotoLoadError(false);
     setPhotoBusy(true);
     try {
       // Compress/convert to a small JPEG first - fixes HEIC (iPhone) and large
       // photos that were silently failing, and makes the upload fast.
       const { blob, contentType } = await compressImageToJpeg(file);
+      // If the browser couldn't decode it to a JPEG (e.g. desktop + HEIC), the
+      // helper returns the original type - tell the member clearly instead of
+      // sending something the server will reject.
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
+        setError("That image format isn't supported here. Please use a JPG or PNG photo.");
+        return;
+      }
       const url = await uploadMedia('photo', blob, contentType, accessToken);
       onPhoto(url);
     } catch (err) {
@@ -200,14 +209,19 @@ export function ProfileMedia({ accessToken, photoUrl, videoUrl, onPhoto, onVideo
         </p>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
-            {photoUrl ? (
+            {photoUrl && !photoLoadError ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photoUrl}
                 alt="Your headshot"
                 className="h-full w-full object-cover"
-                onError={() => onPhoto('')}
+                // If the PREVIEW can't render (e.g. a transient CDN/redirect
+                // hiccup), do NOT wipe the uploaded photo - keep it so the
+                // member isn't blocked. Just show a "saved" state instead.
+                onError={() => setPhotoLoadError(true)}
               />
+            ) : photoUrl ? (
+              <Check size={22} className="text-success" />
             ) : (
               <Camera size={22} className="text-gray-300" />
             )}
