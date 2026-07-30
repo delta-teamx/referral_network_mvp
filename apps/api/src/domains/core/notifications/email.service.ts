@@ -90,42 +90,43 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
     case 'welcome': {
       const firstName = String(d.firstName ?? 'there');
       const dashUrl = `${BRAND.app}/dashboard`;
-      const gettingStarted = linkList([
-        { label: 'How It Works', url: `${BRAND.marketing}/how-it-works`, desc: 'The 4-step referral engine, start to finish.' },
-        { label: 'For Members', url: `${BRAND.marketing}/for-members`, desc: 'What you get and how to make the most of it.' },
-        { label: 'Complete your profile', url: `${BRAND.app}/onboarding`, desc: 'Add your business, industry and what you can refer.' },
-        { label: 'Record your 60-second intro video', url: `${BRAND.app}/onboarding`, desc: 'Members send far more referrals to people they can see and hear.' },
-        { label: 'AI matching & Trust Score', url: `${BRAND.marketing}/trust-score`, desc: 'How we match you and how your Trust Score is calculated.' },
-      ]);
+      const onboardUrl = `${BRAND.app}/onboarding`;
+      const P = (t: string) => `<p style="margin:0 0 14px;">${t}</p>`;
+      const steps = [
+        `<a href="${onboardUrl}" style="color:${BRAND.blue};text-decoration:none;font-weight:600;">Complete your profile</a> and add a photo`,
+        `<a href="${onboardUrl}" style="color:${BRAND.blue};text-decoration:none;font-weight:600;">Record your 60 second intro video</a>`,
+        `Review your first AI matches and send an introduction`,
+      ];
       return {
-        subject: `Welcome to ${appName} \u2014 here's how to get started`,
+        subject: `Welcome to Referral Nova, ${firstName}`,
         text:
-          `Hi ${firstName}, welcome to Referral Nova.\n\n` +
-          `Referral Nova turns your network into revenue: our AI matches you with trusted partners and qualified referrals flow both ways, week after week.\n\n` +
-          `What happens next: complete your profile, record a 60-second intro, and our AI starts suggesting introductions. First, open your dashboard: ${dashUrl}\n\n` +
-          `Getting started: How It Works ${BRAND.marketing}/how-it-works \u00b7 For Members ${BRAND.marketing}/for-members \u00b7 Profile setup ${BRAND.app}/onboarding \u00b7 Trust Score ${BRAND.marketing}/trust-score\n\n` +
-          `Privacy ${BRAND.marketing}/privacy \u00b7 Terms ${BRAND.marketing}/terms\n\n` +
-          `Thank you for joining \u2014 Founder, Referral Nova`,
+          `Hi ${firstName},\n\n` +
+          `Thank you for joining Referral Nova, and welcome. You have just taken the first step toward turning your network into a steady source of warm, qualified referrals.\n\n` +
+          `Here is how it works. Our AI learns what your business does and who you want to meet, then introduces you to trusted partners whose needs line up with yours, so qualified referrals flow in both directions, week after week.\n\n` +
+          `The best way to start is by completing your profile, since that is what our AI uses to find your best matches. It only takes a few minutes.\n\n` +
+          `Getting started:\n- Complete your profile and add a photo\n- Record your 60 second intro video\n- Review your first AI matches and send an introduction\n\n` +
+          `Open your dashboard: ${dashUrl}\n\n` +
+          `The legal bits: Privacy ${BRAND.marketing}/privacy, Terms ${BRAND.marketing}/terms, Disclaimers ${BRAND.marketing}/terms#referral-agreements\n\n` +
+          `Thank you for trusting us to help grow your business. We are glad to have you here.\n\nWarm regards,\nThe Referral Nova Team`,
         html: brandedLayout(
-          `Welcome to Referral Nova, ${escapeHtml(firstName)} \ud83d\udc4b`,
-          `<p>We're thrilled to have you. <strong>Referral Nova</strong> turns your professional network into a reliable source of business: our AI matches you with trusted partners, and qualified referrals flow in both directions \u2014 continuously, not just once.</p>
-           <p><strong>What happens next:</strong> finish your profile so the AI understands who you are and who you want to meet, record a quick 60-second intro video, and we'll start suggesting introductions and meetings. The best first step is simply to open your dashboard and complete setup.</p>
-           ${button('Go to my dashboard', dashUrl)}
-           <h2 style="font-size:16px;margin:28px 0 6px;color:${BRAND.ink};">Getting started</h2>
-           <p style="margin:0 0 6px;color:${BRAND.gray};font-size:14px;">A few short reads to help you set up and get matched:</p>
-           ${gettingStarted}
-           <h2 style="font-size:16px;margin:28px 0 10px;color:${BRAND.ink};">The legal bits</h2>
-           ${secondaryButtons([
-             { label: 'Privacy Policy', url: `${BRAND.marketing}/privacy` },
-             { label: 'Terms of Service', url: `${BRAND.marketing}/terms` },
-             { label: 'Disclaimers', url: `${BRAND.marketing}/terms#referral-agreements` },
-           ])}
-           <div style="margin-top:28px;padding-top:20px;border-top:1px solid ${BRAND.line};">
-             <p style="margin:0 0 4px;">Thank you for trusting us to help grow your business. We built Referral Nova to make referrals happen on purpose, not by luck \u2014 and we're glad you're here.</p>
-             <p style="margin:12px 0 0;color:${BRAND.gray};">Warmly,<br>
-             <!-- FOUNDER_NAME_PLACEHOLDER: drop the founder's name on the line below when ready -->
-             <strong style="color:${BRAND.ink};">Founder, Referral Nova</strong></p>
-           </div>`,
+          `Welcome to Referral Nova, ${escapeHtml(firstName)}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Thank you for joining Referral Nova, and welcome. You have just taken the first step toward turning your network into a steady source of warm, qualified referrals.`) +
+            P(`Here is how it works. Our AI learns what your business does and who you want to meet, then introduces you to trusted partners whose needs line up with yours, so qualified referrals flow in both directions, week after week.`) +
+            P(`The best way to start is by completing your profile, since that is what our AI uses to find your best matches. It only takes a few minutes.`) +
+            `<p style="margin:0 0 8px;font-weight:700;color:${BRAND.ink};">Getting started</p>` +
+            `<ul style="margin:0 0 8px;padding-left:20px;color:#374151;line-height:1.6;">` +
+            steps.map((x) => `<li style="margin:0 0 6px;">${x}</li>`).join('') +
+            `</ul>` +
+            P(`Your dashboard is the best place to begin.`) +
+            button('Go to my dashboard', dashUrl) +
+            `<p style="margin:8px 0 0;font-size:13px;color:${BRAND.gray};">The legal bits: ` +
+            `<a href="${BRAND.marketing}/privacy" style="color:${BRAND.blue};">Privacy Policy</a>, ` +
+            `<a href="${BRAND.marketing}/terms" style="color:${BRAND.blue};">Terms of Service</a>, ` +
+            `<a href="${BRAND.marketing}/terms#referral-agreements" style="color:${BRAND.blue};">Disclaimers</a></p>` +
+            `<div style="margin-top:24px;padding-top:18px;border-top:1px solid ${BRAND.line};">` +
+            P(`Thank you for trusting us to help grow your business. We are glad to have you here.`) +
+            `<p style="margin:8px 0 0;color:${BRAND.gray};">Warm regards,<br><strong style="color:${BRAND.ink};">The Referral Nova Team</strong></p></div>`,
         ),
       };
     }
