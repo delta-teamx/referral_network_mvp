@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { env } from '../../../config/env.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
+import { assertEngagementQuota } from '../../billing/billing.tiers.js';
 
 /**
  * In-app messaging between two users.
@@ -19,6 +20,7 @@ import { createNotification } from '../../core/notifications/notifications.servi
 export async function getOrCreateConversation(
   userIdA: string,
   userIdB: string,
+  opts?: { skipQuota?: boolean },
 ) {
   if (userIdA === userIdB) {
     throw AppError.badRequest("You can't message yourself.");
@@ -45,6 +47,14 @@ export async function getOrCreateConversation(
   });
 
   if (existing) return existing;
+
+  // Free plan: capped at 3 conversations. Existing threads still open; starting
+  // a NEW one past the cap requires upgrading. The initiator (userIdA, the
+  // authenticated caller) is the one whose quota applies. Internal callers
+  // (e.g. auto-opening a thread when an intro is accepted) pass skipQuota.
+  if (!opts?.skipQuota) {
+    await assertEngagementQuota(userIdA, 'conversation');
+  }
 
   // Create a new conversation with both participants.
   const conversation = await prisma.conversation.create({

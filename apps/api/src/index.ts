@@ -366,6 +366,12 @@ async function ensureRuntimeSchema(): Promise<void> {
        EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // ADMIN EMAIL CHANGE: Igor's admin account moved to a new address. Rename
+      // the existing row (keeps his password + admin role) so he can log in and
+      // receive new-signup notifications; if the new email already exists,
+      // just ensure it's an admin. Idempotent - no-op after the first boot.
+      `DO $$ BEGIN UPDATE "User" SET "email"='beanieland2021@gmail.com', "role"='ADMIN' WHERE "email"='igor@virtualpro.com'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      `DO $$ BEGIN UPDATE "User" SET "role"='ADMIN' WHERE "email"='beanieland2021@gmail.com' AND "role" <> 'ADMIN'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // STAGE MERGE: contract_signed and won are one stage now.
       `DO $$ BEGIN UPDATE "PipelineCard" SET "stage"='won' WHERE "stage"='contract_signed'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // INTERCONNECTION HEAL: intro requests between people who already met

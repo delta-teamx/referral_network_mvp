@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { getOrCreateConversation, sendMessage } from '../../network/messaging/messaging.service.js';
+import { assertEngagementQuota } from '../../billing/billing.tiers.js';
 
 /**
  * Introduction lifecycle - manage AI-suggested introductions between members.
@@ -95,6 +96,9 @@ export async function requestIntro(introId: string, userId: string) {
   });
   if (!intro) throw AppError.notFound('Suggestion not found');
 
+  // Free plan: capped at 3 intro requests, then upgrade required.
+  await assertEngagementQuota(userId, 'intro');
+
   const updated = await prisma.introduction.update({
     where: { id: intro.id },
     data: { status: 'requested', requestedAt: new Date() },
@@ -184,7 +188,9 @@ export async function respondToIntro(
     // the match details as the first message, and tell the requester. All
     // best-effort - the accept itself never fails on these.
     void (async () => {
-      const conversation = await getOrCreateConversation(userId, intro.senderId);
+      const conversation = await getOrCreateConversation(userId, intro.senderId, {
+        skipQuota: true,
+      });
       await sendMessage(
         conversation.id,
         userId,

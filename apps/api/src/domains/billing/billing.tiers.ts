@@ -7,8 +7,55 @@
  */
 
 import { prisma } from '../../config/prisma.js';
+import { AppError } from '../../utils/AppError.js';
 
 export type Tier = 'FREE' | 'PRO' | 'PREMIUM';
+
+/**
+ * Free-plan engagement allowance. After the founding 200 (who are PREMIUM), a
+ * FREE member can send up to this many intro requests AND start up to this many
+ * conversations. Beyond that they must upgrade to Pro to reach new people.
+ * Messages inside conversations they already have stay open; PRO/PREMIUM (incl.
+ * founding members, who are PREMIUM) are unlimited.
+ */
+export const FREE_ENGAGEMENT_LIMIT = 3;
+
+export async function assertEngagementQuota(
+  userId: string,
+  kind: 'intro' | 'conversation',
+): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionTier: true },
+  });
+  const tier = (user?.subscriptionTier ?? 'FREE') as Tier;
+  if (tier !== 'FREE') return; // Pro/Premium/founding: unlimited
+
+  if (kind === 'intro') {
+    const used = await prisma.introduction.count({
+      where: { senderId: userId, status: { in: ['requested', 'accepted', 'completed'] } },
+    });
+    if (used >= FREE_ENGAGEMENT_LIMIT) {
+      throw new AppError(
+        `Your free plan includes ${FREE_ENGAGEMENT_LIMIT} intro requests. Upgrade to Pro to request more introductions.`,
+        403,
+        'billing/free_quota_reached',
+      );
+    }
+    return;
+  }
+
+  const used = await prisma.conversation.count({
+    where: { participants: { some: { userId } } },
+  });
+  if (used >= FREE_ENGAGEMENT_LIMIT) {
+    throw new AppError(
+      `Your free plan includes ${FREE_ENGAGEMENT_LIMIT} conversations. Upgrade to Pro to start new conversations.`,
+      403,
+      'billing/free_quota_reached',
+    );
+  }
+}
 
 export interface TierCaps {
   name: string;
