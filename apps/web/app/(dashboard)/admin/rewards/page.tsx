@@ -11,6 +11,16 @@ import { useAuthStore } from '../../../../stores/auth';
  * and resolve disputed referrals.
  */
 
+interface RewardDef {
+  key: string;
+  label: string;
+  description: string;
+  type: string;
+  cost: number;
+  durationDays: number;
+  enabled: boolean;
+}
+
 interface Config {
   contributionPoints: {
     referral_accepted: number;
@@ -19,6 +29,7 @@ interface Config {
     referral_business: number;
   };
   freeEngagementLimit: number;
+  rewardCatalog: RewardDef[];
 }
 
 interface PickUser {
@@ -106,8 +117,13 @@ export default function AdminRewardsPage() {
     setSaving(true);
     setError(null);
     try {
-      const updated = await api.patch<Config>('/api/v1/admin/config', config, { accessToken });
-      setConfig(updated);
+      const updated = await api.patch<Omit<Config, 'rewardCatalog'>>(
+        '/api/v1/admin/config',
+        { contributionPoints: config.contributionPoints, freeEngagementLimit: config.freeEngagementLimit },
+        { accessToken },
+      );
+      // The /config response omits the catalog - keep the one we already have.
+      setConfig({ ...config, ...updated });
       setSavedAt(new Date().toLocaleTimeString());
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Save failed');
@@ -134,6 +150,36 @@ export default function AdminRewardsPage() {
       setUserQuery('');
     } catch (err) {
       setAdjustMsg(err instanceof ApiError ? err.message : 'Adjustment failed');
+    }
+  }
+
+  const [catalogSavedAt, setCatalogSavedAt] = useState<string | null>(null);
+  function updateReward(key: string, patch: Partial<RewardDef>) {
+    if (!config) return;
+    setConfig({
+      ...config,
+      rewardCatalog: config.rewardCatalog.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    });
+  }
+  async function saveCatalog() {
+    if (!accessToken || !config) return;
+    setError(null);
+    try {
+      const rewards = config.rewardCatalog.map((r) => ({
+        key: r.key,
+        cost: r.cost,
+        durationDays: r.durationDays,
+        enabled: r.enabled,
+      }));
+      const updated = await api.patch<RewardDef[]>(
+        '/api/v1/admin/rewards-catalog',
+        { rewards },
+        { accessToken },
+      );
+      setConfig({ ...config, rewardCatalog: updated });
+      setCatalogSavedAt(new Date().toLocaleTimeString());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Save failed');
     }
   }
 
@@ -294,6 +340,72 @@ export default function AdminRewardsPage() {
           {adjustMsg && <p className="mt-3 text-xs text-emerald-400">{adjustMsg}</p>}
         </section>
       </div>
+
+      {/* Rewards store catalog */}
+      {config && (
+        <section className="mt-6 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Coins size={15} className="text-amber-400" /> Rewards store catalog
+            </h2>
+            <div className="flex items-center gap-3">
+              {catalogSavedAt && <span className="text-xs text-emerald-400">Saved at {catalogSavedAt}</span>}
+              <button
+                onClick={() => void saveCatalog()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-semibold text-gray-950 hover:bg-amber-400"
+              >
+                <Save size={13} /> Save catalog
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wider text-gray-500">
+                  <th className="px-2 py-2">Reward</th>
+                  <th className="px-2 py-2">Cost (pts)</th>
+                  <th className="px-2 py-2">Duration (days)</th>
+                  <th className="px-2 py-2">Enabled</th>
+                </tr>
+              </thead>
+              <tbody>
+                {config.rewardCatalog.map((r) => (
+                  <tr key={r.key} className="border-t border-gray-800">
+                    <td className="px-2 py-2">
+                      <p className="font-medium text-white">{r.label}</p>
+                      <p className="text-xs text-gray-500">{r.type}</p>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input
+                        type="number"
+                        value={r.cost}
+                        onChange={(e) => updateReward(r.key, { cost: Number(e.target.value) })}
+                        className="w-24 rounded-lg border border-gray-700 bg-gray-950 px-2 py-1 text-right text-white outline-none focus:border-amber-500"
+                      />
+                    </td>
+                    <td className="px-2 py-2">
+                      <input
+                        type="number"
+                        value={r.durationDays}
+                        onChange={(e) => updateReward(r.key, { durationDays: Number(e.target.value) })}
+                        className="w-20 rounded-lg border border-gray-700 bg-gray-950 px-2 py-1 text-right text-white outline-none focus:border-amber-500"
+                      />
+                    </td>
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={r.enabled}
+                        onChange={(e) => updateReward(r.key, { enabled: e.target.checked })}
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Disputed referrals */}
       <section className="mt-6 rounded-2xl border border-gray-800 bg-gray-900 p-5">

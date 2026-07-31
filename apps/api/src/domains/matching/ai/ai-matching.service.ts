@@ -1,5 +1,6 @@
 import { prisma } from '../../../config/prisma.js';
 import { usersWithPriorityMatching } from '../../network/referral-tracking/referral-tracking.service.js';
+import { activeRewardUserIds } from '../../network/rewards/rewards.service.js';
 
 /**
  * How much the "Priority matching" perk lifts a member in other people's
@@ -95,8 +96,12 @@ export async function generateMatchesForUser(
   });
 
   // Members holding the Priority matching perk (earned this cycle by inviting
-  // people) are ranked higher in everyone's feed - that is what the perk DOES.
-  const prioritySet = await usersWithPriorityMatching();
+  // people) OR a redeemed ranking-boost reward are ranked higher in everyone's
+  // feed - that is what the perk / reward DOES.
+  const [prioritySet, boostSet] = await Promise.all([
+    usersWithPriorityMatching(),
+    activeRewardUserIds('boost'),
+  ]);
 
   // Score everyone (keep the candidate profile alongside its score so we can
   // write a good reason for the discovery tier). The priority perk adds a boost
@@ -104,7 +109,7 @@ export async function generateMatchesForUser(
   // genuine profile-fit score so the perk never fakes a two-sided match.
   const scored = candidates
     .map((them) => {
-      const priority = prioritySet.has(them.userId);
+      const priority = prioritySet.has(them.userId) || boostSet.has(them.userId);
       const m = scoreMatch(myProfile, them);
       if (priority) m.factors.priorityMatching = PRIORITY_MATCHING_BOOST;
       return { them, m, priority, sortScore: m.score + (priority ? PRIORITY_MATCHING_BOOST : 0) };

@@ -92,6 +92,19 @@ const JOBS: JobDefinition[] = [
       return result;
     },
   },
+  {
+    name: 'expire-rewards',
+    intervalMs: 30 * 60 * 1000, // Every 30 minutes - expire temporary reward unlocks
+    handler: async () => {
+      const { expireRewards } = await import('../../network/rewards/rewards.service.js');
+      const result = await expireRewards();
+      if (result.expired > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`[jobs] expire-rewards: expired ${result.expired}`);
+      }
+      return result;
+    },
+  },
 ];
 
 function isRealRedis(url: string): boolean {

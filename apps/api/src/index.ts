@@ -18,6 +18,7 @@ import { registerLeadSubscribers } from './domains/matching/leads/leads.subscrib
 import { dashboardRouter } from './domains/core/dashboard/dashboard.routes.js';
 import { reviewsRouter } from './domains/directory/reviews/reviews.routes.js';
 import { referralsRouter } from './domains/network/referrals/referrals.routes.js';
+import { rewardsRouter } from './domains/network/rewards/rewards.routes.js';
 import { connectionsRouter } from './domains/network/connections/connections.routes.js';
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
 import { contractsRouter } from './domains/network/contracts/contracts.routes.js';
@@ -175,6 +176,7 @@ app.use('/api/v1/bookings', verifiedWriteGate, bookingsRouter);
 app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/pods', podsRouter);
 app.use('/api/v1/referral-tracking', referralTrackingRouter);
+app.use('/api/v1/rewards', rewardsRouter);
 app.use('/api/v1/pipeline', pipelineRouter);
 app.use('/api/v1/support', rateLimit({ windowMs: 60_000, max: 30, key: 'support' }), supportRouter);
 
@@ -481,6 +483,21 @@ async function ensureRuntimeSchema(): Promise<void> {
          "value" JSONB NOT NULL,
          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
        );`,
+      // Rewards store: temporary unlocks redeemed with Contribution points.
+      `CREATE TABLE IF NOT EXISTS "RewardRedemption" (
+         "id" TEXT PRIMARY KEY,
+         "userId" TEXT NOT NULL,
+         "rewardKey" TEXT NOT NULL,
+         "type" TEXT NOT NULL,
+         "cost" INTEGER NOT NULL,
+         "startsAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "expiresAt" TIMESTAMP(3) NOT NULL,
+         "status" TEXT NOT NULL DEFAULT 'active',
+         "meta" JSONB,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE INDEX IF NOT EXISTS "RewardRedemption_userId_idx" ON "RewardRedemption" ("userId");`,
+      `CREATE INDEX IF NOT EXISTS "RewardRedemption_status_expiresAt_idx" ON "RewardRedemption" ("status", "expiresAt");`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

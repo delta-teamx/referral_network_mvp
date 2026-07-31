@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText, sanitizeArray } from '../../../utils/sanitize.js';
 import { getMemberBadges } from '../referral-tracking/referral-tracking.service.js';
+import { activeRewardUserIds } from '../rewards/rewards.service.js';
 
 export interface UpsertProfileInput {
   businessName: string;
@@ -223,10 +224,16 @@ export async function searchMembers(filters: { q?: string; industry?: string; ci
     }),
     foundingCutoffDate(),
   ]);
-  return profiles.map((p) => ({
-    ...p,
-    isFoundingMember: isFounding(p.user.createdAt, p.user.role, cutoff),
-  }));
+  // Members with an active "featured placement" reward rise to the top of the
+  // directory page (and are flagged so the UI can badge them).
+  const featured = await activeRewardUserIds('featured');
+  return profiles
+    .map((p) => ({
+      ...p,
+      isFoundingMember: isFounding(p.user.createdAt, p.user.role, cutoff),
+      isFeatured: featured.has(p.userId),
+    }))
+    .sort((a, b) => (a.isFeatured === b.isFeatured ? 0 : a.isFeatured ? -1 : 1));
 }
 
 export async function setVideoMeta(userId: string, meta: { videoUrl: string; videoKey: string; videoDurationSec?: number }) {

@@ -5,6 +5,7 @@ import { eventBus } from '../../core/events/index.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import {
   contributionBadges,
+  getAvailablePoints,
   getMemberContribution,
   verifiedCountsByUser,
   verifiedPointsByUser,
@@ -552,6 +553,41 @@ export async function getCommunityLeaderboard(
       rewardMonths: viewer?.referralRewardMonths ?? 0,
     },
   };
+}
+
+/**
+ * A member's TOTAL points: `earned` (all-time activity + verified contribution,
+ * the number shown as their score) and `balance` (earned minus what they have
+ * spent on rewards - the spendable amount in the rewards store).
+ */
+export async function getMemberPointsSummary(
+  userId: string,
+): Promise<{ earned: number; balance: number }> {
+  const now = new Date();
+  const [invites, deals, contracts, referrals, hostCalls, guestCalls, contribution, ledger] =
+    await Promise.all([
+      prisma.referralTracking.count({
+        where: { referrerUserId: userId, status: { in: ['onboarded', 'paid'] } },
+      }),
+      prisma.pipelineCard.count({ where: { ownerId: userId, stage: 'won' } }),
+      prisma.contract.count({ where: { senderId: userId, status: 'signed' } }),
+      prisma.referral.count({ where: { senderId: userId } }),
+      prisma.bookingCall.count({
+        where: { hostId: userId, status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      }),
+      prisma.bookingCall.count({
+        where: { guestId: userId, status: { in: ['confirmed', 'completed'] }, endsAt: { lt: now } },
+      }),
+      getMemberContribution(userId), // verified points (excludes reward spends)
+      getAvailablePoints(userId), // full ledger sum = verified minus spent
+    ]);
+  const base =
+    invites * LEADERBOARD_POINTS.inviteOnboarded +
+    deals * LEADERBOARD_POINTS.dealWon +
+    contracts * LEADERBOARD_POINTS.contractSigned +
+    referrals * LEADERBOARD_POINTS.referralSent +
+    (hostCalls + guestCalls) * LEADERBOARD_POINTS.callHeld;
+  return { earned: base + contribution.points, balance: base + ledger };
 }
 
 /** Badge ladder driven by successful (onboarded) invites. */

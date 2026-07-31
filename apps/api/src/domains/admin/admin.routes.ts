@@ -35,6 +35,7 @@ import {
   setFreeEngagementLimit,
 } from '../core/settings/settings.service.js';
 import { adjustMemberPoints } from '../network/referral-tracking/contribution.service.js';
+import { getRewardCatalog, setRewardCatalog } from '../network/rewards/rewards.service.js';
 import {
   adminOverrideReferral,
   listDisputedReferrals,
@@ -198,11 +199,35 @@ adminRouter.post(
 adminRouter.get(
   '/config',
   asyncHandler(async (_req, res) => {
-    const [contributionPoints, freeEngagementLimit] = await Promise.all([
+    const [contributionPoints, freeEngagementLimit, rewardCatalog] = await Promise.all([
       getContributionPoints(),
       getFreeEngagementLimit(),
+      getRewardCatalog(),
     ]);
-    const data = { contributionPoints, freeEngagementLimit };
+    const data = { contributionPoints, freeEngagementLimit, rewardCatalog };
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Edit the rewards store catalog (cost / duration / enabled per reward).
+const catalogSchema = z.object({
+  rewards: z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(60),
+        cost: z.number().optional(),
+        durationDays: z.number().optional(),
+        enabled: z.boolean().optional(),
+      }),
+    )
+    .max(50),
+});
+adminRouter.patch(
+  '/rewards-catalog',
+  validate(catalogSchema),
+  asyncHandler(async (req, res) => {
+    const data = await setRewardCatalog(req.body.rewards);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

@@ -61,14 +61,30 @@ export async function adjustMemberPoints(
   console.log(`[contribution] admin adjusted ${userId} by ${rounded}: ${reason}`);
 }
 
-/** Verified contribution points per user, optionally since a date (monthly cycle). */
+/**
+ * Earned contribution points (the leaderboard/reputation SCORE). Spending
+ * points on rewards must never lower a member's earned score, so reward
+ * redemptions are excluded here - they only affect the spendable balance.
+ */
 export async function verifiedPointsByUser(since?: Date): Promise<Map<string, number>> {
   const rows = await prisma.contributionEvent.groupBy({
     by: ['userId'],
-    where: since ? { occurredAt: { gte: since } } : undefined,
+    where: {
+      type: { not: 'reward_redemption' },
+      ...(since ? { occurredAt: { gte: since } } : {}),
+    },
     _sum: { points: true },
   });
   return new Map(rows.map((r) => [r.userId, r._sum.points ?? 0]));
+}
+
+/** Spendable points balance = everything earned minus everything redeemed. */
+export async function getAvailablePoints(userId: string): Promise<number> {
+  const agg = await prisma.contributionEvent.aggregate({
+    where: { userId },
+    _sum: { points: true },
+  });
+  return agg._sum.points ?? 0;
 }
 
 export interface VerifiedCounts {
@@ -106,7 +122,8 @@ export async function getMemberContribution(
   let points = 0;
   const counts: VerifiedCounts = { relevant: 0, opportunity: 0, business: 0 };
   for (const r of rows) {
-    points += r.points;
+    // Reward spends don't reduce the earned reputation score.
+    if (r.type !== 'reward_redemption') points += r.points;
     if (r.type === 'referral_relevant') counts.relevant += 1;
     else if (r.type === 'referral_opportunity') counts.opportunity += 1;
     else if (r.type === 'referral_business') counts.business += 1;

@@ -948,6 +948,26 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 }
 
+/// A member spending Contribution points on a temporary reward (Premium days,
+/// ranking boost, featured placement). Rewards auto-expire; the scheduler
+/// reverts the effect at expiresAt. The points spend is recorded as a negative
+/// ContributionEvent so the balance stays consistent.
+model RewardRedemption {
+  id        String   @id @default(uuid())
+  userId    String
+  rewardKey String
+  type      String // premium | boost | featured
+  cost      Int
+  startsAt  DateTime @default(now())
+  expiresAt DateTime
+  status    String   @default("active") // active | expired
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status, expiresAt])
+}
+
 /// Contribution Score ledger. Each row is a verified point award to a member,
 /// so the score is persisted and auditable (not recomputed on the fly). `id` is
 /// a deterministic dedup key (e.g. "referral_relevant:<referralId>") so awards
