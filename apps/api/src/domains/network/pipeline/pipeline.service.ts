@@ -286,7 +286,13 @@ export async function listPipeline(ownerId: string) {
     // Sync is best-effort - the board must still render existing cards.
   }
   return prisma.pipelineCard.findMany({
-    where: { ownerId },
+    // Never show admin/ROUL-Support contacts as leads (belt-and-suspenders on
+    // top of the sync exclusion + the boot heal). Cards without a member
+    // contact (manual / referral / consumer leads) are unaffected.
+    where: {
+      ownerId,
+      OR: [{ contactUserId: null }, { contact: { role: { not: 'ADMIN' } } }],
+    },
     orderBy: { stageUpdatedAt: 'desc' },
     take: 500,
     select: cardSelect,

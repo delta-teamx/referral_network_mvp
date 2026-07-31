@@ -8,20 +8,18 @@ import { BarChart3, Calendar, Coins, FileSignature, Headset, LayoutDashboard, Me
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
-  // Ordered by priority: manage -> communicate/support -> insights ->
-  // engagement config -> operations.
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/messages', label: 'Member messages', icon: MessageSquare },
-  { href: '/admin/support', label: 'Support tickets', icon: Headset },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/admin/rewards', label: 'Rewards & points', icon: Coins },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/events', label: 'Zoom events', icon: Video },
   { href: '/admin/pods', label: 'Matchmaking pods', icon: UsersRound },
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
+  { href: '/admin/support', label: 'Support tickets', icon: Headset },
+  { href: '/admin/messages', label: 'Member messages', icon: MessageSquare },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

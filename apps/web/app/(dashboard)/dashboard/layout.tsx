@@ -38,19 +38,17 @@ const NOTIFICATION_TAB: Record<string, string> = {
 };
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
-  // Ordered by workflow priority: find people -> work deals -> communicate ->
-  // schedule -> close -> community -> rewards -> insights -> settings.
   { href: '/dashboard', label: 'AI Matches', icon: LayoutDashboard },
   { href: '/dashboard/members', label: 'Members', icon: Search },
   { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/rewards', label: 'Rewards', icon: Gift },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
   { href: '/dashboard/network', label: 'My network', icon: Network },
   { href: '/dashboard/groups', label: 'Groups', icon: UsersRound },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/dashboard/rewards', label: 'Rewards', icon: Gift },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 
