@@ -74,17 +74,18 @@ const upsertSchema = z.object({
   headline: clip(200).optional(),
   bio: clip(2000).optional(),
   photoUrl: z.string().url().optional(),
-  // LinkedIn profile link. Forgiving: "linkedin.com/in/name" gets https://
-  // prefixed; empty string clears the field; anything else must be a
-  // linkedin.com URL.
+  // LinkedIn profile link. Deliberately forgiving so members are never blocked:
+  // we add https:// if missing and only require that it looks like a web link
+  // (a dot, no spaces). We do NOT force a strict linkedin.com/path shape - that
+  // over-validation was rejecting perfectly good links and blocking saves.
   linkedinUrl: z
     .string()
     .trim()
     .max(300)
     .transform((v) => (v === '' || /^https?:\/\//i.test(v) ? v : `https://${v}`))
     .refine(
-      (v) => v === '' || /^https?:\/\/([a-z0-9-]+\.)*linkedin\.com\/.+/i.test(v),
-      'Enter a valid LinkedIn profile link (e.g. linkedin.com/in/yourname)',
+      (v) => v === '' || /^https?:\/\/\S+\.\S+/i.test(v),
+      'Enter a valid link, for example linkedin.com/in/yourname',
     )
     .optional(),
   keywords: clipList(50, 20).optional(),
