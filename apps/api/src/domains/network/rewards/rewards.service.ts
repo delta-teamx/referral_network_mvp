@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { getSetting, setSetting } from '../../core/settings/settings.service.js';
@@ -144,7 +145,9 @@ export async function redeemReward(userId: string, rewardKey: string) {
     }
     await tx.contributionEvent.create({
       data: {
-        id: `reward_redemption:${userId}:${now.getTime()}`,
+        // Random id: each spend is a distinct row (no idempotency needed), so a
+        // same-millisecond redeem can never collide on the primary key.
+        id: `reward_redemption:${randomUUID()}`,
         userId,
         type: 'reward_redemption',
         points: -reward.cost,
