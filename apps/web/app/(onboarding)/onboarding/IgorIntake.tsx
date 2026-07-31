@@ -15,6 +15,7 @@ import {
   Video,
 } from 'lucide-react';
 import { fadeInUp } from '../../../lib/animations';
+import { splitServiceList } from '../../../lib/serviceList';
 import { Button } from '../../../components/ui/Button';
 import { FormField } from '../../../components/ui/FormField';
 import { ProfileMedia } from '../../../components/onboarding/ProfileMedia';
@@ -148,7 +149,7 @@ export function IgorIntake() {
           website: website.trim().slice(0, 300) || undefined,
           bio: bio.trim().slice(0, 2000) || undefined,
           keywords: splitList(keywords, ',', 50, 20),
-          servicesOffered: splitList(services, ',', 100, 15),
+          servicesOffered: splitServiceList(services, 100, 15),
           yearsInBusiness:
             yearsNum !== undefined && Number.isFinite(yearsNum)
               ? Math.min(150, Math.max(0, yearsNum))
@@ -321,7 +322,7 @@ export function IgorIntake() {
               label="Services offered"
               name="services"
               placeholder="AI Chatbots, Facebook Ads, CRM Setup"
-              hint="Separate with commas."
+              hint="Separate short services with commas. A full sentence stays together - it won't be split into pieces."
               value={services}
               onChange={(e) => setServices(e.target.value)}
             />

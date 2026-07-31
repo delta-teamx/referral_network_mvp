@@ -8,6 +8,7 @@ import {
   Save, Target, Video, X,
 } from 'lucide-react';
 import { fadeInUp } from '../../../../lib/animations';
+import { splitServiceList } from '../../../../lib/serviceList';
 import { MemberProfileView } from '../../../../components/members/MemberProfileView';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
@@ -163,7 +164,7 @@ export default function SettingsPage() {
         website: String(form.get('website') ?? '').trim(),
         bio: String(form.get('bio') ?? '') || undefined,
         keywords: String(form.get('keywords') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
-        servicesOffered: String(form.get('servicesOffered') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+        servicesOffered: splitServiceList(String(form.get('servicesOffered') ?? '')),
         yearsInBusiness: yrs >= 0 && yrs <= 150 ? yrs : undefined,
         icpIndustries: String(form.get('icpIndustries') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
         icpRoles: String(form.get('icpRoles') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
@@ -313,7 +314,21 @@ export default function SettingsPage() {
                 defaultValue={profile.website ?? ''}
               />
               <div><label className="mb-1 block text-sm font-medium text-gray-900">Bio</label><textarea name="bio" defaultValue={profile.bio ?? ''} rows={4} maxLength={2000} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" /></div>
-              <FormField label="Services (comma-separated)" name="servicesOffered" defaultValue={profile.servicesOffered.join(', ')} />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-900">Services offered</label>
+                <textarea
+                  name="servicesOffered"
+                  defaultValue={profile.servicesOffered.join('\n')}
+                  rows={4}
+                  maxLength={2000}
+                  placeholder={'One service per line, e.g.\nBrand strategy\nWebsite design\nSEO'}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Put each service on its own line. A short list separated by commas also works, but a
+                  full sentence stays together (it won&rsquo;t be broken into pieces).
+                </p>
+              </div>
               <FormField label="Keywords (comma-separated)" name="keywords" defaultValue={profile.keywords.join(', ')} />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <FormField label="City" name="city" defaultValue={profile.city ?? ''} />

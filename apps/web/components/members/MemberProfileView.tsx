@@ -472,16 +472,29 @@ export function MemberProfileView({ id }: { id: string }) {
               <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 <Briefcase size={14} className="text-primary" /> Services offered
               </h2>
-              <div className="flex flex-wrap gap-2">
-                {profile.servicesOffered.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
+              {/* Short items render as pills; a longer item is a sentence, so
+                  show it as a readable line instead of a giant pill. */}
+              {profile.servicesOffered.every((s) => s.length <= 45) ? (
+                <div className="flex flex-wrap gap-2">
+                  {profile.servicesOffered.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <ul className="space-y-1.5">
+                  {profile.servicesOffered.map((s) => (
+                    <li key={s} className="flex gap-2 text-sm text-gray-700">
+                      <span className="mt-0.5 text-primary">•</span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
