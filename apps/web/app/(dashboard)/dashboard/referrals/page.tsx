@@ -12,9 +12,13 @@ import { InvitationsAndContracts } from '../../../../components/network/Invitati
 
 type Status = 'SENT' | 'ACCEPTED' | 'CONVERTED' | 'DECLINED';
 
+type Verdict = 'relevant' | 'opportunity' | 'not_relevant';
+
 interface Referral {
   id: string;
   status: Status;
+  relevance: Verdict | null;
+  relevanceAt: string | null;
   clientName: string | null;
   clientPhone: string | null;
   clientEmail: string | null;
@@ -70,6 +74,22 @@ export default function ReferralsPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Update failed');
+    }
+  }
+
+  // Recipient verifies referral quality - this is what awards the sender their
+  // Contribution Score points.
+  async function verify(id: string, verdict: Verdict) {
+    if (!accessToken) return;
+    try {
+      await api.post(
+        `/api/v1/referrals/${id}/verify`,
+        { verdict },
+        { accessToken: accessToken ?? undefined },
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not submit');
     }
   }
 
@@ -203,6 +223,47 @@ export default function ReferralsPage() {
               {r.notes && (
                 <p className="mb-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
                   {r.notes}
+                </p>
+              )}
+              {/* Quality verification (recipient-only). This is what earns the
+                  sender their Contribution Score, so we ask it up front. */}
+              {tab === 'received' && !r.relevance && r.status !== 'DECLINED' && (
+                <div className="mb-3 rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold text-gray-800">
+                    Was this a relevant and valuable referral introduction?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => void verify(r.id, 'relevant')}
+                      className="rounded-full bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90"
+                    >
+                      Yes, it was relevant
+                    </button>
+                    <button
+                      onClick={() => void verify(r.id, 'opportunity')}
+                      className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
+                    >
+                      It may become an opportunity
+                    </button>
+                    <button
+                      onClick={() => void verify(r.id, 'not_relevant')}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                    >
+                      No, not relevant
+                    </button>
+                  </div>
+                </div>
+              )}
+              {tab === 'received' && r.relevance && r.relevance !== 'not_relevant' && (
+                <p className="mb-3 inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+                  <Check size={12} /> You confirmed this referral
+                  {r.relevance === 'opportunity' ? ' as a potential opportunity' : ' as relevant'}
+                </p>
+              )}
+              {tab === 'sent' && r.relevance && r.relevance !== 'not_relevant' && (
+                <p className="mb-3 inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+                  <Check size={12} /> Verified by recipient
+                  {r.relevance === 'opportunity' ? ' as a potential opportunity' : ' as relevant'}
                 </p>
               )}
               {tab === 'received' && r.status !== 'CONVERTED' && r.status !== 'DECLINED' && (

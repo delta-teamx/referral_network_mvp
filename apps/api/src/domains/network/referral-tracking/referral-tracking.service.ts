@@ -3,6 +3,12 @@ import { AppError } from '../../../utils/AppError.js';
 import { env } from '../../../config/env.js';
 import { eventBus } from '../../core/events/index.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
+import {
+  contributionBadges,
+  getMemberContribution,
+  verifiedCountsByUser,
+  verifiedPointsByUser,
+} from './contribution.service.js';
 
 const REWARD_MONTHS_PER_PAID_REFERRAL = 1;
 
@@ -440,18 +446,28 @@ export async function getCommunityLeaderboard(
   const hostCallMap = new Map(hostCalls.map((r) => [r.hostId, r._count._all]));
   const guestCallMap = new Map(guestCalls.map((r) => [r.guestId, r._count._all]));
 
+  // Verified Contribution Score: recipient-confirmed referral quality. Adds to
+  // each member's points and drives the quality badges.
+  const [verifiedPoints, verifiedCounts] = await Promise.all([
+    verifiedPointsByUser(since),
+    verifiedCountsByUser(since),
+  ]);
+
   const rows = users.map((u, idx) => {
     const invitesOnboarded = inviteMap.get(u.id) ?? 0;
     const dealsWon = dealMap.get(u.id) ?? 0;
     const contractsSigned = contractMap.get(u.id) ?? 0;
     const referralsSent = referralMap.get(u.id) ?? 0;
     const callsHeld = (hostCallMap.get(u.id) ?? 0) + (guestCallMap.get(u.id) ?? 0);
+    const vc = verifiedCounts.get(u.id) ?? { relevant: 0, opportunity: 0, business: 0 };
+    const verifiedReferrals = vc.relevant + vc.opportunity + vc.business;
     const points =
       invitesOnboarded * LEADERBOARD_POINTS.inviteOnboarded +
       dealsWon * LEADERBOARD_POINTS.dealWon +
       contractsSigned * LEADERBOARD_POINTS.contractSigned +
       referralsSent * LEADERBOARD_POINTS.referralSent +
-      callsHeld * LEADERBOARD_POINTS.callHeld;
+      callsHeld * LEADERBOARD_POINTS.callHeld +
+      (verifiedPoints.get(u.id) ?? 0);
     const isFounding = idx < FOUNDING_MEMBER_LIMIT;
     return {
       userId: u.id,
@@ -465,8 +481,10 @@ export async function getCommunityLeaderboard(
       contractsSigned,
       referralsSent,
       callsHeld,
+      verifiedReferrals,
+      opportunities: vc.opportunity + vc.business,
       points,
-      badges: badgesFor(invitesOnboarded, isFounding),
+      badges: [...badgesFor(invitesOnboarded, isFounding), ...contributionBadges(vc)],
     };
   });
 
@@ -520,8 +538,15 @@ export async function getCommunityLeaderboard(
       rank: myRow?.rank ?? null,
       points: myRow?.points ?? 0,
       isFounding: viewerFounding,
-      badges: badgesFor(viewerCycleInvites, viewerFounding),
+      badges: [
+        ...badgesFor(viewerCycleInvites, viewerFounding),
+        ...contributionBadges(verifiedCounts.get(viewerId) ?? { relevant: 0, opportunity: 0, business: 0 }),
+      ],
       priorityMatching: viewerCycleInvites >= PRIORITY_MATCHING_MIN_INVITES,
+      verifiedReferrals: (() => {
+        const c = verifiedCounts.get(viewerId) ?? { relevant: 0, opportunity: 0, business: 0 };
+        return c.relevant + c.opportunity + c.business;
+      })(),
       invitesOnboarded,
       invitesPending,
       rewardMonths: viewer?.referralRewardMonths ?? 0,
@@ -572,16 +597,27 @@ export async function getMemberBadges(userId: string): Promise<{
   priorityMatching: boolean;
   invitesThisCycle: number;
   cycleLabel: string;
+  contributionScore: number;
+  verifiedReferrals: number;
 }> {
-  const [invitesThisCycle, founding] = await Promise.all([
+  const [invitesThisCycle, founding, contribution] = await Promise.all([
     monthlyInvitesOnboarded(userId),
     isFoundingMember(userId),
+    getMemberContribution(userId),
   ]);
+  // Activity badges reset monthly; verified-contribution badges are all-time
+  // (earned reputation, not a monthly sprint).
+  const badges = [
+    ...badgesFor(invitesThisCycle, founding),
+    ...contributionBadges(contribution),
+  ];
   return {
-    badges: badgesFor(invitesThisCycle, founding),
+    badges,
     priorityMatching: invitesThisCycle >= PRIORITY_MATCHING_MIN_INVITES,
     invitesThisCycle,
     cycleLabel: monthLabel(currentMonthStart()),
+    contributionScore: contribution.points,
+    verifiedReferrals: contribution.relevant + contribution.opportunity + contribution.business,
   };
 }
 

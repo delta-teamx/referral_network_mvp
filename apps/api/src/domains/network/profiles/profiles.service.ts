@@ -163,6 +163,8 @@ export async function getPublicProfile(idOrUserId: string) {
     badges: badgeInfo.badges,
     priorityMatching: badgeInfo.priorityMatching,
     badgeCycleLabel: badgeInfo.cycleLabel,
+    contributionScore: badgeInfo.contributionScore,
+    verifiedReferrals: badgeInfo.verifiedReferrals,
   };
 }
 

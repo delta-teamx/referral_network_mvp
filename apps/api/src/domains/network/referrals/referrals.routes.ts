@@ -10,7 +10,9 @@ import {
   listReferralsSent,
   sendReferral,
   updateReferralStatus,
+  verifyReferral,
   type ReferralStatus,
+  type ReferralVerdict,
 } from './referrals.service.js';
 
 export const referralsRouter: Router = Router();
@@ -56,6 +58,26 @@ referralsRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const referrals = await listReferralsReceived(req.user.id);
     const body: ApiResponse<typeof referrals> = { success: true, data: referrals };
+    res.json(body);
+  }),
+);
+
+// Recipient confirms whether the referral was relevant/valuable (Contribution
+// Score gate). Only the receiver can verify their own received referral.
+const verifySchema = z.object({
+  verdict: z.enum(['relevant', 'opportunity', 'not_relevant']),
+});
+referralsRouter.post(
+  '/:id/verify',
+  validate(verifySchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const updated = await verifyReferral(
+      req.params.id ?? '',
+      req.user.id,
+      req.body.verdict as ReferralVerdict,
+    );
+    const body: ApiResponse<typeof updated> = { success: true, data: updated };
     res.json(body);
   }),
 );

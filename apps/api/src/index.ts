@@ -462,6 +462,19 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "priority" BOOLEAN NOT NULL DEFAULT false;`,
       // ROUL Support conversations surfaced in the member's Messages tab.
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "isOfficial" BOOLEAN NOT NULL DEFAULT false;`,
+      // Contribution Score: referral quality verification + the points ledger.
+      `ALTER TABLE "Referral" ADD COLUMN IF NOT EXISTS "relevance" TEXT;`,
+      `ALTER TABLE "Referral" ADD COLUMN IF NOT EXISTS "relevanceAt" TIMESTAMP(3);`,
+      `CREATE TABLE IF NOT EXISTS "ContributionEvent" (
+         "id" TEXT PRIMARY KEY,
+         "userId" TEXT NOT NULL,
+         "type" TEXT NOT NULL,
+         "points" INTEGER NOT NULL,
+         "occurredAt" TIMESTAMP(3) NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE INDEX IF NOT EXISTS "ContributionEvent_userId_idx" ON "ContributionEvent" ("userId");`,
+      `CREATE INDEX IF NOT EXISTS "ContributionEvent_occurredAt_idx" ON "ContributionEvent" ("occurredAt");`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

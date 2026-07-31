@@ -30,6 +30,7 @@ interface LeaderboardMember {
   contractsSigned: number;
   referralsSent: number;
   callsHeld: number;
+  verifiedReferrals?: number;
   points: number;
   badges: string[];
   rank: number | null;
@@ -59,6 +60,7 @@ interface LeaderboardData {
     invitesOnboarded: number;
     invitesPending: number;
     rewardMonths: number;
+    verifiedReferrals?: number;
   };
 }
 
@@ -301,6 +303,9 @@ export default function LeaderboardPage() {
             { icon: FileSignature, label: `Contract signed +${data.points.contractSigned}` },
             { icon: Handshake, label: `Referral sent +${data.points.referralSent}` },
             { icon: PhoneCall, label: `Call held +${data.points.callHeld}` },
+            { icon: Check, label: 'Verified referral +20' },
+            { icon: Trophy, label: 'Referral opportunity +50' },
+            { icon: Trophy, label: 'Referral becomes business +100' },
           ].map(({ icon: Icon, label }) => (
             <span
               key={label}

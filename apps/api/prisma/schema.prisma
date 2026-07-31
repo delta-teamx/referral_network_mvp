@@ -431,6 +431,10 @@ model Referral {
   // Optional: member-to-member referrals have no directory listing.
   listingId   String?
   status      ReferralStatus @default(SENT)
+  // Recipient verification of referral quality (Contribution Score gating):
+  // relevant | opportunity | not_relevant. Null = awaiting the recipient's answer.
+  relevance   String?
+  relevanceAt DateTime?
   notes       String?
   clientName  String?
   clientPhone String?
@@ -935,6 +939,23 @@ model PodFeedback {
 }
 
 /// Tracks member-to-non-member referrals and rewards.
+/// Contribution Score ledger. Each row is a verified point award to a member,
+/// so the score is persisted and auditable (not recomputed on the fly). `id` is
+/// a deterministic dedup key (e.g. "referral_relevant:<referralId>") so awards
+/// are idempotent. occurredAt is when the underlying action happened (used for
+/// the monthly leaderboard cycle).
+model ContributionEvent {
+  id         String   @id
+  userId     String
+  type       String // referral_relevant | referral_opportunity | referral_business | ...
+  points     Int
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([occurredAt])
+}
+
 model ReferralTracking {
   id              String   @id @default(uuid())
   referrerUserId  String

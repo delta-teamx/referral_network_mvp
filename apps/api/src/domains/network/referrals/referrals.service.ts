@@ -3,6 +3,10 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
+import { awardContribution } from '../referral-tracking/contribution.service.js';
+
+/** Recipient's verdict on a received referral (drives the Contribution Score). */
+export type ReferralVerdict = 'relevant' | 'opportunity' | 'not_relevant';
 
 /**
  * B2B referrals - one business owner sending a client to another business.
@@ -128,9 +132,75 @@ export async function updateReferralStatus(
     select: referralSelect,
   });
 
-  if (status === 'ACCEPTED') await eventBus.publish('referral.accepted', { referralId });
-  if (status === 'CONVERTED') await eventBus.publish('referral.converted', { referralId });
+  if (status === 'ACCEPTED') {
+    await eventBus.publish('referral.accepted', { referralId });
+    await awardContribution(`referral_accepted:${referralId}`, updated.sender.id, 'referral_accepted', new Date());
+  }
+  if (status === 'CONVERTED') {
+    await eventBus.publish('referral.converted', { referralId });
+    // Completed business is the top Contribution Score award (recipient-verified).
+    await awardContribution(`referral_business:${referralId}`, updated.sender.id, 'referral_business', new Date());
+  }
   if (status === 'DECLINED') await eventBus.publish('referral.declined', { referralId });
+
+  return updated;
+}
+
+/**
+ * Recipient confirms whether a received referral was relevant and valuable.
+ * This is the Contribution Score gate: the SENDER only earns referral points
+ * once the recipient verifies quality. "opportunity" means it may become a
+ * qualified opportunity, which earns the higher award.
+ */
+export async function verifyReferral(
+  referralId: string,
+  receiverUserId: string,
+  verdict: ReferralVerdict,
+) {
+  const referral = await prisma.referral.findFirst({
+    where: { id: referralId, receiverId: receiverUserId },
+    select: { id: true, senderId: true, status: true, relevance: true, clientName: true },
+  });
+  if (!referral) throw AppError.notFound('Referral not found');
+
+  const now = new Date();
+  const nextStatus: ReferralStatus =
+    verdict === 'not_relevant'
+      ? 'DECLINED'
+      : referral.status === 'SENT'
+        ? 'ACCEPTED'
+        : referral.status;
+
+  const updated = await prisma.referral.update({
+    where: { id: referralId },
+    data: { relevance: verdict, relevanceAt: now, status: nextStatus },
+    select: referralSelect,
+  });
+
+  // Award the SENDER, gated on the recipient's verification. Idempotent, so a
+  // changed verdict never double-awards; "not relevant" awards nothing.
+  if (verdict === 'relevant' || verdict === 'opportunity') {
+    await awardContribution(`referral_accepted:${referralId}`, referral.senderId, 'referral_accepted', now);
+    await awardContribution(`referral_relevant:${referralId}`, referral.senderId, 'referral_relevant', now);
+  }
+  if (verdict === 'opportunity') {
+    await awardContribution(`referral_opportunity:${referralId}`, referral.senderId, 'referral_opportunity', now);
+  }
+
+  // Let the sender know their referral was verified (best-effort).
+  const label =
+    verdict === 'opportunity'
+      ? 'may become an opportunity 🚀'
+      : verdict === 'relevant'
+        ? 'was a great match ✅'
+        : 'was marked not relevant';
+  void createNotification({
+    userId: referral.senderId,
+    type: 'referral',
+    title: 'Your referral was reviewed',
+    body: `Your referral${referral.clientName ? ` for ${referral.clientName}` : ''} ${label}.`,
+    data: { referralId },
+  }).catch(() => undefined);
 
   return updated;
 }
@@ -138,6 +208,8 @@ export async function updateReferralStatus(
 const referralSelect = {
   id: true,
   status: true,
+  relevance: true,
+  relevanceAt: true,
   clientName: true,
   clientPhone: true,
   clientEmail: true,
