@@ -475,6 +475,12 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE INDEX IF NOT EXISTS "ContributionEvent_userId_idx" ON "ContributionEvent" ("userId");`,
       `CREATE INDEX IF NOT EXISTS "ContributionEvent_occurredAt_idx" ON "ContributionEvent" ("occurredAt");`,
+      // Admin-editable settings store (Rewards & Points config).
+      `CREATE TABLE IF NOT EXISTS "AppSetting" (
+         "key" TEXT PRIMARY KEY,
+         "value" JSONB NOT NULL,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

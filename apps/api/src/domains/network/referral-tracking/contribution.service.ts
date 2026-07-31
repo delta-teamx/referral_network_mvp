@@ -1,4 +1,8 @@
 import { prisma } from '../../../config/prisma.js';
+import {
+  DEFAULT_CONTRIBUTION_POINTS,
+  getContributionPoints,
+} from '../../core/settings/settings.service.js';
 
 /**
  * Contribution Score - a persisted, verification-gated points ledger.
@@ -7,15 +11,10 @@ import { prisma } from '../../../config/prisma.js';
  * awarded once a REFERRAL RECIPIENT confirms the referral was genuinely
  * valuable, so the score reflects verified quality, not raw volume. Each award
  * is one ContributionEvent row with a deterministic id, so awards are
- * idempotent (safe to retry / reconcile). Values are the Phase 1 defaults;
- * Phase 2 makes them admin-configurable.
+ * idempotent (safe to retry / reconcile). Point VALUES are admin-configurable
+ * (settings store) with these code defaults as the fallback.
  */
-export const CONTRIBUTION_POINTS = {
-  referral_accepted: 5,
-  referral_relevant: 20,
-  referral_opportunity: 50,
-  referral_business: 100,
-} as const;
+export const CONTRIBUTION_POINTS = DEFAULT_CONTRIBUTION_POINTS;
 
 export type ContributionType = keyof typeof CONTRIBUTION_POINTS;
 
@@ -26,15 +25,40 @@ export async function awardContribution(
   type: ContributionType,
   occurredAt: Date,
 ): Promise<void> {
+  const points = (await getContributionPoints())[type] ?? CONTRIBUTION_POINTS[type];
   try {
     await prisma.contributionEvent.create({
-      data: { id: dedupId, userId, type, points: CONTRIBUTION_POINTS[type], occurredAt },
+      data: { id: dedupId, userId, type, points, occurredAt },
     });
   } catch (err) {
     // Already awarded - a repeat verification / reconcile must not double-count.
     if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') return;
     throw err;
   }
+}
+
+/**
+ * Admin manual point adjustment (award a bonus or reverse points). Recorded as
+ * its own ledger row so it is auditable; `points` may be negative to reverse.
+ */
+export async function adjustMemberPoints(
+  userId: string,
+  points: number,
+  reason: string,
+): Promise<void> {
+  const rounded = Math.round(points);
+  if (!Number.isFinite(rounded) || rounded === 0) return;
+  await prisma.contributionEvent.create({
+    data: {
+      id: `admin_adjustment:${userId}:${Date.now()}:${Math.round(Math.abs(rounded))}`,
+      userId,
+      type: 'admin_adjustment',
+      points: rounded,
+      occurredAt: new Date(),
+    },
+  });
+  // eslint-disable-next-line no-console
+  console.log(`[contribution] admin adjusted ${userId} by ${rounded}: ${reason}`);
 }
 
 /** Verified contribution points per user, optionally since a date (monthly cycle). */

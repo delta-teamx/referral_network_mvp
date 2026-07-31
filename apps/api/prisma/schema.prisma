@@ -939,6 +939,15 @@ model PodFeedback {
 }
 
 /// Tracks member-to-non-member referrals and rewards.
+/// Generic admin-editable settings (key -> JSON). Backs the Rewards & Points
+/// config: point values, limits, reward definitions. Falls back to code
+/// defaults when a key is absent.
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
 /// Contribution Score ledger. Each row is a verified point award to a member,
 /// so the score is persisted and auditable (not recomputed on the fly). `id` is
 /// a deterministic dedup key (e.g. "referral_relevant:<referralId>") so awards

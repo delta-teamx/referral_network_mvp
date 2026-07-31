@@ -205,6 +205,46 @@ export async function verifyReferral(
   return updated;
 }
 
+/** Admin: referrals a recipient marked "not relevant" (for dispute review). */
+export async function listDisputedReferrals() {
+  return prisma.referral.findMany({
+    where: { relevance: 'not_relevant' },
+    orderBy: { relevanceAt: 'desc' },
+    take: 100,
+    select: referralSelect,
+  });
+}
+
+/**
+ * Admin override of a referral verdict (dispute resolution). Bypasses the
+ * recipient check and awards the sender accordingly. Idempotent awards.
+ */
+export async function adminOverrideReferral(referralId: string, verdict: ReferralVerdict) {
+  const referral = await prisma.referral.findUnique({
+    where: { id: referralId },
+    select: { id: true, senderId: true, status: true },
+  });
+  if (!referral) throw AppError.notFound('Referral not found');
+  const now = new Date();
+  const updated = await prisma.referral.update({
+    where: { id: referralId },
+    data: {
+      relevance: verdict,
+      relevanceAt: now,
+      status: verdict === 'not_relevant' ? 'DECLINED' : referral.status === 'SENT' ? 'ACCEPTED' : referral.status,
+    },
+    select: referralSelect,
+  });
+  if (verdict === 'relevant' || verdict === 'opportunity') {
+    await awardContribution(`referral_accepted:${referralId}`, referral.senderId, 'referral_accepted', now);
+    await awardContribution(`referral_relevant:${referralId}`, referral.senderId, 'referral_relevant', now);
+  }
+  if (verdict === 'opportunity') {
+    await awardContribution(`referral_opportunity:${referralId}`, referral.senderId, 'referral_opportunity', now);
+  }
+  return updated;
+}
+
 const referralSelect = {
   id: true,
   status: true,

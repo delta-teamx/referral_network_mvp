@@ -8,6 +8,7 @@
 
 import { prisma } from '../../config/prisma.js';
 import { AppError } from '../../utils/AppError.js';
+import { getFreeEngagementLimit } from '../core/settings/settings.service.js';
 
 export type Tier = 'FREE' | 'PRO' | 'PREMIUM';
 
@@ -31,13 +32,16 @@ export async function assertEngagementQuota(
   const tier = (user?.subscriptionTier ?? 'FREE') as Tier;
   if (tier !== 'FREE') return; // Pro/Premium/founding: unlimited
 
+  // Admin-configurable (falls back to FREE_ENGAGEMENT_LIMIT).
+  const limit = await getFreeEngagementLimit();
+
   if (kind === 'intro') {
     const used = await prisma.introduction.count({
       where: { senderId: userId, status: { in: ['requested', 'accepted', 'completed'] } },
     });
-    if (used >= FREE_ENGAGEMENT_LIMIT) {
+    if (used >= limit) {
       throw new AppError(
-        `Your free plan includes ${FREE_ENGAGEMENT_LIMIT} intro requests. Upgrade to Pro to request more introductions.`,
+        `Your free plan includes ${limit} intro requests. Upgrade to Pro to request more introductions.`,
         403,
         'billing/free_quota_reached',
       );
@@ -48,9 +52,9 @@ export async function assertEngagementQuota(
   const used = await prisma.conversation.count({
     where: { participants: { some: { userId } } },
   });
-  if (used >= FREE_ENGAGEMENT_LIMIT) {
+  if (used >= limit) {
     throw new AppError(
-      `Your free plan includes ${FREE_ENGAGEMENT_LIMIT} conversations. Upgrade to Pro to start new conversations.`,
+      `Your free plan includes ${limit} conversations. Upgrade to Pro to start new conversations.`,
       403,
       'billing/free_quota_reached',
     );

@@ -28,6 +28,17 @@ import {
   getOfficialThread,
   listOfficialConversations,
 } from '../network/messaging/messaging.service.js';
+import {
+  getContributionPoints,
+  getFreeEngagementLimit,
+  setContributionPoints,
+  setFreeEngagementLimit,
+} from '../core/settings/settings.service.js';
+import { adjustMemberPoints } from '../network/referral-tracking/contribution.service.js';
+import {
+  adminOverrideReferral,
+  listDisputedReferrals,
+} from '../network/referrals/referrals.service.js';
 
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
@@ -178,6 +189,86 @@ adminRouter.post(
   validate(roulReplySchema),
   asyncHandler(async (req, res) => {
     const data = await adminReplyAsRoul(req.params.id ?? '', req.body.text);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// ── Rewards & Points config (Phase 2) ────────────────────────────────────────
+adminRouter.get(
+  '/config',
+  asyncHandler(async (_req, res) => {
+    const [contributionPoints, freeEngagementLimit] = await Promise.all([
+      getContributionPoints(),
+      getFreeEngagementLimit(),
+    ]);
+    const data = { contributionPoints, freeEngagementLimit };
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const configSchema = z.object({
+  contributionPoints: z
+    .object({
+      referral_accepted: z.number().optional(),
+      referral_relevant: z.number().optional(),
+      referral_opportunity: z.number().optional(),
+      referral_business: z.number().optional(),
+    })
+    .optional(),
+  freeEngagementLimit: z.number().optional(),
+});
+adminRouter.patch(
+  '/config',
+  validate(configSchema),
+  asyncHandler(async (req, res) => {
+    const contributionPoints = req.body.contributionPoints
+      ? await setContributionPoints(req.body.contributionPoints)
+      : await getContributionPoints();
+    const freeEngagementLimit =
+      typeof req.body.freeEngagementLimit === 'number'
+        ? await setFreeEngagementLimit(req.body.freeEngagementLimit)
+        : await getFreeEngagementLimit();
+    const data = { contributionPoints, freeEngagementLimit };
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Manually award or reverse a member's Contribution Score points.
+const pointsSchema = z.object({
+  points: z.number().int(),
+  reason: z.string().trim().min(1).max(300),
+});
+adminRouter.post(
+  '/users/:id/points',
+  validate(pointsSchema),
+  asyncHandler(async (req, res) => {
+    await adjustMemberPoints(req.params.id ?? '', req.body.points, req.body.reason);
+    const body: ApiResponse<{ ok: true }> = { success: true, data: { ok: true } };
+    res.json(body);
+  }),
+);
+
+// Disputed referrals (recipient marked "not relevant") + admin override.
+adminRouter.get(
+  '/referrals/disputed',
+  asyncHandler(async (_req, res) => {
+    const data = await listDisputedReferrals();
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const overrideSchema = z.object({
+  verdict: z.enum(['relevant', 'opportunity', 'not_relevant']),
+});
+adminRouter.post(
+  '/referrals/:id/override',
+  validate(overrideSchema),
+  asyncHandler(async (req, res) => {
+    const data = await adminOverrideReferral(req.params.id ?? '', req.body.verdict);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
