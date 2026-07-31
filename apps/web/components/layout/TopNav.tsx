@@ -21,7 +21,7 @@ const NAV_LINKS = [
 // On the app domain the header is part of the product, not the marketing site -
 // link to the app's own sections instead of marketing pages.
 const APP_LINKS = [
-  { href: '/dashboard', label: 'Overview' },
+  { href: '/dashboard', label: 'AI Matches' },
   { href: '/dashboard/members', label: 'Members' },
   { href: '/dashboard/messages', label: 'Messages' },
   { href: '/dashboard/groups', label: 'Groups' },

@@ -45,7 +45,7 @@ export default function MembersDirectoryPage() {
           q: filters?.q || undefined,
           industry: filters?.industry || undefined,
           city: filters?.city || undefined,
-          limit: 50,
+          limit: 200,
         },
         accessToken: accessToken ?? undefined,
       });

@@ -37,7 +37,7 @@ const NOTIFICATION_TAB: Record<string, string> = {
 };
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'AI Matches', icon: LayoutDashboard },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/dashboard/members', label: 'Members', icon: Search },
   { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },

@@ -6,7 +6,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../events/index.js';
 import { toAuthenticatedUserDto } from '../users/users.service.js';
 import { notifyAdminsOfSignup } from './auth.service.js';
-import { resolveSignupTier } from '../../billing/founding.service.js';
+import { resolveOAuthSignupTier } from '../../billing/founding.service.js';
 import {
   accessTokenSeconds,
   signAccessToken,
@@ -126,7 +126,7 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user:
       lastName: profile.family_name?.trim() || 'Last',
       avatarUrl: profile.picture ?? null,
       role: 'CONSUMER',
-      subscriptionTier: await resolveSignupTier('CONSUMER'),
+      subscriptionTier: await resolveOAuthSignupTier(),
       // Verification-code step removed: OAuth accounts are active immediately.
       emailVerified: true,
     },
@@ -254,7 +254,7 @@ async function upsertFromFbProfile(profile: FbProfile): Promise<{ user: User; is
       lastName: profile.last_name?.trim() || 'Last',
       avatarUrl: profile.picture?.data?.url ?? null,
       role: 'CONSUMER',
-      subscriptionTier: await resolveSignupTier('CONSUMER'),
+      subscriptionTier: await resolveOAuthSignupTier(),
       emailVerified: true,
     },
   });

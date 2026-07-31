@@ -20,9 +20,11 @@ export async function countFoundingMembers(): Promise<number> {
   return prisma.user.count({
     where: {
       deletedAt: null,
-      // Founding spots are for real businesses - exclude admins and consumers so
-      // consumer sign-ups don't burn through the 200 business slots.
-      role: { notIn: ['ADMIN', 'CONSUMER'] },
+      // Every genuine member counts toward the 200, including people who signed
+      // up with Google (those accounts carry the CONSUMER role by default but
+      // are real networking members). Only operator accounts and the seeded
+      // demo network are excluded.
+      role: { not: 'ADMIN' },
       NOT: { email: { endsWith: '@vpn-demo.com' } },
     },
   });
@@ -39,6 +41,18 @@ export async function countFoundingMembers(): Promise<number> {
  */
 export async function resolveSignupTier(role: string): Promise<'PREMIUM' | 'FREE'> {
   if (role === 'CONSUMER' || role === 'ADMIN') return 'FREE';
+  const taken = await countFoundingMembers();
+  return taken < FOUNDING_LIMIT ? FOUNDING_TIER : 'FREE';
+}
+
+/**
+ * Tier for a new account created through social sign-in (Google). These are
+ * genuine members even though they carry the default CONSUMER role, so they get
+ * the founding grant while spots remain - previously EVERY Google signup was
+ * forced to FREE (the OAuth path passed 'CONSUMER' to resolveSignupTier), which
+ * is why real members who joined with Google showed up as free accounts.
+ */
+export async function resolveOAuthSignupTier(): Promise<'PREMIUM' | 'FREE'> {
   const taken = await countFoundingMembers();
   return taken < FOUNDING_LIMIT ? FOUNDING_TIER : 'FREE';
 }

@@ -398,6 +398,26 @@ async function ensureRuntimeSchema(): Promise<void> {
        EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // FOUNDING HEAL for Google sign-ups: the OAuth path used to force every
+      // Google account to FREE, so real members who joined with Google (e.g.
+      // Lisa Murphy) showed as free. Retroactively grant the founding tier to
+      // those accounts (passwordHash IS NULL = social sign-in), but only while
+      // the community is still within the 200 founding spots. Idempotent.
+      `DO $$
+       DECLARE genuine int;
+       BEGIN
+         SELECT count(*) INTO genuine FROM "User"
+           WHERE "deletedAt" IS NULL AND "role" <> 'ADMIN'
+             AND "email" NOT LIKE '%@vpn-demo.com';
+         IF genuine <= 200 THEN
+           UPDATE "User" SET "subscriptionTier"='PREMIUM'
+             WHERE "subscriptionTier"='FREE'
+               AND "passwordHash" IS NULL
+               AND "role" <> 'ADMIN'
+               AND "deletedAt" IS NULL
+               AND "email" NOT LIKE '%@vpn-demo.com';
+         END IF;
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // ADMIN EMAIL CHANGE: Igor's admin account moved to a new address. Rename
       // the existing row (keeps his password + admin role) so he can log in and
       // receive new-signup notifications; if the new email already exists,

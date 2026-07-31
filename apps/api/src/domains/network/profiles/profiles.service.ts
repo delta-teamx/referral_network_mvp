@@ -157,7 +157,29 @@ export async function getPublicProfile(idOrUserId: string) {
 }
 
 export async function searchMembers(filters: { q?: string; industry?: string; city?: string; state?: string; groupId?: string; limit?: number }) {
-  const limit = Math.min(filters.limit ?? 20, 50);
+  const limit = Math.min(filters.limit ?? 100, 200);
+  // Free-text search matches a PERSON'S NAME as well as their business/profile.
+  // Previously we only searched businessName/headline/bio, so looking up a
+  // member by their first or last name ("Dawn") returned nothing. We now split
+  // the query into words and require every word to match somewhere (name,
+  // business, headline, bio or industry), so "dawn", "dawn smith" and "smith"
+  // all find the right person.
+  const tokens = (filters.q ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 6);
+  const textFilter =
+    tokens.length > 0
+      ? {
+          AND: tokens.map((token) => ({
+            OR: [
+              { businessName: { contains: token, mode: 'insensitive' as const } },
+              { headline: { contains: token, mode: 'insensitive' as const } },
+              { bio: { contains: token, mode: 'insensitive' as const } },
+              { industry: { contains: token, mode: 'insensitive' as const } },
+              { user: { firstName: { contains: token, mode: 'insensitive' as const } } },
+              { user: { lastName: { contains: token, mode: 'insensitive' as const } } },
+            ],
+          })),
+        }
+      : {};
   const where: Parameters<typeof prisma.memberProfile.findMany>[0] = {
     where: {
       // Admin accounts are operational, not networking members - never list
@@ -166,11 +188,7 @@ export async function searchMembers(filters: { q?: string; industry?: string; ci
       ...(filters.industry ? { industry: { contains: filters.industry, mode: 'insensitive' } } : {}),
       ...(filters.city ? { city: { equals: filters.city, mode: 'insensitive' } } : {}),
       ...(filters.state ? { state: filters.state.toUpperCase().slice(0, 2) } : {}),
-      ...(filters.q ? { OR: [
-        { businessName: { contains: filters.q, mode: 'insensitive' } },
-        { headline: { contains: filters.q, mode: 'insensitive' } },
-        { bio: { contains: filters.q, mode: 'insensitive' } },
-      ] } : {}),
+      ...textFilter,
     },
   };
   let userIds: string[] | undefined;
