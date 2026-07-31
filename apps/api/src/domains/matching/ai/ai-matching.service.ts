@@ -1,4 +1,14 @@
 import { prisma } from '../../../config/prisma.js';
+import { usersWithPriorityMatching } from '../../network/referral-tracking/referral-tracking.service.js';
+
+/**
+ * How much the "Priority matching" perk lifts a member in other people's
+ * suggestion feeds. Big enough to move an equally-good match to the top and to
+ * pull a priority member out of the discovery tail, but not so big that it
+ * fabricates a "strong" two-sided fit that isn't there (that classification
+ * still keys off the real profile-fit score).
+ */
+const PRIORITY_MATCHING_BOOST = 12;
 
 /**
  * AI-powered matching engine - the heart of Igor's vision.
@@ -84,11 +94,22 @@ export async function generateMatchesForUser(
     take: 200,
   });
 
+  // Members holding the Priority matching perk (earned this cycle by inviting
+  // people) are ranked higher in everyone's feed - that is what the perk DOES.
+  const prioritySet = await usersWithPriorityMatching();
+
   // Score everyone (keep the candidate profile alongside its score so we can
-  // write a good reason for the discovery tier).
+  // write a good reason for the discovery tier). The priority perk adds a boost
+  // to the ORDERING only; the strong/discovery classification still keys off the
+  // genuine profile-fit score so the perk never fakes a two-sided match.
   const scored = candidates
-    .map((them) => ({ them, m: scoreMatch(myProfile, them) }))
-    .sort((a, b) => b.m.score - a.m.score);
+    .map((them) => {
+      const priority = prioritySet.has(them.userId);
+      const m = scoreMatch(myProfile, them);
+      if (priority) m.factors.priorityMatching = PRIORITY_MATCHING_BOOST;
+      return { them, m, priority, sortScore: m.score + (priority ? PRIORITY_MATCHING_BOOST : 0) };
+    })
+    .sort((a, b) => b.sortScore - a.sortScore);
 
   // Two tiers, so the network is NEVER hidden behind a strict threshold:
   //   • strong    - real two-sided overlap (score ≥ floor), shown with reasons

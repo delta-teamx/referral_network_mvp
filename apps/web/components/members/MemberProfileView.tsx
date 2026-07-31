@@ -16,8 +16,13 @@ import {
   MapPin,
   MessageSquare,
   Send,
+  Sparkles,
+  Star,
   Target,
+  Users,
+  Zap,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { fadeInUp } from '../../lib/animations';
 import { api, ApiError } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
@@ -46,12 +51,43 @@ interface PublicProfile {
   barterWants: string[];
   barterNotes: string | null;
   isFoundingMember?: boolean;
+  badges?: string[];
+  priorityMatching?: boolean;
   user: {
     id: string;
     firstName: string;
     lastName: string;
     avatarUrl: string | null;
   };
+}
+
+/** Visual style per leaderboard badge. Unknown labels fall back to a neutral chip. */
+const BADGE_STYLE: Record<string, { icon: LucideIcon; className: string }> = {
+  'Founding member': { icon: Crown, className: 'bg-amber-100 text-amber-700' },
+  Connector: { icon: Users, className: 'bg-primary-light text-primary' },
+  'Priority matching': { icon: Zap, className: 'bg-violet-100 text-violet-700' },
+  Ambassador: { icon: Star, className: 'bg-emerald-100 text-emerald-700' },
+  'Founding Ambassador': { icon: Sparkles, className: 'bg-amber-100 text-amber-700' },
+};
+
+function BadgeChips({ badges }: { badges: string[] }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {badges.map((label) => {
+        const style = BADGE_STYLE[label] ?? { icon: Star, className: 'bg-gray-100 text-gray-700' };
+        const Icon = style.icon;
+        return (
+          <span
+            key={label}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${style.className}`}
+          >
+            <Icon size={11} /> {label}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 /** Inline form: send this member a client referral. */
@@ -266,13 +302,19 @@ export function MemberProfileView({ id }: { id: string }) {
               <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
                 {profile.user.firstName} {profile.user.lastName}
               </h1>
-              {profile.isFoundingMember && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
-                  <Crown size={11} /> Founding Member
-                </span>
-              )}
             </div>
-            <p className="text-base font-semibold text-primary">{profile.businessName}</p>
+            {/* Leaderboard badges + perks (Founding member, Connector, Priority
+                matching, ...). Activity badges reflect the current monthly cycle. */}
+            <BadgeChips
+              badges={
+                profile.badges && profile.badges.length > 0
+                  ? profile.badges
+                  : profile.isFoundingMember
+                    ? ['Founding member']
+                    : []
+              }
+            />
+            <p className="mt-2 text-base font-semibold text-primary">{profile.businessName}</p>
             {profile.headline && <p className="mt-1 text-sm text-gray-600">{profile.headline}</p>}
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">

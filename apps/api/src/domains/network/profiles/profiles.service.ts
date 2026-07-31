@@ -2,6 +2,7 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText, sanitizeArray } from '../../../utils/sanitize.js';
+import { getMemberBadges } from '../referral-tracking/referral-tracking.service.js';
 
 export interface UpsertProfileInput {
   businessName: string;
@@ -149,10 +150,19 @@ export async function getPublicProfile(idOrUserId: string) {
     },
   });
   if (!profile) throw AppError.notFound('Profile not found');
-  const cutoff = await foundingCutoffDate();
+  const [cutoff, badgeInfo] = await Promise.all([
+    foundingCutoffDate(),
+    // Live leaderboard badges + perks for THIS member (Connector, Priority
+    // matching, Ambassador, ...), earned from the current monthly cycle. This
+    // is what makes the leaderboard tags actually show up on the profile.
+    getMemberBadges(profile.userId),
+  ]);
   return {
     ...profile,
     isFoundingMember: isFounding(profile.user.createdAt, profile.user.role, cutoff),
+    badges: badgeInfo.badges,
+    priorityMatching: badgeInfo.priorityMatching,
+    badgeCycleLabel: badgeInfo.cycleLabel,
   };
 }
 

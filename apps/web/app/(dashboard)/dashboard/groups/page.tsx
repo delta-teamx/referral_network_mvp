@@ -42,6 +42,18 @@ interface MyGroup {
   memberCount: number;
   role: string;
 }
+interface PublicGroup {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  city: string;
+  state: string;
+  meetingSchedule: string | null;
+  memberCount: number;
+  maxMembers: number;
+  isPublic: boolean;
+}
 interface ChatMessage {
   id: string;
   text: string;
@@ -60,37 +72,61 @@ function GroupsInner() {
 
 function MyGroupsList({ accessToken }: { accessToken: string | null }) {
   const [groups, setGroups] = useState<MyGroup[]>([]);
+  const [discover, setDiscover] = useState<PublicGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState<Set<string>>(new Set());
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const [mine, all] = await Promise.all([
+        api.get<MyGroup[]>('/api/v1/groups/mine', { accessToken: accessToken ?? undefined }),
+        api.get<PublicGroup[]>('/api/v1/groups', { query: { limit: 50 }, accessToken: accessToken ?? undefined }),
+      ]);
+      setGroups(mine);
+      // Open groups they can still join: public, not already a member, not full.
+      const mineIds = new Set(mine.map((g) => g.id));
+      setDiscover(all.filter((g) => g.isPublic && !mineIds.has(g.id) && g.memberCount < g.maxMembers));
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
 
   useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function join(groupId: string) {
     if (!accessToken) return;
-    void (async () => {
-      try {
-        const data = await api.get<MyGroup[]>('/api/v1/groups/mine', {
-          accessToken: accessToken ?? undefined,
-        });
-        setGroups(data);
-      } catch {
-        /* ignore */
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [accessToken]);
+    setJoinError(null);
+    setJoining((prev) => new Set(prev).add(groupId));
+    try {
+      await api.post(`/api/v1/groups/${groupId}/join`, {}, { accessToken: accessToken ?? undefined });
+      await load();
+    } catch (err) {
+      setJoinError(err instanceof ApiError ? err.message : 'Could not join that group');
+    } finally {
+      setJoining((prev) => {
+        const next = new Set(prev);
+        next.delete(groupId);
+        return next;
+      });
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Groups</p>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
-            <Users size={22} /> My groups
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">Your networking circles. Open one to see members and chat.</p>
-        </div>
-        <Link href="/groups" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90">
-          Browse all groups
-        </Link>
+      <header className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Groups</p>
+        <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
+          <Users size={22} /> Groups
+        </h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Your networking circles, plus open groups you can join for free.
+        </p>
       </header>
 
       {loading ? (
@@ -99,35 +135,110 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" />
           ))}
         </div>
-      ) : groups.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-          <Users size={32} className="mx-auto mb-3 text-primary" />
-          <h3 className="mb-1 text-lg font-semibold text-gray-900">You haven&rsquo;t joined a group yet</h3>
-          <p className="mb-4 text-sm text-gray-600">Groups are local networking circles - join one to meet and refer.</p>
-          <Link href="/groups" className="inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
-            Browse groups →
-          </Link>
-        </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((g) => (
-            <li key={g.id}>
-              <Link
-                href={`/dashboard/groups?slug=${g.slug}`}
-                className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
-              >
-                <p className="font-semibold text-gray-900">{g.name}</p>
-                <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-                  <MapPin size={11} /> {g.city}, {g.state}
-                </p>
-                <p className="mt-3 text-xs text-gray-500">
-                  {g.memberCount} member{g.memberCount === 1 ? '' : 's'} · you are {g.role.toLowerCase()}
-                </p>
-                <span className="mt-4 inline-block text-sm font-semibold text-primary">Open group →</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-8">
+          {/* My groups */}
+          {groups.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">My groups</h2>
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {groups.map((g) => (
+                  <li key={g.id}>
+                    <Link
+                      href={`/dashboard/groups?slug=${g.slug}`}
+                      className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
+                    >
+                      <p className="font-semibold text-gray-900">{g.name}</p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                        <MapPin size={11} /> {g.city}, {g.state}
+                      </p>
+                      <p className="mt-3 text-xs text-gray-500">
+                        {g.memberCount} member{g.memberCount === 1 ? '' : 's'} · you are {g.role.toLowerCase()}
+                      </p>
+                      <span className="mt-4 inline-block text-sm font-semibold text-primary">Open group →</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Discover / join */}
+          <section>
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                {groups.length === 0 ? 'Join a group' : 'Discover more groups'}
+              </h2>
+              <span className="text-xs font-medium text-emerald-600">Free and open to all</span>
+            </div>
+
+            {groups.length === 0 && (
+              <p className="mb-4 text-sm text-gray-600">
+                You haven&rsquo;t joined a group yet. These are open to everyone - join any that fit and start meeting and referring.
+              </p>
+            )}
+            {joinError && (
+              <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{joinError}</p>
+            )}
+
+            {discover.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-10 text-center">
+                <Users size={28} className="mx-auto mb-3 text-primary" />
+                <h3 className="mb-1 text-base font-semibold text-gray-900">No open groups right now</h3>
+                <p className="text-sm text-gray-600">Check back soon, or start your own from the marketing site.</p>
+                <Link href="/groups" className="mt-4 inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white">
+                  Browse all groups →
+                </Link>
+              </div>
+            ) : (
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {discover.map((g) => {
+                  const isJoining = joining.has(g.id);
+                  return (
+                    <li
+                      key={g.id}
+                      className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-gray-900">{g.name}</p>
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                          Open
+                        </span>
+                      </div>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                        <MapPin size={11} /> {g.city}, {g.state}
+                      </p>
+                      {g.description && <p className="mt-2 line-clamp-2 text-xs text-gray-600">{g.description}</p>}
+                      {g.meetingSchedule && (
+                        <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                          <Calendar size={11} /> {g.meetingSchedule}
+                        </p>
+                      )}
+                      <p className="mt-3 text-xs text-gray-500">
+                        {g.memberCount}/{g.maxMembers} members
+                      </p>
+                      <div className="mt-4 flex items-center gap-2">
+                        <button
+                          onClick={() => void join(g.id)}
+                          disabled={isJoining}
+                          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+                        >
+                          {isJoining ? 'Joining…' : 'Join free'}
+                        </button>
+                        <Link
+                          href={`/dashboard/groups?slug=${g.slug}`}
+                          className="text-sm font-semibold text-primary hover:underline"
+                        >
+                          Preview →
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
       )}
     </div>
   );

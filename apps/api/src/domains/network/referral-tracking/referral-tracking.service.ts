@@ -500,6 +500,11 @@ export async function getCommunityLeaderboard(
   const appOrigin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
   const inviteUrl = `https://referralnova.com/join/${code}`;
 
+  // Badges + perks reflect the CURRENT monthly cycle (they reset each month),
+  // so drive them off this month's successful invites - not the all-time total
+  // that powers the "your successful invites" stat below.
+  const viewerCycleInvites = await monthlyInvitesOnboarded(viewerId);
+
   return {
     members: opts?.includeInactive ? rows.map((r, i) => ({ ...r, rank: r.points > 0 ? i + 1 : null })) : participants.slice(0, 50),
     totalMembers: rows.length,
@@ -515,7 +520,8 @@ export async function getCommunityLeaderboard(
       rank: myRow?.rank ?? null,
       points: myRow?.points ?? 0,
       isFounding: viewerFounding,
-      badges: badgesFor(invitesOnboarded, viewerFounding),
+      badges: badgesFor(viewerCycleInvites, viewerFounding),
+      priorityMatching: viewerCycleInvites >= PRIORITY_MATCHING_MIN_INVITES,
       invitesOnboarded,
       invitesPending,
       rewardMonths: viewer?.referralRewardMonths ?? 0,
@@ -528,10 +534,76 @@ function badgesFor(invitesOnboarded: number, founding: boolean): string[] {
   const badges: string[] = [];
   if (founding) badges.push('Founding member');
   if (invitesOnboarded >= 1) badges.push('Connector');
-  if (invitesOnboarded >= 3) badges.push('Priority matching');
+  if (invitesOnboarded >= PRIORITY_MATCHING_MIN_INVITES) badges.push('Priority matching');
   if (invitesOnboarded >= 5) badges.push('Ambassador');
   if (invitesOnboarded >= 10 && founding) badges.push('Founding Ambassador');
   return badges;
+}
+
+/** Successful invites needed to unlock the Priority matching perk this cycle. */
+export const PRIORITY_MATCHING_MIN_INVITES = 3;
+
+/**
+ * Successful (onboarded/paid) invites credited to a member in the CURRENT
+ * monthly cycle. Badges and perks are earned per-cycle, so this is the number
+ * that drives them.
+ */
+export async function monthlyInvitesOnboarded(userId: string): Promise<number> {
+  return prisma.referralTracking.count({
+    where: {
+      referrerUserId: userId,
+      status: { in: ['onboarded', 'paid'] },
+      inviteeJoinedAt: { gte: currentMonthStart() },
+    },
+  });
+}
+
+/**
+ * A member's live badges + perks for the CURRENT monthly cycle.
+ *
+ * Activity badges (Connector, Priority matching, Ambassador) and the
+ * priority-matching perk are earned by THIS month's successful invites, so a
+ * member who does nothing this month loses them until they invite again - the
+ * same reset the monthly leaderboard uses. "Founding member" is a permanent
+ * identity badge and is unaffected by the monthly cycle.
+ */
+export async function getMemberBadges(userId: string): Promise<{
+  badges: string[];
+  priorityMatching: boolean;
+  invitesThisCycle: number;
+  cycleLabel: string;
+}> {
+  const [invitesThisCycle, founding] = await Promise.all([
+    monthlyInvitesOnboarded(userId),
+    isFoundingMember(userId),
+  ]);
+  return {
+    badges: badgesFor(invitesThisCycle, founding),
+    priorityMatching: invitesThisCycle >= PRIORITY_MATCHING_MIN_INVITES,
+    invitesThisCycle,
+    cycleLabel: monthLabel(currentMonthStart()),
+  };
+}
+
+/**
+ * Every member who currently holds the Priority matching perk (>= the invite
+ * threshold this cycle). The matching engine reads this to rank those members
+ * higher in other people's suggestions - which is what makes the perk real.
+ */
+export async function usersWithPriorityMatching(): Promise<Set<string>> {
+  const rows = await prisma.referralTracking.groupBy({
+    by: ['referrerUserId'],
+    where: {
+      status: { in: ['onboarded', 'paid'] },
+      inviteeJoinedAt: { gte: currentMonthStart() },
+    },
+    _count: { _all: true },
+  });
+  return new Set(
+    rows
+      .filter((r) => r._count._all >= PRIORITY_MATCHING_MIN_INVITES)
+      .map((r) => r.referrerUserId),
+  );
 }
 
 /**
