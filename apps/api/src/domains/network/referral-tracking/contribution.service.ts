@@ -78,6 +78,43 @@ export async function verifiedPointsByUser(since?: Date): Promise<Map<string, nu
   return new Map(rows.map((r) => [r.userId, r._sum.points ?? 0]));
 }
 
+/** Remove a previously-awarded contribution event (no-op if absent). */
+export async function removeContribution(dedupId: string): Promise<void> {
+  await prisma.contributionEvent.deleteMany({ where: { id: dedupId } });
+}
+
+/**
+ * Make the verdict-driven referral awards (accepted / relevant / opportunity)
+ * exactly match the CURRENT verdict, so a recipient or admin who downgrades a
+ * verdict (opportunity -> relevant -> not relevant) claws the extra points back
+ * instead of leaving them stranded. Business-completion points are separate and
+ * untouched here.
+ */
+export async function reconcileReferralAwards(
+  referralId: string,
+  senderId: string,
+  verdict: 'relevant' | 'opportunity' | 'not_relevant',
+  when: Date,
+): Promise<void> {
+  const accept = `referral_accepted:${referralId}`;
+  const relevant = `referral_relevant:${referralId}`;
+  const opportunity = `referral_opportunity:${referralId}`;
+  const desired =
+    verdict === 'opportunity'
+      ? [accept, relevant, opportunity]
+      : verdict === 'relevant'
+        ? [accept, relevant]
+        : [];
+  for (const id of [accept, relevant, opportunity]) {
+    if (!desired.includes(id)) await removeContribution(id);
+  }
+  if (desired.includes(accept)) await awardContribution(accept, senderId, 'referral_accepted', when);
+  if (desired.includes(relevant)) await awardContribution(relevant, senderId, 'referral_relevant', when);
+  if (desired.includes(opportunity)) {
+    await awardContribution(opportunity, senderId, 'referral_opportunity', when);
+  }
+}
+
 /** Spendable points balance = everything earned minus everything redeemed. */
 export async function getAvailablePoints(userId: string): Promise<number> {
   const agg = await prisma.contributionEvent.aggregate({

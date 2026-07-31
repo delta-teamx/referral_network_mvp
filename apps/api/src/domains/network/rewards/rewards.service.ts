@@ -124,11 +124,23 @@ export async function redeemReward(userId: string, rewardKey: string) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { subscriptionTier: true },
+    select: { subscriptionTier: true, stripeCustomerId: true },
   });
   if (!user) throw AppError.notFound('User not found');
-  if (reward.type === 'premium' && user.subscriptionTier !== 'FREE') {
-    throw AppError.badRequest('You already have Premium features on your plan.');
+  if (reward.type === 'premium') {
+    if (user.subscriptionTier !== 'FREE') {
+      throw AppError.badRequest('Temporary Premium is for members on the Free plan.');
+    }
+    // Former subscribers keep their Stripe customer id for life, so it is not a
+    // reliable "is paying" signal. Restrict the temporary-Premium trial to
+    // never-subscribed members - that keeps the expiry revert reliable (a
+    // member who pays DURING the trial gains a stripeCustomerId, so expiry
+    // leaves their paid Premium alone).
+    if (user.stripeCustomerId) {
+      throw AppError.badRequest(
+        'The Premium trial is for members who have not subscribed before. You can resubscribe anytime from Billing.',
+      );
+    }
   }
 
   const now = new Date();

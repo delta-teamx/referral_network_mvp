@@ -3,7 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
-import { awardContribution } from '../referral-tracking/contribution.service.js';
+import { awardContribution, reconcileReferralAwards } from '../referral-tracking/contribution.service.js';
 
 /** Recipient's verdict on a received referral (drives the Contribution Score). */
 export type ReferralVerdict = 'relevant' | 'opportunity' | 'not_relevant';
@@ -177,15 +177,10 @@ export async function verifyReferral(
     select: referralSelect,
   });
 
-  // Award the SENDER, gated on the recipient's verification. Idempotent, so a
-  // changed verdict never double-awards; "not relevant" awards nothing.
-  if (verdict === 'relevant' || verdict === 'opportunity') {
-    await awardContribution(`referral_accepted:${referralId}`, referral.senderId, 'referral_accepted', now);
-    await awardContribution(`referral_relevant:${referralId}`, referral.senderId, 'referral_relevant', now);
-  }
-  if (verdict === 'opportunity') {
-    await awardContribution(`referral_opportunity:${referralId}`, referral.senderId, 'referral_opportunity', now);
-  }
+  // Award the SENDER, gated on the recipient's verification. Reconciles to the
+  // current verdict, so downgrading (opportunity -> relevant -> not relevant)
+  // claws the extra points back; "not relevant" leaves nothing.
+  await reconcileReferralAwards(referralId, referral.senderId, verdict, now);
 
   // Let the sender know their referral was verified (best-effort).
   const label =
@@ -235,13 +230,7 @@ export async function adminOverrideReferral(referralId: string, verdict: Referra
     },
     select: referralSelect,
   });
-  if (verdict === 'relevant' || verdict === 'opportunity') {
-    await awardContribution(`referral_accepted:${referralId}`, referral.senderId, 'referral_accepted', now);
-    await awardContribution(`referral_relevant:${referralId}`, referral.senderId, 'referral_relevant', now);
-  }
-  if (verdict === 'opportunity') {
-    await awardContribution(`referral_opportunity:${referralId}`, referral.senderId, 'referral_opportunity', now);
-  }
+  await reconcileReferralAwards(referralId, referral.senderId, verdict, now);
   return updated;
 }
 
