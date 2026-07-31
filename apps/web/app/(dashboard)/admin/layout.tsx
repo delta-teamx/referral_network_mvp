@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Calendar, Coins, FileSignature, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
+import { BarChart3, Calendar, Coins, FileSignature, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
@@ -12,6 +12,7 @@ const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; ta
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/admin/rewards', label: 'Rewards & points', icon: Coins },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/events', label: 'Zoom events', icon: Video },
   { href: '/admin/pods', label: 'Matchmaking pods', icon: UsersRound },
   { href: '/admin/bookings', label: 'All bookings', icon: Calendar },

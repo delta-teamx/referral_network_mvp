@@ -40,6 +40,7 @@ import {
   adminOverrideReferral,
   listDisputedReferrals,
 } from '../network/referrals/referrals.service.js';
+import { computeReferralAnalytics } from './analytics.service.js';
 
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
@@ -190,6 +191,16 @@ adminRouter.post(
   validate(roulReplySchema),
   asyncHandler(async (req, res) => {
     const data = await adminReplyAsRoul(req.params.id ?? '', req.body.text);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Referral + rewards funnel analytics.
+adminRouter.get(
+  '/analytics',
+  asyncHandler(async (_req, res) => {
+    const data = await computeReferralAnalytics();
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

@@ -59,6 +59,23 @@ export async function sendReferral(input: CreateReferralInput) {
     throw AppError.badRequest("You can't refer a client to yourself.");
   }
 
+  // Anti-spam: don't let the same client be referred to the same member over and
+  // over (a cheap way to farm referral points). Keyed on the client's email.
+  if (input.clientEmail) {
+    const dupe = await prisma.referral.findFirst({
+      where: {
+        senderId: input.senderId,
+        receiverId,
+        clientEmail: input.clientEmail.trim().toLowerCase(),
+        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+      select: { id: true },
+    });
+    if (dupe) {
+      throw AppError.badRequest('You have already referred this client to this member recently.');
+    }
+  }
+
   const referral = await prisma.referral.create({
     data: {
       senderId: input.senderId,
