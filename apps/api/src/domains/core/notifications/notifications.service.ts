@@ -24,7 +24,7 @@ export async function createNotification(input: {
 }
 
 export async function listNotifications(userId: string, limit = 20) {
-  return prisma.notification.findMany({
+  const rows = await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
     take: limit,
@@ -37,6 +37,16 @@ export async function listNotifications(userId: string, limit = 20) {
       isRead: true,
       createdAt: true,
     },
+  });
+  // Admin/ROUL direct messages are priority: they sit ABOVE everything else in
+  // the inbox (before support and the rest), newest first. Unread ones outrank
+  // read ones so a fresh admin note is always the first thing a member sees.
+  return rows.sort((a, b) => {
+    const rank = (n: (typeof rows)[number]) =>
+      n.type === 'admin_message' ? (n.isRead ? 1 : 2) : 0;
+    const diff = rank(b) - rank(a);
+    if (diff !== 0) return diff;
+    return b.createdAt.getTime() - a.createdAt.getTime();
   });
 }
 

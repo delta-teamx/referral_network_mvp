@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, ShieldCheck, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 
@@ -156,12 +156,22 @@ export function NotificationBell() {
               items.map((n) => {
                 const href = TYPE_HREF[n.type];
                 const isReminder = n.type === 'booking_reminder';
+                const isAdmin = n.type === 'admin_message';
                 const inner = (
                   <>
-                    <p className={`text-sm font-medium ${isReminder ? 'text-primary' : 'text-gray-900'}`}>
+                    {isAdmin && (
+                      <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                        <ShieldCheck size={10} /> ROUL · Admin
+                      </span>
+                    )}
+                    <p
+                      className={`text-sm font-medium ${
+                        isAdmin ? 'text-gray-900' : isReminder ? 'text-primary' : 'text-gray-900'
+                      }`}
+                    >
                       {n.title}
                     </p>
-                    <p className="text-xs text-gray-600">{n.body}</p>
+                    <p className="whitespace-pre-line text-xs text-gray-600">{n.body}</p>
                     <p className="mt-1 text-[10px] text-gray-400">
                       {new Date(n.createdAt).toLocaleString()}
                     </p>
@@ -171,11 +181,13 @@ export function NotificationBell() {
                   <li
                     key={n.id}
                     className={`border-b border-gray-50 ${
-                      isReminder && !n.isRead
-                        ? 'bg-primary-light/50'
-                        : n.isRead
-                          ? ''
-                          : 'bg-primary-light/30'
+                      isAdmin
+                        ? `border-l-2 border-l-blue-500 ${n.isRead ? 'bg-blue-50/40' : 'bg-blue-50'}`
+                        : isReminder && !n.isRead
+                          ? 'bg-primary-light/50'
+                          : n.isRead
+                            ? ''
+                            : 'bg-primary-light/30'
                     }`}
                   >
                     {href ? (

@@ -17,6 +17,7 @@ import {
   listAllUsers,
   listPendingListings,
   rejectListing,
+  sendAdminMessage,
   setUserRole,
   setUserTier,
   hardDeleteUser,
@@ -120,6 +121,28 @@ adminRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const data = await setUserTier(req.user.id, req.params.id ?? '', req.body.tier);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Direct admin -> member message (ROUL note in their inbox). For reminders and
+// direct support; never added to pipelines. Reaches every member (all plans).
+const adminMessageSchema = z.object({
+  text: z.string().trim().min(1, 'Message is required').max(2000),
+  title: z.string().trim().max(120).optional(),
+});
+adminRouter.post(
+  '/users/:id/message',
+  validate(adminMessageSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await sendAdminMessage(
+      req.user.id,
+      req.params.id ?? '',
+      req.body.text,
+      req.body.title,
+    );
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

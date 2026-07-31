@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Eye, Search, Trash2, X } from 'lucide-react';
+import { Ban, Eye, MessageSquare, Search, Send, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -38,6 +38,41 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewingUser, setViewingUser] = useState<(AdminUser & { profile?: UserProfile }) | null>(null);
+  // Direct ROUL message composer.
+  const [messagingUser, setMessagingUser] = useState<AdminUser | null>(null);
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgText, setMsgText] = useState('');
+  const [msgSending, setMsgSending] = useState(false);
+  const [msgSent, setMsgSent] = useState(false);
+  const [msgError, setMsgError] = useState<string | null>(null);
+
+  function openMessage(u: AdminUser) {
+    setMessagingUser(u);
+    setMsgTitle('');
+    setMsgText('');
+    setMsgSent(false);
+    setMsgError(null);
+  }
+
+  async function sendMessage() {
+    if (!accessToken || !messagingUser || !msgText.trim()) return;
+    setMsgSending(true);
+    setMsgError(null);
+    try {
+      await api.post(
+        `/api/v1/admin/users/${messagingUser.id}/message`,
+        { text: msgText.trim(), title: msgTitle.trim() || undefined },
+        { accessToken: accessToken ?? undefined },
+      );
+      setMsgSent(true);
+      setMsgText('');
+      setMsgTitle('');
+    } catch (err) {
+      setMsgError(err instanceof ApiError ? err.message : 'Could not send the message');
+    } finally {
+      setMsgSending(false);
+    }
+  }
 
   async function load() {
     if (!accessToken) return;
@@ -165,6 +200,81 @@ export default function AdminUsersPage() {
         <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
           {error}
         </p>
+      )}
+
+      {/* Direct ROUL message composer */}
+      {messagingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-gray-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                  <MessageSquare size={18} className="text-blue-400" /> Message {messagingUser.firstName}
+                </h2>
+                <p className="text-xs text-gray-400">
+                  Delivered to their inbox as a ROUL note with an admin badge. For reminders and direct
+                  support - it is never added to their pipeline.
+                </p>
+              </div>
+              <button
+                onClick={() => setMessagingUser(null)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {msgSent ? (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">
+                Sent. {messagingUser.firstName} will see it at the top of their notification inbox.
+                <button
+                  onClick={() => setMsgSent(false)}
+                  className="ml-2 font-semibold text-emerald-200 underline"
+                >
+                  Send another
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <input
+                  value={msgTitle}
+                  onChange={(e) => setMsgTitle(e.target.value)}
+                  placeholder="Subject (optional) - defaults to a note from ROUL"
+                  maxLength={120}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500"
+                />
+                <textarea
+                  value={msgText}
+                  onChange={(e) => setMsgText(e.target.value)}
+                  rows={5}
+                  maxLength={2000}
+                  placeholder={`Write your message to ${messagingUser.firstName}…`}
+                  className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 outline-none focus:border-blue-500"
+                />
+                {msgError && (
+                  <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                    {msgError}
+                  </p>
+                )}
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setMessagingUser(null)}
+                    className="rounded-full border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => void sendMessage()}
+                    disabled={msgSending || !msgText.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  >
+                    <Send size={14} /> {msgSending ? 'Sending…' : 'Send to inbox'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* View User Modal */}
@@ -338,6 +448,15 @@ export default function AdminUsersPage() {
                           className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
                         >
                           <Eye size={12} /> View
+                        </button>
+                      )}
+                      {!isSelf && (
+                        <button
+                          onClick={() => openMessage(u)}
+                          title="Send a direct ROUL message to this member's inbox"
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-xs text-blue-300 hover:bg-blue-500/10"
+                        >
+                          <MessageSquare size={12} /> Message
                         </button>
                       )}
                       {!isSelf && (
