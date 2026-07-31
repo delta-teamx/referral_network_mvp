@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, Check, ShieldCheck, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
@@ -13,6 +14,7 @@ interface Notification {
   body: string;
   isRead: boolean;
   createdAt: string;
+  data?: { ticketId?: string } | null;
 }
 
 /** Where each notification type takes you when clicked. */
@@ -37,6 +39,7 @@ const TYPE_HREF: Record<string, string> = {
  * booking_reminder), not by email.
  */
 export function NotificationBell() {
+  const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const [count, setCount] = useState(0);
@@ -99,6 +102,19 @@ export function NotificationBell() {
     if (next) void loadItems();
   }
 
+  // Open the support widget on a specific ticket. The widget lives in the app
+  // shell (not on the Messages page or admin), so we stash the ticket id, fire
+  // an event for the same-page case, and route to the dashboard so the widget
+  // is mounted to pick it up. Works on mobile too (no URL param needed).
+  function openSupportThread(ticketId: string) {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('rn-open-support-ticket', ticketId);
+      window.dispatchEvent(new CustomEvent('rn:open-support', { detail: { ticketId } }));
+    }
+    setOpen(false);
+    router.push('/dashboard');
+  }
+
   async function markAllRead() {
     if (!accessToken) return;
     try {
@@ -154,6 +170,9 @@ export function NotificationBell() {
               <li className="px-4 py-6 text-center text-xs text-gray-500">No notifications yet</li>
             ) : (
               items.map((n) => {
+                // A ROUL/support notification opens the support widget on its
+                // thread; everything else uses the per-type destination.
+                const ticketId = n.data?.ticketId;
                 const href = TYPE_HREF[n.type];
                 const isReminder = n.type === 'booking_reminder';
                 const isAdmin = n.type === 'admin_message';
@@ -190,7 +209,14 @@ export function NotificationBell() {
                             : 'bg-primary-light/30'
                     }`}
                   >
-                    {href ? (
+                    {ticketId ? (
+                      <button
+                        onClick={() => openSupportThread(ticketId)}
+                        className="block w-full px-4 py-3 text-left transition hover:bg-gray-50"
+                      >
+                        {inner}
+                      </button>
+                    ) : href ? (
                       <Link
                         href={href}
                         onClick={() => setOpen(false)}

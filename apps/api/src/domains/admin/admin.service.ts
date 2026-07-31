@@ -4,49 +4,30 @@ import { eventBus } from '../core/events/index.js';
 import { deleteAttachmentPrefixes } from '../network/messaging/messaging.service.js';
 import { signAccessToken } from '../../utils/tokens.js';
 import { toAuthenticatedUserDto } from '../core/users/users.service.js';
-import { createNotification } from '../core/notifications/notifications.service.js';
+import { createPriorityTicketForMember } from '../core/support/support.service.js';
 
 /**
- * Direct admin -> member message, delivered as a high-priority "ROUL" note in
- * the member's notification inbox (the bell). This is for reminders and direct
- * support, NOT a networking message: it never touches pipelines, and it reaches
- * every member regardless of plan (unlike the PRO-gated Messages inbox). It is
- * signed as ROUL (the Referral Nova team) and carries an admin badge, and the
- * inbox pins these above everything else - support included.
+ * Direct admin -> member message. Opens a two-way Priority Support thread (ROUL
+ * as the first message) that the member can reply to, and that the admin picks
+ * back up under Admin -> Support (Priority). For reminders and direct support,
+ * NOT a networking message: it never touches pipelines, and it reaches every
+ * member regardless of plan (support is not plan-gated). The member is also
+ * pinged in their notification inbox (signed as ROUL, with an admin badge) with
+ * a deep link straight to the thread.
  */
 export async function sendAdminMessage(
   adminId: string,
   targetUserId: string,
   text: string,
   title?: string,
-): Promise<{ ok: true; userId: string }> {
-  const target = await prisma.user.findFirst({
-    where: { id: targetUserId, deletedAt: null },
-    select: { id: true },
+): Promise<{ ok: true; userId: string; ticketId: string }> {
+  const ticket = await createPriorityTicketForMember({
+    adminId,
+    targetUserId,
+    message: text,
+    subject: title,
   });
-  if (!target) throw AppError.notFound('That member no longer exists.');
-
-  await createNotification({
-    userId: target.id,
-    type: 'admin_message',
-    // Signed as ROUL; the inbox renders the ROUL identity + admin badge.
-    title: title?.trim() ? title.trim().slice(0, 120) : 'Message from ROUL (Referral Nova team)',
-    body: text.trim().slice(0, 2000),
-    data: { from: 'ROUL', admin: true, adminId },
-  });
-
-  await prisma.domainEvent
-    .create({
-      data: {
-        id: `admin_message:${adminId}:${target.id}:${Date.now()}`,
-        type: 'admin.direct_message',
-        aggregateId: target.id,
-        payload: { adminId },
-      },
-    })
-    .catch(() => undefined);
-
-  return { ok: true, userId: target.id };
+  return { ok: true, userId: targetUserId, ticketId: ticket.id };
 }
 
 /**

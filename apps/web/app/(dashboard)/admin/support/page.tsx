@@ -24,6 +24,7 @@ interface TicketSummary {
   email: string;
   topic: string;
   status: string;
+  priority?: boolean;
   createdAt: string;
   updatedAt: string;
   userId: string | null;
@@ -61,7 +62,7 @@ const STATUS_TONE: Record<string, string> = {
 export default function AdminSupportPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
-  const [filter, setFilter] = useState<'open' | 'pending' | 'closed' | 'all'>('open');
+  const [filter, setFilter] = useState<'priority' | 'open' | 'pending' | 'closed' | 'all'>('open');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<TicketDetail | null>(null);
   const [draft, setDraft] = useState('');
@@ -74,7 +75,8 @@ export default function AdminSupportPage() {
     try {
       const data = await api.get<TicketSummary[]>('/api/v1/support/admin/tickets', {
         accessToken,
-        query: { status: filter },
+        // "Priority" is a cross-status view of admin-initiated ROUL threads.
+        query: filter === 'priority' ? { status: 'all', priority: 'true' } : { status: filter },
       });
       setTickets(data);
       setError(null);
@@ -201,22 +203,27 @@ export default function AdminSupportPage() {
         </p>
         <h1 className="mt-1 text-2xl font-bold text-white">Support tickets</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Every widget conversation from the site and dashboard. Support is online 24/7.
+          Every widget conversation from the site and dashboard, plus Priority threads you start
+          with members from the Users tab. Members reply here and you get back to them. Online 24/7.
         </p>
       </header>
 
-      <div className="mb-4 flex gap-2">
-        {(['open', 'pending', 'closed', 'all'] as const).map((f) => (
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(['priority', 'open', 'pending', 'closed', 'all'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition ${
               filter === f
-                ? 'bg-amber-500 text-gray-950'
-                : 'border border-gray-700 bg-gray-900 text-gray-300 hover:border-amber-500'
+                ? f === 'priority'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-amber-500 text-gray-950'
+                : f === 'priority'
+                  ? 'border border-blue-500/40 bg-blue-500/10 text-blue-300 hover:border-blue-400'
+                  : 'border border-gray-700 bg-gray-900 text-gray-300 hover:border-amber-500'
             }`}
           >
-            {f}
+            {f === 'priority' ? '★ Priority' : f}
           </button>
         ))}
       </div>
@@ -251,9 +258,16 @@ export default function AdminSupportPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-white">{t.name}</p>
+                        <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-white">
+                          {t.priority && (
+                            <span className="shrink-0 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-300">
+                              ★ Priority
+                            </span>
+                          )}
+                          <span className="truncate">{t.name}</span>
+                        </p>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_TONE[t.status] ?? ''}`}
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_TONE[t.status] ?? ''}`}
                         >
                           {t.status}
                         </span>

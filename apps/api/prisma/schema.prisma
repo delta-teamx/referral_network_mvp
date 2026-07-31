@@ -550,6 +550,7 @@ model SupportTicket {
   email     String
   topic     String
   status    String   @default("open") // open, pending (agent replied), closed
+  priority  Boolean  @default(false) // admin-initiated ROUL outreach (Priority Support)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -557,6 +558,7 @@ model SupportTicket {
   messages SupportMessage[]
 
   @@index([status, updatedAt(sort: Desc)])
+  @@index([priority, updatedAt(sort: Desc)])
 }
 
 model SupportMessage {

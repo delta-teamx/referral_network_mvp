@@ -212,8 +212,8 @@ export default function AdminUsersPage() {
                   <MessageSquare size={18} className="text-blue-400" /> Message {messagingUser.firstName}
                 </h2>
                 <p className="text-xs text-gray-400">
-                  Delivered to their inbox as a ROUL note with an admin badge. For reminders and direct
-                  support - it is never added to their pipeline.
+                  Starts a two-way Priority Support thread. They get a ROUL note in their inbox, can
+                  reply, and you pick it back up under Support (★ Priority). Never added to their pipeline.
                 </p>
               </div>
               <button
@@ -226,7 +226,8 @@ export default function AdminUsersPage() {
 
             {msgSent ? (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">
-                Sent. {messagingUser.firstName} will see it at the top of their notification inbox.
+                Sent. {messagingUser.firstName} gets a ROUL note in their inbox and can reply. Watch
+                for their reply under Support (★ Priority).
                 <button
                   onClick={() => setMsgSent(false)}
                   className="ml-2 font-semibold text-emerald-200 underline"

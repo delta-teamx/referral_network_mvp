@@ -28,6 +28,7 @@ interface Ticket {
   email: string;
   topic: string;
   status: string;
+  priority?: boolean;
   online: boolean;
   messages: TicketMessage[];
 }
@@ -80,6 +81,9 @@ export function SupportChatWidget() {
     if (typeof window !== 'undefined') window.localStorage.setItem(teaserKey, 'dismissed');
   }
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  // When opened via a ROUL/support notification the widget shows even on phones
+  // (normally it is desktop-only) so members can always reply to the team.
+  const [forcedVisible, setForcedVisible] = useState(false);
   const [online, setOnline] = useState<boolean | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -134,6 +138,41 @@ export function SupportChatWidget() {
     setHasUnseen(false);
   }, [open, seenKey, ticket?.messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Deep-link from a ROUL/support notification: open a specific ticket. The
+  // notification bell stashes the id in sessionStorage and fires an event; we
+  // read the stash on mount (covers cross-page navigation) and also listen for
+  // the event (same page). Shown on phones too when opened this way.
+  useEffect(() => {
+    async function openOnTicket(ticketId: string) {
+      if (!ticketId) return;
+      setForcedVisible(true);
+      setOpen(true);
+      try {
+        const t = await api.get<Ticket>(`/api/v1/support/tickets/${ticketId}`, {
+          accessToken: accessToken ?? undefined,
+        });
+        setTicket(t);
+        if (typeof window !== 'undefined') window.localStorage.setItem(storageKey, t.id);
+      } catch {
+        /* ignore - ticket may not be theirs */
+      }
+    }
+    if (typeof window !== 'undefined') {
+      const stashed = window.sessionStorage.getItem('rn-open-support-ticket');
+      if (stashed) {
+        window.sessionStorage.removeItem('rn-open-support-ticket');
+        void openOnTicket(stashed);
+      }
+    }
+    function onEvent(e: Event) {
+      const tid = (e as CustomEvent<{ ticketId?: string }>).detail?.ticketId;
+      if (typeof window !== 'undefined') window.sessionStorage.removeItem('rn-open-support-ticket');
+      if (tid) void openOnTicket(tid);
+    }
+    window.addEventListener('rn:open-support', onEvent as EventListener);
+    return () => window.removeEventListener('rn:open-support', onEvent as EventListener);
+  }, [accessToken, storageKey]);
+
   // Restore an existing conversation + check live-hours status once opened.
   useEffect(() => {
     if (!open) return;
@@ -155,12 +194,32 @@ export function SupportChatWidget() {
         } catch {
           window.localStorage.removeItem(storageKey);
         }
+      } else if (user) {
+        // No local thread but the member may have an admin-initiated Priority
+        // thread waiting - surface their most recent ticket so they can reply.
+        try {
+          const mine = await api.get<{ ticketId: string | null }>(
+            '/api/v1/support/tickets/mine',
+            { accessToken: accessToken ?? undefined },
+          );
+          if (!cancelled && mine.ticketId) {
+            const t = await api.get<Ticket>(`/api/v1/support/tickets/${mine.ticketId}`, {
+              accessToken: accessToken ?? undefined,
+            });
+            if (!cancelled) {
+              setTicket(t);
+              if (typeof window !== 'undefined') window.localStorage.setItem(storageKey, t.id);
+            }
+          }
+        } catch {
+          /* widget still works with the new-ticket form */
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, storageKey, accessToken]);
+  }, [open, storageKey, accessToken, user]);
 
   // Poll the thread while open so agent replies appear live.
   useEffect(() => {
@@ -273,6 +332,10 @@ export function SupportChatWidget() {
       );
       setTicket(t);
 
+      // Priority (admin-initiated) threads are handled by a human on the team -
+      // don't let ROUL's AI jump in on top of the admin. Just post the reply.
+      if (ticket.priority) return;
+
       // ROUL — AI Support Manager — answers first, 24/7.
       const history = t.messages.map((m) => ({
         role: m.senderType === 'agent' ? ('assistant' as const) : ('user' as const),
@@ -311,8 +374,10 @@ export function SupportChatWidget() {
   }
 
   return (
-    // Desktop + tablet only - the widget never renders on phones.
-    <div className="fixed bottom-5 right-5 z-50 hidden md:block">
+    // Desktop + tablet by default; also shows on phones when a member opens a
+    // ROUL/Priority Support thread from their notifications.
+    <div className={`fixed bottom-5 right-5 z-50 ${forcedVisible ? 'block' : 'hidden md:block'}`}>
+
       {open ? (
         <div className="flex h-[28rem] w-80 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
           {/* Header */}
@@ -328,7 +393,10 @@ export function SupportChatWidget() {
               </div>
             </div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setForcedVisible(false);
+              }}
               className="rounded-full p-1.5 transition hover:bg-white/20"
               aria-label="Close support chat"
             >

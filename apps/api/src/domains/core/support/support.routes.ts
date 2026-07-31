@@ -12,6 +12,7 @@ import {
   agentReply,
   createTicket,
   deleteTicket,
+  getMyLatestTicket,
   getTicket,
   isSupportOnline,
   listTickets,
@@ -62,6 +63,19 @@ supportRouter.post(
       isOnboarding: req.body.isOnboarding,
     });
     const body: ApiResponse<typeof result> = { success: true, data: result };
+    res.json(body);
+  }),
+);
+
+// The signed-in member's most recent ticket - lets the support widget surface
+// an admin-initiated Priority thread the member never opened themselves.
+supportRouter.get(
+  '/tickets/mine',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getMyLatestTicket(req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );
@@ -139,7 +153,10 @@ supportRouter.get(
   authenticate,
   asyncHandler(async (req, res) => {
     if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
-    const tickets = await listTickets(typeof req.query.status === 'string' ? req.query.status : undefined);
+    const tickets = await listTickets(
+      typeof req.query.status === 'string' ? req.query.status : undefined,
+      { priorityOnly: req.query.priority === 'true' },
+    );
     const body: ApiResponse<typeof tickets> = { success: true, data: tickets };
     res.json(body);
   }),
