@@ -4,30 +4,39 @@ import { eventBus } from '../core/events/index.js';
 import { deleteAttachmentPrefixes } from '../network/messaging/messaging.service.js';
 import { signAccessToken } from '../../utils/tokens.js';
 import { toAuthenticatedUserDto } from '../core/users/users.service.js';
-import { createPriorityTicketForMember } from '../core/support/support.service.js';
+import { ROUL_EMAIL, startOfficialConversationFromRoul } from '../network/messaging/messaging.service.js';
+import { sendEmail } from '../core/notifications/email.service.js';
 
 /**
- * Direct admin -> member message. Opens a two-way Priority Support thread (ROUL
- * as the first message) that the member can reply to, and that the admin picks
- * back up under Admin -> Support (Priority). For reminders and direct support,
- * NOT a networking message: it never touches pipelines, and it reaches every
- * member regardless of plan (support is not plan-gated). The member is also
- * pinged in their notification inbox (signed as ROUL, with an admin badge) with
- * a deep link straight to the thread.
+ * Direct admin -> member message. Opens a two-way "ROUL Support" thread in the
+ * member's Messages tab (pinned + badged, visible on every plan), pings their
+ * notification bell, AND emails them ("ROUL Support sent you a message"). The
+ * member replies in the same thread; the team is notified and replies from the
+ * admin console's Member messages tab. For reminders and direct support - never
+ * added to any pipeline.
  */
 export async function sendAdminMessage(
-  adminId: string,
+  _adminId: string,
   targetUserId: string,
   text: string,
-  title?: string,
-): Promise<{ ok: true; userId: string; ticketId: string }> {
-  const ticket = await createPriorityTicketForMember({
-    adminId,
-    targetUserId,
-    message: text,
-    subject: title,
+  _title?: string,
+): Promise<{ ok: true; userId: string; conversationId: string }> {
+  const target = await prisma.user.findFirst({
+    where: { id: targetUserId, deletedAt: null },
+    select: { id: true, email: true, firstName: true },
   });
-  return { ok: true, userId: targetUserId, ticketId: ticket.id };
+  if (!target) throw AppError.notFound('That member no longer exists.');
+
+  const { conversationId } = await startOfficialConversationFromRoul(target.id, text);
+
+  // Email the member so it reaches them even outside the app (best-effort).
+  void sendEmail({
+    to: target.email,
+    template: 'roul_message',
+    data: { firstName: target.firstName, message: text },
+  }).catch(() => undefined);
+
+  return { ok: true, userId: targetUserId, conversationId };
 }
 
 /**
@@ -66,6 +75,8 @@ export async function adminOverview() {
 export async function listAllUsers(page = 1, limit = 25, q?: string) {
   const where = {
     deletedAt: null,
+    // Hide the ROUL Support system account from the admin user table.
+    NOT: { email: ROUL_EMAIL },
     ...(q
       ? {
           OR: [

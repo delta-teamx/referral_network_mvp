@@ -72,7 +72,7 @@ export async function createTicket(input: {
 
   // Surface the new ticket to every admin's bell.
   const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN', deletedAt: null },
+    where: { role: 'ADMIN', deletedAt: null, NOT: { email: 'roul-support@referralnova.com' } },
     select: { id: true },
   });
   await Promise.all(

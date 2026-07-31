@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Calendar, FileSignature, Headset, LayoutDashboard, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
+import { Calendar, FileSignature, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
@@ -17,6 +17,7 @@ const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; ta
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
   { href: '/admin/support', label: 'Support tickets', icon: Headset },
+  { href: '/admin/messages', label: 'Member messages', icon: MessageSquare },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

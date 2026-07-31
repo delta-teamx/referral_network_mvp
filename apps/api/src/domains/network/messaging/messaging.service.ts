@@ -14,6 +14,157 @@ import { assertEngagementQuota } from '../../billing/billing.tiers.js';
  */
 
 // ---------------------------------------------------------------------------
+// ROUL Support system account + official (Priority Support) conversations
+// ---------------------------------------------------------------------------
+
+/** The system account that admins speak through in the member's Messages tab. */
+export const ROUL_EMAIL = 'roul-support@referralnova.com';
+let roulUserIdCache: string | null = null;
+
+/** Get (or lazily create) the ROUL Support system user. Cached per process. */
+export async function getRoulUserId(): Promise<string> {
+  if (roulUserIdCache) return roulUserIdCache;
+  const existing = await prisma.user.findFirst({ where: { email: ROUL_EMAIL }, select: { id: true } });
+  if (existing) {
+    roulUserIdCache = existing.id;
+    return existing.id;
+  }
+  const created = await prisma.user.create({
+    data: {
+      email: ROUL_EMAIL,
+      passwordHash: null,
+      firstName: 'ROUL',
+      lastName: 'Support',
+      role: 'ADMIN', // keeps ROUL out of the member directory, leaderboard and matches
+      emailVerified: true,
+    },
+    select: { id: true },
+  });
+  roulUserIdCache = created.id;
+  return created.id;
+}
+
+/**
+ * Open (or reuse) the official ROUL Support thread with a member and post an
+ * admin message into it. This lands in the member's Messages tab, pinned and
+ * badged, and is visible on every plan. Two-way: the member replies in the same
+ * thread and the team is notified.
+ */
+export async function startOfficialConversationFromRoul(
+  memberUserId: string,
+  text: string,
+): Promise<{ conversationId: string }> {
+  const roulId = await getRoulUserId();
+  if (roulId === memberUserId) throw AppError.badRequest('Cannot message the support account.');
+  const convo = await getOrCreateConversation(roulId, memberUserId, { skipQuota: true });
+  await prisma.conversation.update({ where: { id: convo.id }, data: { isOfficial: true } });
+  await sendMessage(convo.id, roulId, text);
+  return { conversationId: convo.id };
+}
+
+/** Admin console: every official ROUL Support thread, newest activity first. */
+export async function listOfficialConversations() {
+  const roulId = await getRoulUserId();
+  const convos = await prisma.conversation.findMany({
+    where: { isOfficial: true, participants: { some: { userId: roulId } } },
+    orderBy: { updatedAt: 'desc' },
+    take: 200,
+    select: {
+      id: true,
+      updatedAt: true,
+      participants: {
+        select: {
+          userId: true,
+          lastReadAt: true,
+          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      },
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { senderId: true, text: true, createdAt: true },
+      },
+    },
+  });
+  return convos.map((c) => {
+    const member = c.participants.find((p) => p.userId !== roulId);
+    const roulPart = c.participants.find((p) => p.userId === roulId);
+    const last = c.messages[0] ?? null;
+    // Needs-reply = the member spoke last, after the team last read the thread.
+    const unread = Boolean(
+      last &&
+        last.senderId !== roulId &&
+        (!roulPart?.lastReadAt || last.createdAt > roulPart.lastReadAt),
+    );
+    return {
+      id: c.id,
+      updatedAt: c.updatedAt,
+      member: member
+        ? {
+            id: member.user.id,
+            name: `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.email,
+            email: member.user.email,
+          }
+        : null,
+      lastMessage: last,
+      unread,
+    };
+  });
+}
+
+/** Admin console: one official thread's full transcript (marks it read for the team). */
+export async function getOfficialThread(conversationId: string) {
+  const roulId = await getRoulUserId();
+  const convo = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      id: true,
+      isOfficial: true,
+      participants: {
+        select: { userId: true, user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      },
+    },
+  });
+  if (!convo || !convo.isOfficial) throw AppError.notFound('Thread not found');
+  const member = convo.participants.find((p) => p.userId !== roulId);
+  const messages = (
+    await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { id: true, senderId: true, text: true, createdAt: true },
+    })
+  ).reverse();
+  await prisma.conversationParticipant.updateMany({
+    where: { conversationId, userId: roulId },
+    data: { lastReadAt: new Date() },
+  });
+  return {
+    id: convo.id,
+    member: member
+      ? {
+          id: member.user.id,
+          name: `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.email,
+          email: member.user.email,
+        }
+      : null,
+    messages: messages.map((m) => ({ ...m, fromRoul: m.senderId === roulId })),
+  };
+}
+
+/** Admin console: reply into an official thread, speaking as ROUL Support. */
+export async function adminReplyAsRoul(conversationId: string, text: string) {
+  const convo = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { id: true, isOfficial: true },
+  });
+  if (!convo || !convo.isOfficial) throw AppError.notFound('Thread not found');
+  const roulId = await getRoulUserId();
+  await sendMessage(conversationId, roulId, text);
+  return getOfficialThread(conversationId);
+}
+
+// ---------------------------------------------------------------------------
 // getOrCreateConversation
 // ---------------------------------------------------------------------------
 
@@ -112,7 +263,7 @@ export async function sendMessage(
 
   // Alert the recipient in the notification bell (best-effort).
   void (async () => {
-    const [other, sender] = await Promise.all([
+    const [other, sender, convo, roulId] = await Promise.all([
       prisma.conversationParticipant.findFirst({
         where: { conversationId, userId: { not: senderId } },
         select: { userId: true },
@@ -121,15 +272,41 @@ export async function sendMessage(
         where: { id: senderId },
         select: { firstName: true, lastName: true },
       }),
+      prisma.conversation.findUnique({ where: { id: conversationId }, select: { isOfficial: true } }),
+      getRoulUserId(),
     ]);
-    if (!other) return;
-    await createNotification({
-      userId: other.userId,
-      type: 'message',
-      title: `New message from ${sender ? `${sender.firstName} ${sender.lastName}` : 'a member'}`,
-      body: message.text.slice(0, 120),
-      data: { conversationId },
-    });
+    const isOfficial = Boolean(convo?.isOfficial);
+    const fromRoul = senderId === roulId;
+    if (other) {
+      await createNotification({
+        userId: other.userId,
+        type: 'message',
+        title: isOfficial && fromRoul
+          ? 'New message from ROUL Support'
+          : `New message from ${sender ? `${sender.firstName} ${sender.lastName}` : 'a member'}`,
+        body: message.text.slice(0, 120),
+        data: { conversationId },
+      });
+    }
+    // A member reply on an official ROUL thread pings the human team so the
+    // loop closes - "they reply, we get back to them".
+    if (isOfficial && !fromRoul) {
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN', deletedAt: null, NOT: { email: ROUL_EMAIL } },
+        select: { id: true },
+      });
+      await Promise.all(
+        admins.map((a) =>
+          createNotification({
+            userId: a.id,
+            type: 'roul_reply',
+            title: `Priority reply from ${sender ? `${sender.firstName} ${sender.lastName}` : 'a member'}`,
+            body: message.text.slice(0, 120),
+            data: { roulConversationId: conversationId },
+          }).catch(() => undefined),
+        ),
+      );
+    }
   })().catch(() => undefined);
 
   return message;
@@ -149,6 +326,7 @@ export async function listConversations(userId: string) {
     select: {
       id: true,
       updatedAt: true,
+      isOfficial: true,
       participants: {
         select: {
           userId: true,
@@ -171,7 +349,7 @@ export async function listConversations(userId: string) {
     },
   });
 
-  return conversations.map((c) => {
+  const mapped = conversations.map((c) => {
     const otherParticipant = c.participants.find((p) => p.userId !== userId);
     const myParticipant = c.participants.find((p) => p.userId === userId);
     const lastMessage = c.messages[0] ?? null;
@@ -179,6 +357,9 @@ export async function listConversations(userId: string) {
     return {
       id: c.id,
       updatedAt: c.updatedAt,
+      // Official = a ROUL Support (admin) thread. The member always sees these
+      // (any plan), badged and pinned to the top of the inbox.
+      isOfficial: c.isOfficial,
       otherUser: otherParticipant
         ? {
             id: otherParticipant.user.id,
@@ -194,6 +375,11 @@ export async function listConversations(userId: string) {
             lastMessage.createdAt > myParticipant.lastReadAt
           : false,
     };
+  });
+  // Official ROUL Support threads pinned above everything, then by recency.
+  return mapped.sort((a, b) => {
+    if (a.isOfficial !== b.isOfficial) return a.isOfficial ? -1 : 1;
+    return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 }
 

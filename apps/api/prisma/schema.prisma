@@ -242,6 +242,9 @@ model Introduction {
 
 model Conversation {
   id        String   @id @default(uuid())
+  // Official = an admin/ROUL Support thread (Priority Support). Shown to the
+  // member in their Messages tab regardless of plan and pinned to the top.
+  isOfficial Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   messages  Message[]

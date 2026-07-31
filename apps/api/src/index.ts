@@ -460,6 +460,8 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "customDomain" TEXT;`,
       // Priority Support: admin-initiated ROUL outreach threads.
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "priority" BOOLEAN NOT NULL DEFAULT false;`,
+      // ROUL Support conversations surfaced in the member's Messages tab.
+      `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "isOfficial" BOOLEAN NOT NULL DEFAULT false;`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

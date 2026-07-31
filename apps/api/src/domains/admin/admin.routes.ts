@@ -23,6 +23,11 @@ import {
   hardDeleteUser,
   suspendUser,
 } from './admin.service.js';
+import {
+  adminReplyAsRoul,
+  getOfficialThread,
+  listOfficialConversations,
+} from '../network/messaging/messaging.service.js';
 
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
@@ -143,6 +148,36 @@ adminRouter.post(
       req.body.text,
       req.body.title,
     );
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// ── ROUL Support: admin-facing member message threads (Messages tab) ──────────
+adminRouter.get(
+  '/roul-threads',
+  asyncHandler(async (_req, res) => {
+    const data = await listOfficialConversations();
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+adminRouter.get(
+  '/roul-threads/:id',
+  asyncHandler(async (req, res) => {
+    const data = await getOfficialThread(req.params.id ?? '');
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const roulReplySchema = z.object({ text: z.string().trim().min(1).max(5000) });
+adminRouter.post(
+  '/roul-threads/:id/reply',
+  validate(roulReplySchema),
+  asyncHandler(async (req, res) => {
+    const data = await adminReplyAsRoul(req.params.id ?? '', req.body.text);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

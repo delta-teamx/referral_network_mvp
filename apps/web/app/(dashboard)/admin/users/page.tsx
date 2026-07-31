@@ -212,8 +212,8 @@ export default function AdminUsersPage() {
                   <MessageSquare size={18} className="text-blue-400" /> Message {messagingUser.firstName}
                 </h2>
                 <p className="text-xs text-gray-400">
-                  Starts a two-way Priority Support thread. They get a ROUL note in their inbox, can
-                  reply, and you pick it back up under Support (★ Priority). Never added to their pipeline.
+                  Lands in their Messages tab as a two-way ROUL Support thread and emails them too.
+                  They reply there; you answer under Member messages. Never added to their pipeline.
                 </p>
               </div>
               <button
@@ -226,8 +226,8 @@ export default function AdminUsersPage() {
 
             {msgSent ? (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">
-                Sent. {messagingUser.firstName} gets a ROUL note in their inbox and can reply. Watch
-                for their reply under Support (★ Priority).
+                Sent. It is now in {messagingUser.firstName}&rsquo;s Messages tab (and emailed to them).
+                Watch for their reply under Member messages.
                 <button
                   onClick={() => setMsgSent(false)}
                   className="ml-2 font-semibold text-emerald-200 underline"

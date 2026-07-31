@@ -26,7 +26,8 @@ export type EmailTemplate =
   | 'event_registered'
   | 'support_escalation'
   | 'reengagement'
-  | 'complete_profile';
+  | 'complete_profile'
+  | 'roul_message';
 
 export interface EmailAttachment {
   filename: string;
@@ -230,6 +231,29 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: brandedLayout(
           `You're one step away, ${escapeHtml(firstName)}`,
           paras.map(P).join('') + button('Complete my profile', onboardUrl),
+        ),
+      };
+    }
+    case 'roul_message': {
+      const firstName = String(d.firstName ?? 'there');
+      const messageText = String(d.message ?? '');
+      const messagesUrl = `${BRAND.app}/dashboard/messages`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const quoted = `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">${escapeHtml(messageText).replace(/\n/g, '<br/>')}</div>`;
+      return {
+        subject: 'ROUL Support sent you a message',
+        text:
+          `Hi ${firstName},\n\n` +
+          `ROUL Support (the Referral Nova team) sent you a message:\n\n` +
+          `${messageText}\n\n` +
+          `Open your Messages to read it and reply: ${messagesUrl}`,
+        html: brandedLayout(
+          'You have a new message from ROUL Support',
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`The Referral Nova team (ROUL Support) just sent you a message:`) +
+            quoted +
+            P(`Open your Messages to read it and reply. We will get right back to you.`) +
+            button('Open my messages', messagesUrl),
         ),
       };
     }

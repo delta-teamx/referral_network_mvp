@@ -29,6 +29,7 @@ const TYPE_HREF: Record<string, string> = {
   booking_declined: '/dashboard/bookings',
   booking_reminder: '/dashboard/bookings',
   support_ticket: '/admin/support',
+  roul_reply: '/admin/messages',
   billing_past_due: '/dashboard/billing',
 };
 

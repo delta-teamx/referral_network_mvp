@@ -2,10 +2,10 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, MessageSquare, Paperclip, Send } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, MessageSquare, Paperclip, Send, ShieldCheck } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
-import { UpgradeGate } from '../../../../components/billing/UpgradeGate';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +31,7 @@ interface Conversation {
   otherUser: OtherUser | null;
   lastMessage: LastMessage | null;
   unread: boolean;
+  isOfficial?: boolean;
 }
 
 interface Message {
@@ -300,6 +301,13 @@ function MessagesInner() {
   // ---- Helpers ------------------------------------------------------------
 
   const activeConversation = conversations.find((c) => c.id === activeId);
+  // Free members can always see & reply to official ROUL Support threads;
+  // member-to-member messaging stays a Pro feature.
+  const isPaid =
+    user?.role === 'ADMIN' ||
+    user?.subscriptionTier === 'PRO' ||
+    user?.subscriptionTier === 'PREMIUM';
+  const visibleConversations = isPaid ? conversations : conversations.filter((c) => c.isOfficial);
 
   function selectConversation(id: string) {
     setActiveId(id);
@@ -310,7 +318,7 @@ function MessagesInner() {
   // ---- Render -------------------------------------------------------------
 
   return (
-    <UpgradeGate feature="In-App Messaging" requiredTier="PRO">
+    <>
     {/* On phones the fixed bottom tab bar (~3.5rem) would cover the composer's
         Send button - subtract it from the chat height below md. */}
     <div className="flex h-[calc(100vh-6.5rem)] overflow-hidden md:h-[calc(100vh-3rem)]">
@@ -347,13 +355,23 @@ function MessagesInner() {
               Retry
             </button>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : visibleConversations.length === 0 ? (
           <div className="p-8 text-center text-sm text-gray-500">
-            No conversations yet. Start one from a member&rsquo;s profile.
+            {isPaid
+              ? 'No conversations yet. Start one from a member’s profile.'
+              : 'No messages yet. The Referral Nova team will reach you here.'}
           </div>
         ) : (
           <ul>
-            {conversations.map((c) => {
+            {!isPaid && (
+              <li className="mx-2 my-1 rounded-xl border border-primary/20 bg-primary-light/40 px-3 py-2 text-[11px] text-gray-600">
+                Upgrade to Pro to message other members directly.{' '}
+                <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
+                  See plans
+                </Link>
+              </li>
+            )}
+            {visibleConversations.map((c) => {
               const other = c.otherUser;
               const isActive = c.id === activeId;
               return (
@@ -361,22 +379,37 @@ function MessagesInner() {
                   <button
                     onClick={() => selectConversation(c.id)}
                     className={`mx-2 my-0.5 flex w-[calc(100%-1rem)] items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-gray-50 ${
-                      isActive ? 'bg-primary-light/50' : ''
+                      isActive ? 'bg-primary-light/50' : c.isOfficial ? 'bg-blue-50/50' : ''
                     }`}
                   >
                     {/* Avatar initials */}
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-500 text-xs font-bold uppercase text-white shadow-sm">
-                      {other
-                        ? (other.firstName?.[0] ?? '') + (other.lastName?.[0] ?? '')
-                        : '?'}
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase text-white shadow-sm ${
+                        c.isOfficial
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-700'
+                          : 'bg-gradient-to-br from-primary to-blue-500'
+                      }`}
+                    >
+                      {c.isOfficial ? (
+                        <ShieldCheck size={16} />
+                      ) : other ? (
+                        (other.firstName?.[0] ?? '') + (other.lastName?.[0] ?? '')
+                      ) : (
+                        '?'
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p
-                        className={`truncate text-sm ${
+                        className={`flex items-center gap-1.5 truncate text-sm ${
                           c.unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'
                         }`}
                       >
-                        {other ? `${other.firstName} ${other.lastName}` : 'Unknown'}
+                        {c.isOfficial ? 'ROUL Support' : other ? `${other.firstName} ${other.lastName}` : 'Unknown'}
+                        {c.isOfficial && (
+                          <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
+                            Admin
+                          </span>
+                        )}
                       </p>
                       {c.lastMessage && (
                         <p className="truncate text-xs text-gray-500">{c.lastMessage.text}</p>
@@ -411,20 +444,38 @@ function MessagesInner() {
                 >
                   <ArrowLeft size={18} />
                 </button>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-500 text-xs font-bold uppercase text-white shadow-sm">
-                  {activeConversation?.otherUser
-                    ? (activeConversation.otherUser.firstName?.[0] ?? '') +
-                      (activeConversation.otherUser.lastName?.[0] ?? '')
-                    : '?'}
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase text-white shadow-sm ${
+                    activeConversation?.isOfficial
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-700'
+                      : 'bg-gradient-to-br from-primary to-blue-500'
+                  }`}
+                >
+                  {activeConversation?.isOfficial ? (
+                    <ShieldCheck size={16} />
+                  ) : activeConversation?.otherUser ? (
+                    (activeConversation.otherUser.firstName?.[0] ?? '') +
+                    (activeConversation.otherUser.lastName?.[0] ?? '')
+                  ) : (
+                    '?'
+                  )}
                 </div>
-                <p className="truncate font-semibold text-gray-900">
-                  {activeConversation?.otherUser
-                    ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
-                    : 'Conversation'}
+                <p className="flex items-center gap-1.5 truncate font-semibold text-gray-900">
+                  {activeConversation?.isOfficial
+                    ? 'ROUL Support'
+                    : activeConversation?.otherUser
+                      ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
+                      : 'Conversation'}
+                  {activeConversation?.isOfficial && (
+                    <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
+                      Referral Nova team
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {activeConversation?.otherUser && (
+                {/* Member-only actions are hidden on the official ROUL thread. */}
+                {!activeConversation?.isOfficial && activeConversation?.otherUser && (
                   <a
                     href={`/dashboard/members/profile?id=${activeConversation.otherUser.id}`}
                     className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"
@@ -432,13 +483,15 @@ function MessagesInner() {
                     View profile
                   </a>
                 )}
-                <button
-                  onClick={() => void sendBookingInvite()}
-                  disabled={sending}
-                  className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
-                >
-                  📅 Invite to book a call
-                </button>
+                {!activeConversation?.isOfficial && (
+                  <button
+                    onClick={() => void sendBookingInvite()}
+                    disabled={sending}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    📅 Invite to book a call
+                  </button>
+                )}
               </div>
             </header>
 
@@ -553,7 +606,7 @@ function MessagesInner() {
         )}
       </section>
     </div>
-    </UpgradeGate>
+    </>
   );
 }
 

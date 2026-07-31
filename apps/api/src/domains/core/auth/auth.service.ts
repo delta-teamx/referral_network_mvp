@@ -115,7 +115,8 @@ export async function notifyAdminsOfSignup(user: {
 }): Promise<void> {
   try {
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', deletedAt: null },
+      // Exclude the ROUL Support system account (a role=ADMIN system user).
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: 'roul-support@referralnova.com' } },
       select: { email: true },
     });
     if (admins.length === 0) return;
