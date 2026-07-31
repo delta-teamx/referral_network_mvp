@@ -398,6 +398,13 @@ async function ensureRuntimeSchema(): Promise<void> {
            AND (i."senderId" = u.id OR i."targetId" = u.id)
            AND u."role" = 'ADMIN';
        EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
+      // ROUL Support / admin messages are inbox-only, never pipeline leads:
+      // remove any pipeline card whose contact is an admin account.
+      `DO $$ BEGIN
+         DELETE FROM "PipelineCard" pc
+         USING "User" u
+         WHERE pc."contactUserId" = u.id AND u."role" = 'ADMIN';
+       EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING GRANT: Brian Parnell's account is comped lifetime Premium.
       `DO $$ BEGIN UPDATE "User" SET "subscriptionTier"='PREMIUM' WHERE "email"='brian@virtualpros.com' AND "subscriptionTier" <> 'PREMIUM'; EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
       // FOUNDING HEAL for Google sign-ups: the OAuth path used to force every

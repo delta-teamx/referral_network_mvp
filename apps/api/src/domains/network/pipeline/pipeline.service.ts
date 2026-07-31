@@ -100,13 +100,15 @@ export async function syncPipeline(ownerId: string): Promise<void> {
   const engagedPeerIds = new Set<string>();
 
   // 1. Every conversation with at least one message → a card for the peer.
+  //    EXCEPT official "ROUL Support" threads (admin outreach), which are just
+  //    a message in the inbox and must never appear as a lead on the pipeline.
   const conversations = await prisma.conversation.findMany({
-    where: { participants: { some: { userId: ownerId } } },
+    where: { participants: { some: { userId: ownerId } }, isOfficial: false },
     select: {
       id: true,
       participants: {
         select: {
-          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          user: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
         },
       },
       messages: { take: 1, select: { id: true } },
@@ -117,6 +119,8 @@ export async function syncPipeline(ownerId: string): Promise<void> {
     if (c.messages.length === 0) continue;
     const peer = c.participants.map((p) => p.user).find((u) => u.id !== ownerId);
     if (!peer) continue;
+    // Admins (incl. the ROUL Support system account) are never leads.
+    if (peer.role === 'ADMIN') continue;
     engagedPeerIds.add(peer.id);
     await ensureContactCard(ownerId, peer, 'message');
   }
