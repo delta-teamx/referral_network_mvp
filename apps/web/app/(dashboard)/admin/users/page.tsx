@@ -28,6 +28,20 @@ interface UserProfile {
   keywords?: string[];
 }
 
+interface UserActivity {
+  lastLoginAt: string | null;
+  profileComplete: number;
+  messagesSent: number;
+  conversations: number;
+  replyRate: number;
+  referralsSent: number;
+  referralsReceived: number;
+  invitesOnboarded: number;
+  bookings: number;
+  contributionPoints: number;
+  recentMessages: { text: string; at: string }[];
+}
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -38,6 +52,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewingUser, setViewingUser] = useState<(AdminUser & { profile?: UserProfile }) | null>(null);
+  const [activity, setActivity] = useState<UserActivity | null>(null);
   // Direct ROUL message composer.
   const [messagingUser, setMessagingUser] = useState<AdminUser | null>(null);
   const [msgTitle, setMsgTitle] = useState('');
@@ -165,6 +180,7 @@ export default function AdminUsersPage() {
   }
 
   async function viewUser(user: AdminUser) {
+    setActivity(null);
     try {
       const profile = await api.get<UserProfile>(`/api/v1/profiles/public/${user.id}`, {
         accessToken: accessToken ?? undefined,
@@ -173,6 +189,13 @@ export default function AdminUsersPage() {
     } catch {
       setViewingUser({ ...user });
     }
+    // Activity snapshot (separate call so a profile miss doesn't block it).
+    void api
+      .get<UserActivity>(`/api/v1/admin/users/${user.id}/activity`, {
+        accessToken: accessToken ?? undefined,
+      })
+      .then((a) => setActivity(a))
+      .catch(() => undefined);
   }
 
   return (
@@ -316,6 +339,46 @@ export default function AdminUsersPage() {
                 <span className="text-gray-500">Joined</span>
                 <span className="text-gray-200">{new Date(viewingUser.createdAt).toLocaleDateString()}</span>
               </div>
+
+              {/* Activity snapshot */}
+              <h3 className="mt-4 font-semibold text-amber-400">Activity</h3>
+              {!activity ? (
+                <p className="text-xs text-gray-500">Loading activity…</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ['Last login', activity.lastLoginAt ? new Date(activity.lastLoginAt).toLocaleDateString() : 'Never'],
+                      ['Profile complete', `${activity.profileComplete}%`],
+                      ['Messages sent', activity.messagesSent],
+                      ['Reply rate', `${activity.replyRate}%`],
+                      ['Conversations', activity.conversations],
+                      ['Bookings', activity.bookings],
+                      ['Referrals sent / recv', `${activity.referralsSent} / ${activity.referralsReceived}`],
+                      ['Invites onboarded', activity.invitesOnboarded],
+                      ['Contribution points', activity.contributionPoints],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
+                        <p className="text-sm font-semibold text-gray-100">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {activity.recentMessages.length > 0 && (
+                    <div className="mt-2">
+                      <p className="mb-1 text-xs text-gray-500">Recent messages sent</p>
+                      <ul className="space-y-1">
+                        {activity.recentMessages.map((m, i) => (
+                          <li key={i} className="truncate rounded bg-gray-950/60 px-2 py-1 text-xs text-gray-300">
+                            <span className="text-gray-500">{new Date(m.at).toLocaleDateString()}:</span> {m.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+
               {viewingUser.profile && (
                 <>
                   <h3 className="mt-4 font-semibold text-amber-400">Business Profile</h3>

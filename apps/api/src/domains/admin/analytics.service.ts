@@ -138,6 +138,100 @@ export async function computeReferralAnalytics() {
   };
 }
 
+/**
+ * One member's activity snapshot for the admin per-user view: identity, profile
+ * completeness, login recency, and real engagement (messages + reply rate,
+ * pipeline, referrals, invites, bookings, points) plus their last few messages.
+ */
+export async function getUserActivity(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      subscriptionTier: true,
+      createdAt: true,
+      lastLoginAt: true,
+      memberProfile: {
+        select: { photoUrl: true, bio: true, businessName: true, industry: true, videoUrl: true },
+      },
+    },
+  });
+  if (!user) return null;
+
+  const myConvoIds = (
+    await prisma.conversationParticipant.findMany({ where: { userId }, select: { conversationId: true } })
+  ).map((c) => c.conversationId);
+
+  const [
+    msgsSent,
+    referralsSent,
+    referralsReceived,
+    invitesOnboarded,
+    bookingsHost,
+    bookingsGuest,
+    pipelineByStage,
+    contribution,
+    repliedConvos,
+    recentMessages,
+  ] = await Promise.all([
+    prisma.message.count({ where: { senderId: userId } }),
+    prisma.referral.count({ where: { senderId: userId } }),
+    prisma.referral.count({ where: { receiverId: userId } }),
+    prisma.referralTracking.count({ where: { referrerUserId: userId, status: { in: ['onboarded', 'paid'] } } }),
+    prisma.bookingCall.count({ where: { hostId: userId } }),
+    prisma.bookingCall.count({ where: { guestId: userId } }),
+    prisma.pipelineCard.groupBy({ by: ['stage'], where: { ownerId: userId }, _count: { _all: true } }),
+    prisma.contributionEvent.aggregate({
+      where: { userId, type: { not: 'reward_redemption' } },
+      _sum: { points: true },
+    }),
+    myConvoIds.length
+      ? prisma.message.findMany({
+          where: { conversationId: { in: myConvoIds }, senderId: { not: userId } },
+          select: { conversationId: true },
+          distinct: ['conversationId'],
+        })
+      : Promise.resolve([]),
+    prisma.message.findMany({
+      where: { senderId: userId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { text: true, createdAt: true },
+    }),
+  ]);
+
+  const p = user.memberProfile;
+  const completeChecks = [Boolean(p?.businessName), Boolean(p?.industry), Boolean(p?.photoUrl), Boolean(p?.bio), Boolean(p?.videoUrl)];
+  const profileComplete = Math.round((completeChecks.filter(Boolean).length / completeChecks.length) * 100);
+
+  return {
+    id: user.id,
+    name: `${user.firstName} ${user.lastName}`.trim() || user.email,
+    email: user.email,
+    role: user.role,
+    tier: user.subscriptionTier,
+    joined: user.createdAt,
+    lastLoginAt: user.lastLoginAt,
+    profileComplete,
+    hasPhoto: Boolean(p?.photoUrl),
+    hasVideo: Boolean(p?.videoUrl),
+    messagesSent: msgsSent,
+    conversations: myConvoIds.length,
+    replyRate: myConvoIds.length ? Math.round((repliedConvos.length / myConvoIds.length) * 100) : 0,
+    referralsSent,
+    referralsReceived,
+    invitesOnboarded,
+    bookings: bookingsHost + bookingsGuest,
+    pipeline: Object.fromEntries(pipelineByStage.map((r) => [r.stage, r._count._all])),
+    contributionPoints: contribution._sum.points ?? 0,
+    recentMessages: recentMessages.map((m) => ({ text: m.text.slice(0, 120), at: m.createdAt })),
+  };
+}
+
 const DISPOSABLE_DOMAINS = [
   'mailinator.com',
   'guerrillamail.com',
