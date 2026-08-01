@@ -37,20 +37,56 @@ const NOTIFICATION_TAB: Record<string, string> = {
   booking_reminder: '/dashboard/bookings',
 };
 
-const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; tag?: string }> = [
+type IconType = typeof LayoutDashboard;
+type NavLeaf = { href: string; label: string; icon: IconType; tag?: string };
+type NavGroup = { label: string; icon: IconType; children: NavLeaf[] };
+type NavEntry = NavLeaf | NavGroup;
+
+// Grouped navigation: related tabs collapse under one top-level entry, with an
+// in-page switcher to move between them. Existing routes are untouched, so deep
+// links and notification click-throughs still land on the right page.
+const NAV: NavEntry[] = [
   { href: '/dashboard', label: 'AI Matches', icon: LayoutDashboard },
-  { href: '/dashboard/members', label: 'Members', icon: Search },
-  { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/rewards', label: 'Rewards', icon: Gift },
-  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
-  { href: '/dashboard/network', label: 'My network', icon: Network },
+  {
+    label: 'Network',
+    icon: Network,
+    children: [
+      { href: '/dashboard/members', label: 'Members', icon: Search },
+      { href: '/dashboard/network', label: 'My network', icon: Network },
+    ],
+  },
   { href: '/dashboard/groups', label: 'Groups', icon: UsersRound },
+  {
+    label: 'Pipeline',
+    icon: KanbanSquare,
+    children: [
+      { href: '/dashboard/leads', label: 'Pipeline', icon: KanbanSquare },
+      { href: '/dashboard/bookings', label: 'Calendar', icon: Calendar },
+      { href: '/dashboard/referrals', label: 'Contracts', icon: FileSignature },
+    ],
+  },
+  {
+    label: 'Growth',
+    icon: Trophy,
+    children: [
+      { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
+      { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+      { href: '/dashboard/rewards', label: 'Rewards', icon: Gift },
+    ],
+  },
+  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
+
+function isGroup(e: NavEntry): e is NavGroup {
+  return 'children' in e;
+}
+
+/** Route match that also lights up on sub-routes (e.g. /members/profile). */
+function matchHref(current: string, href: string): boolean {
+  if (href === '/dashboard') return current === '/dashboard';
+  return current === href || current.startsWith(href + '/');
+}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -183,8 +219,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="px-3">
           {NAV.map((item) => {
-            const active = currentPath === item.href;
             const Icon = item.icon;
+            if (isGroup(item)) {
+              const active = item.children.some((c) => matchHref(currentPath, c.href));
+              const hasDot = item.children.some((c) => dotTabs.has(c.href));
+              return (
+                <Link
+                  key={item.label}
+                  href={item.children[0]!.href}
+                  className={`mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${
+                    active ? 'bg-primary-light font-semibold text-primary' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {item.label}
+                  {hasDot && (
+                    <span className="ml-auto h-2.5 w-2.5 rounded-full bg-danger" aria-label="unread" />
+                  )}
+                </Link>
+              );
+            }
+            const active = matchHref(currentPath, item.href);
             return (
               <Link
                 key={item.href}
@@ -246,6 +301,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
         <UpgradeBanner />
+        {(() => {
+          const group = NAV.find(
+            (e): e is NavGroup => isGroup(e) && e.children.some((c) => matchHref(currentPath, c.href)),
+          );
+          if (!group || group.children.length < 2) return null;
+          return (
+            <div className="flex gap-1.5 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2 sm:px-6">
+              {group.children.map((c) => {
+                const active = matchHref(currentPath, c.href);
+                const CIcon = c.icon;
+                return (
+                  <Link
+                    key={c.href}
+                    href={c.href}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                      active
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <CIcon size={14} />
+                    {c.label}
+                    {dotTabs.has(c.href) && !active && (
+                      <span className="h-2 w-2 rounded-full bg-danger" aria-label="unread" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })()}
         {children}
         <div className="h-16 md:hidden" aria-hidden />
       </main>
