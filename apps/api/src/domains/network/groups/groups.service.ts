@@ -32,6 +32,8 @@ export interface GroupListItem {
   memberCount: number;
   maxMembers: number;
   isPublic: boolean;
+  joinPolicy: string;
+  lockedInterior: boolean;
 }
 
 const groupListSelect = {
@@ -44,6 +46,8 @@ const groupListSelect = {
   meetingSchedule: true,
   maxMembers: true,
   isPublic: true,
+  joinPolicy: true,
+  lockedInterior: true,
   _count: { select: { members: true } },
 } as const;
 
@@ -57,6 +61,8 @@ function toListItem(row: {
   meetingSchedule: string | null;
   maxMembers: number;
   isPublic: boolean;
+  joinPolicy: string;
+  lockedInterior: boolean;
   _count: { members: number };
 }): GroupListItem {
   return {
@@ -70,6 +76,8 @@ function toListItem(row: {
     memberCount: row._count.members,
     maxMembers: row.maxMembers,
     isPublic: row.isPublic,
+    joinPolicy: row.joinPolicy,
+    lockedInterior: row.lockedInterior,
   };
 }
 
@@ -232,13 +240,40 @@ export async function getGroupBySlug(slug: string, viewerId?: string) {
     };
   }
 
+  // Full interior for members (and any open, non-locked group). Whitelist the
+  // fields the client needs - this route is public, so internal columns
+  // (stripeAccountId, billing config, customDomain, meetingUrl, ...) must not
+  // ride along on a `...group` spread.
+  let pendingRequest = false;
+  if (!isMember && viewerId) {
+    const req = await prisma.groupJoinRequest.findUnique({
+      where: { groupId_userId: { groupId: group.id, userId: viewerId } },
+      select: { status: true },
+    });
+    pendingRequest = req?.status === 'pending';
+  }
   return {
-    ...group,
-    locked: false as const,
+    id: group.id,
+    name: group.name,
+    slug: group.slug,
+    description: group.description,
+    city: group.city,
+    state: group.state,
+    meetingSchedule: group.meetingSchedule,
+    maxMembers: group.maxMembers,
+    isPublic: group.isPublic,
+    status: group.status,
+    logoUrl: group.logoUrl,
+    primaryColor: group.primaryColor,
     joinPolicy: group.joinPolicy,
+    lockedInterior: group.lockedInterior,
+    locked: false as const,
+    members: group.members,
+    events: group.events,
     memberCount: group._count.members,
-    pendingRequest: false,
+    pendingRequest,
     viewerRole,
+    _count: group._count,
   };
 }
 
@@ -497,6 +532,19 @@ export async function joinViaInviteLink(token: string, userId: string) {
     });
     if (existing) return true;
 
+    // Re-read the link under the lock so a capped link can't be pushed past
+    // maxUses by concurrent joins (the pre-transaction read is only a fast fail).
+    const fresh = await tx.groupInviteLink.findUnique({
+      where: { id: link.id },
+      select: { active: true, expiresAt: true, uses: true, maxUses: true },
+    });
+    if (!fresh || !fresh.active || fresh.expiresAt.getTime() <= Date.now()) {
+      throw AppError.badRequest('This invite link is no longer active.');
+    }
+    if (fresh.maxUses != null && fresh.uses >= fresh.maxUses) {
+      throw AppError.badRequest('This invite link has reached its limit.');
+    }
+
     const count = await tx.groupMember.count({ where: { groupId: group.id } });
     if (count >= group.maxMembers) throw AppError.badRequest('This group is at capacity.');
 
@@ -532,7 +580,7 @@ export async function joinViaInviteLink(token: string, userId: string) {
         data: {
           firstName: user.firstName,
           groupName: group.name,
-          premium: link.grantsPremium,
+          premium: premiumGranted,
           groupUrl: `${APP_URL}/dashboard/groups?slug=${group.slug}`,
         },
       }).catch(() => undefined);
@@ -552,9 +600,15 @@ export async function joinViaInviteLink(token: string, userId: string) {
 export async function requestToJoin(groupId: string, userId: string, message?: string) {
   const group = await prisma.group.findFirst({
     where: { id: groupId, status: 'active' },
-    select: { id: true, name: true, slug: true },
+    select: { id: true, name: true, slug: true, joinPolicy: true, lockedInterior: true },
   });
   if (!group) throw AppError.notFound('Group not found');
+  // Only request-based / closed groups take join requests. An open group is
+  // joined directly (and 'invite' groups are link-only), so reject here rather
+  // than spamming leaders with requests they can't act on.
+  if (group.joinPolicy !== 'request' && !group.lockedInterior) {
+    throw AppError.badRequest('This group does not accept join requests.');
+  }
 
   const existingMember = await prisma.groupMember.findUnique({
     where: { groupId_userId: { groupId, userId } },

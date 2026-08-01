@@ -535,6 +535,16 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE UNIQUE INDEX IF NOT EXISTS "GroupJoinRequest_groupId_userId_key" ON "GroupJoinRequest" ("groupId", "userId");`,
       `CREATE INDEX IF NOT EXISTS "GroupJoinRequest_groupId_status_idx" ON "GroupJoinRequest" ("groupId", "status");`,
+      // Cascade deletes match the Prisma schema (onDelete: Cascade). Added via
+      // DO blocks so re-running boot heal never errors on an existing constraint.
+      `DO $$ BEGIN
+         ALTER TABLE "GroupInviteLink" ADD CONSTRAINT "GroupInviteLink_groupId_fkey"
+           FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE;
+       EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
+      `DO $$ BEGIN
+         ALTER TABLE "GroupJoinRequest" ADD CONSTRAINT "GroupJoinRequest_groupId_fkey"
+           FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE;
+       EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

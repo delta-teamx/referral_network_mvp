@@ -76,6 +76,8 @@ interface PublicGroup {
   memberCount: number;
   maxMembers: number;
   isPublic: boolean;
+  joinPolicy?: 'open' | 'request' | 'invite';
+  lockedInterior?: boolean;
 }
 interface ChatMessage {
   id: string;
@@ -117,7 +119,9 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
         api.get<PublicGroup[]>('/api/v1/groups', { query: { limit: 50 }, accessToken: accessToken ?? undefined }),
       ]);
       setGroups(mine);
-      // Open groups they can still join: public, not already a member, not full.
+      // Groups they can still act on: public, not already a member, not full.
+      // Open groups get a one-tap join; request/closed groups get a "Request
+      // to join" that opens the group so they can apply.
       const mineIds = new Set(mine.map((g) => g.id));
       setDiscover(all.filter((g) => g.isPublic && !mineIds.has(g.id) && g.memberCount < g.maxMembers));
     } catch {
@@ -226,6 +230,7 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
               <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {discover.map((g) => {
                   const isJoining = joining.has(g.id);
+                  const isOpen = (g.joinPolicy ?? 'open') === 'open';
                   return (
                     <li
                       key={g.id}
@@ -233,9 +238,15 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold text-gray-900">{g.name}</p>
-                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                          Open
-                        </span>
+                        {isOpen ? (
+                          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                            Open
+                          </span>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                            <Lock size={9} /> Private
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                         <MapPin size={11} /> {g.city}, {g.state}
@@ -250,19 +261,30 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
                         {g.memberCount}/{g.maxMembers} members
                       </p>
                       <div className="mt-4 flex items-center gap-2">
-                        <button
-                          onClick={() => void join(g.id)}
-                          disabled={isJoining}
-                          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
-                        >
-                          {isJoining ? 'Joining…' : 'Join free'}
-                        </button>
-                        <Link
-                          href={`/dashboard/groups?slug=${g.slug}`}
-                          className="text-sm font-semibold text-primary hover:underline"
-                        >
-                          Preview →
-                        </Link>
+                        {isOpen ? (
+                          <>
+                            <button
+                              onClick={() => void join(g.id)}
+                              disabled={isJoining}
+                              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+                            >
+                              {isJoining ? 'Joining…' : 'Join free'}
+                            </button>
+                            <Link
+                              href={`/dashboard/groups?slug=${g.slug}`}
+                              className="text-sm font-semibold text-primary hover:underline"
+                            >
+                              Preview →
+                            </Link>
+                          </>
+                        ) : (
+                          <Link
+                            href={`/dashboard/groups?slug=${g.slug}`}
+                            className="rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+                          >
+                            Request to join →
+                          </Link>
+                        )}
                       </div>
                     </li>
                   );
@@ -473,6 +495,22 @@ function GroupDetailView({
               >
                 Leave group
               </button>
+            ) : group.pendingRequest || requestSent ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
+                Request pending
+              </span>
+            ) : group.joinPolicy === 'request' ? (
+              <button
+                onClick={() => void requestJoin()}
+                disabled={busy}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+              >
+                {busy ? 'Sending…' : 'Request to join'}
+              </button>
+            ) : group.joinPolicy === 'invite' ? (
+              <span className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-500">
+                Invite only
+              </span>
             ) : (
               <button
                 onClick={() => void join()}
