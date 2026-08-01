@@ -13,10 +13,14 @@ import {
   Link2,
   Lock,
   MapPin,
+  Megaphone,
   MessageSquare,
+  Plus,
   Send,
   Settings,
+  Trash2,
   Users,
+  Video,
   X,
 } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
@@ -531,18 +535,23 @@ function GroupDetailView({
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        {/* Chat */}
-        <section className="order-2 lg:order-1">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-            <MessageSquare size={14} /> Group chat
-          </h2>
-          {isMember ? (
-            <GroupChat groupId={group.id} accessToken={accessToken} meId={meId} />
-          ) : (
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-600">
-              Join the group to see and post in the chat.
-            </div>
+        {/* Announcements + chat */}
+        <section className="order-2 space-y-6 lg:order-1">
+          {isMember && (
+            <GroupAnnouncements groupId={group.id} accessToken={accessToken} isAdmin={isAdmin} />
           )}
+          <div>
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+              <MessageSquare size={14} /> Group chat
+            </h2>
+            {isMember ? (
+              <GroupChat groupId={group.id} accessToken={accessToken} meId={meId} />
+            ) : (
+              <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-600">
+                Join the group to see and post in the chat.
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Roster + events */}
@@ -577,25 +586,24 @@ function GroupDetailView({
             </ul>
           </section>
 
-          {group.events.length > 0 && (
-            <section>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                <Calendar size={14} /> Upcoming
-              </h2>
-              <ul className="space-y-2">
-                {group.events.map((e) => (
-                  <li key={e.id} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
-                    <p className="font-medium text-gray-900">{e.title}</p>
-                    <p className="text-xs text-gray-500">{new Date(e.date).toLocaleString()}</p>
-                    {e.meetingUrl && (
-                      <a href={e.meetingUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary">
-                        Join link →
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {isMember ? (
+            <GroupEvents groupId={group.id} accessToken={accessToken} isAdmin={isAdmin} />
+          ) : (
+            group.events.length > 0 && (
+              <section>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                  <Calendar size={14} /> Upcoming
+                </h2>
+                <ul className="space-y-2">
+                  {group.events.map((e) => (
+                    <li key={e.id} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm">
+                      <p className="font-medium text-gray-900">{e.title}</p>
+                      <p className="text-xs text-gray-500">{new Date(e.date).toLocaleString()}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
           )}
         </aside>
       </div>
@@ -621,6 +629,14 @@ interface JoinRequestRow {
     avatarUrl: string | null;
     memberProfile: { businessName: string | null; industry: string | null; city: string | null; state: string | null } | null;
   };
+}
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 function timeLeft(iso: string): string {
@@ -834,6 +850,347 @@ function GroupManagePanel({
           </ul>
         )}
       </div>
+    </section>
+  );
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  author: { id: string; firstName: string; lastName: string; avatarUrl: string | null };
+}
+
+function GroupAnnouncements({
+  groupId,
+  accessToken,
+  isAdmin,
+}: {
+  groupId: string;
+  accessToken: string | null;
+  isAdmin: boolean;
+}) {
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [composing, setComposing] = useState(false);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      setItems(await api.get<Announcement[]>(`/api/v1/groups/${groupId}/announcements`, { accessToken }));
+    } catch {
+      /* non-fatal */
+    }
+  }, [groupId, accessToken]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function post() {
+    if (!accessToken || !title.trim() || !body.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.post(`/api/v1/groups/${groupId}/announcements`, { title: title.trim(), body: body.trim() }, { accessToken });
+      setTitle('');
+      setBody('');
+      setComposing(false);
+      await load();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not post');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!accessToken || !window.confirm('Delete this announcement?')) return;
+    try {
+      await api.delete(`/api/v1/groups/announcements/${id}`, { accessToken });
+      setItems((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (items.length === 0 && !isAdmin) return null;
+
+  return (
+    <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Megaphone size={15} className="text-amber-500" /> Announcements
+        </h2>
+        {isAdmin && !composing && (
+          <button
+            onClick={() => setComposing(true)}
+            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
+          >
+            <Plus size={13} /> Post
+          </button>
+        )}
+      </div>
+
+      {composing && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={160}
+            placeholder="Announcement title"
+            className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="What do you want the group to know?"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          {err && <p className="mt-1 text-xs text-danger">{err}</p>}
+          <div className="mt-2 flex justify-end gap-2">
+            <button onClick={() => setComposing(false)} className="rounded-full px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100">
+              Cancel
+            </button>
+            <button
+              onClick={() => void post()}
+              disabled={busy || !title.trim() || !body.trim()}
+              className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {busy ? 'Posting…' : 'Post announcement'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-500">No announcements yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {items.map((a) => (
+            <li key={a.id} className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-gray-900">{a.title}</p>
+                {isAdmin && (
+                  <button onClick={() => void remove(a.id)} className="text-gray-300 hover:text-danger">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 whitespace-pre-line text-sm text-gray-700">{a.body}</p>
+              <p className="mt-2 text-xs text-gray-400">
+                {a.author.firstName} {a.author.lastName} · {timeAgo(a.createdAt)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+interface GroupEventRow2 {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string;
+  location: string | null;
+  meetingUrl: string | null;
+  attendeeCount: number;
+  viewerGoing: boolean;
+}
+
+function GroupEvents({
+  groupId,
+  accessToken,
+  isAdmin,
+}: {
+  groupId: string;
+  accessToken: string | null;
+  isAdmin: boolean;
+}) {
+  const [events, setEvents] = useState<GroupEventRow2[]>([]);
+  const [composing, setComposing] = useState(false);
+  const [form, setForm] = useState({ title: '', description: '', date: '', meetingUrl: '' });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      setEvents(await api.get<GroupEventRow2[]>(`/api/v1/groups/${groupId}/events`, { accessToken }));
+    } catch {
+      /* non-fatal */
+    }
+  }, [groupId, accessToken]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function create() {
+    if (!accessToken || !form.title.trim() || !form.date) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.post(
+        `/api/v1/groups/${groupId}/events`,
+        {
+          title: form.title.trim(),
+          description: form.description.trim() || undefined,
+          date: new Date(form.date).toISOString(),
+          meetingUrl: form.meetingUrl.trim() || undefined,
+        },
+        { accessToken },
+      );
+      setForm({ title: '', description: '', date: '', meetingUrl: '' });
+      setComposing(false);
+      await load();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not create event');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rsvp(id: string) {
+    if (!accessToken) return;
+    try {
+      const res = await api.post<{ going: boolean }>(`/api/v1/groups/events/${id}/rsvp`, {}, { accessToken });
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? { ...e, viewerGoing: res.going, attendeeCount: e.attendeeCount + (res.going ? 1 : -1) }
+            : e,
+        ),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function remove(id: string) {
+    if (!accessToken || !window.confirm('Delete this event?')) return;
+    try {
+      await api.delete(`/api/v1/groups/events/${id}`, { accessToken });
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+          <Calendar size={14} /> Zoom events
+        </h2>
+        {isAdmin && !composing && (
+          <button
+            onClick={() => setComposing(true)}
+            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
+          >
+            <Plus size={13} /> New
+          </button>
+        )}
+      </div>
+
+      {composing && (
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white p-3">
+          <input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            maxLength={160}
+            placeholder="Event title"
+            className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          <input
+            type="datetime-local"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          <input
+            value={form.meetingUrl}
+            onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}
+            placeholder="Zoom link (https://…)"
+            className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={2}
+            maxLength={2000}
+            placeholder="Details (optional)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+          {err && <p className="mt-1 text-xs text-danger">{err}</p>}
+          <div className="mt-2 flex justify-end gap-2">
+            <button onClick={() => setComposing(false)} className="rounded-full px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100">
+              Cancel
+            </button>
+            <button
+              onClick={() => void create()}
+              disabled={busy || !form.title.trim() || !form.date}
+              className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {busy ? 'Creating…' : 'Announce event'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {events.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-gray-200 bg-white px-3 py-4 text-center text-xs text-gray-500">
+          No upcoming events.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {events.map((e) => (
+            <li key={e.id} className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-gray-900">{e.title}</p>
+                {isAdmin && (
+                  <button onClick={() => void remove(e.id)} className="text-gray-300 hover:text-danger">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500">{new Date(e.date).toLocaleString()}</p>
+              {e.description && <p className="mt-1 text-xs text-gray-600">{e.description}</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => void rsvp(e.id)}
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                    e.viewerGoing
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                      : 'border border-primary/30 bg-primary-light text-primary hover:bg-primary/10'
+                  }`}
+                >
+                  <Check size={12} /> {e.viewerGoing ? "You're going" : "I'm going"}
+                </button>
+                <span className="text-xs text-gray-400">{e.attendeeCount} going</span>
+                {e.meetingUrl && (
+                  <a
+                    href={e.meetingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    <Video size={12} /> Join Zoom
+                  </a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
