@@ -31,6 +31,15 @@ const LINK_GROUPS = [
     ],
   },
   {
+    heading: 'Learn',
+    links: [
+      { href: '/learn/how-ai-referral-networks-work', label: 'How AI referral networks work' },
+      { href: '/compare/referral-nova-vs-linkedin', label: 'vs LinkedIn' },
+      { href: '/compare/referral-nova-vs-bni', label: 'vs BNI' },
+      { href: '/compare/referral-nova-vs-traditional-networking', label: 'vs Traditional networking' },
+    ],
+  },
+  {
     heading: 'Company',
     links: [
       { href: '/about', label: 'About us' },
@@ -45,7 +54,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-950 px-6 py-16 text-gray-300">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
             <a href="/">
