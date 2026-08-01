@@ -516,9 +516,12 @@ export async function joinViaInviteLink(token: string, userId: string) {
       select: { subscriptionTier: true, email: true, firstName: true },
     });
     if (user && user.subscriptionTier !== 'PREMIUM') {
+      // Do NOT bump tokenVersion here: that would revoke the session and log
+      // the user out on the join-success screen. The new tier flows into their
+      // JWT on the next access-token refresh (matches the rewards grant).
       await prisma.user.update({
         where: { id: userId },
-        data: { subscriptionTier: 'PREMIUM', tokenVersion: { increment: 1 } },
+        data: { subscriptionTier: 'PREMIUM' },
       });
       premiumGranted = true;
     }
