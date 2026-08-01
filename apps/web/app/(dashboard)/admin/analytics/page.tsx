@@ -25,6 +25,14 @@ interface Analytics {
   watchlist: { userId: string; name: string; referrals30d: number }[];
 }
 
+interface SpamSuspect {
+  userId: string;
+  name: string;
+  email: string;
+  score: number;
+  reasons: string[];
+}
+
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="rounded-2xl border border-gray-800 bg-gray-900 p-4">
@@ -38,7 +46,19 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 export default function AdminAnalyticsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [data, setData] = useState<Analytics | null>(null);
+  const [suspects, setSuspects] = useState<SpamSuspect[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [actioned, setActioned] = useState<Set<string>>(new Set());
+
+  async function loadSuspects() {
+    if (!accessToken) return;
+    try {
+      const s = await api.get<SpamSuspect[]>('/api/v1/admin/spam-suspects', { accessToken });
+      setSuspects(s);
+    } catch {
+      /* non-fatal */
+    }
+  }
 
   useEffect(() => {
     if (!accessToken) return;
@@ -50,7 +70,32 @@ export default function AdminAnalyticsPage() {
         setError(err instanceof ApiError ? err.message : 'Load failed');
       }
     })();
+    void loadSuspects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  async function suspend(s: SpamSuspect) {
+    if (!accessToken) return;
+    const reason = window.prompt(`Suspend ${s.name}? Reason:`, `Spam: ${s.reasons[0] ?? 'flagged'}`);
+    if (!reason || reason.length < 3) return;
+    try {
+      await api.post(`/api/v1/admin/users/${s.userId}/suspend`, { reason }, { accessToken });
+      setActioned((prev) => new Set(prev).add(s.userId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Suspend failed');
+    }
+  }
+
+  async function remove(s: SpamSuspect) {
+    if (!accessToken) return;
+    if (!window.confirm(`PERMANENTLY delete ${s.name} (${s.email}) and all their data? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/api/v1/admin/users/${s.userId}`, { accessToken });
+      setActioned((prev) => new Set(prev).add(s.userId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Delete failed');
+    }
+  }
 
   return (
     <div className="p-6 md:p-8">
@@ -174,6 +219,64 @@ export default function AdminAnalyticsPage() {
               )}
             </section>
           </div>
+
+          {/* Spam suspects */}
+          <section className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+              <AlertTriangle size={15} className="text-rose-400" /> Spam suspects
+              <span className="text-gray-500">({suspects.length})</span>
+            </h2>
+            <p className="mb-3 text-xs text-gray-400">
+              Flagged by automated rules (burst messaging, mass referrals, duplicate messages, empty
+              profiles, disposable emails). Review before acting - these are flags, not proof.
+            </p>
+            {suspects.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-gray-700 p-6 text-center text-sm text-gray-500">
+                No spam suspects right now.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {suspects.map((s) => {
+                  const done = actioned.has(s.userId);
+                  return (
+                    <li
+                      key={s.userId}
+                      className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-800 bg-gray-950/60 px-4 py-3 ${done ? 'opacity-50' : ''}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 text-sm text-white">
+                          <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                            score {s.score}
+                          </span>
+                          {s.name}
+                          <span className="text-gray-500">· {s.email}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-400">{s.reasons.join(' · ')}</p>
+                      </div>
+                      {done ? (
+                        <span className="text-xs font-semibold text-emerald-400">Actioned</span>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => void suspend(s)}
+                            className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20"
+                          >
+                            Suspend
+                          </button>
+                          <button
+                            onClick={() => void remove(s)}
+                            className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>
       )}
     </div>

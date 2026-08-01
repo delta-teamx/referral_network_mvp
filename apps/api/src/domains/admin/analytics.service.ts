@@ -137,3 +137,102 @@ export async function computeReferralAnalytics() {
     })),
   };
 }
+
+const DISPOSABLE_DOMAINS = [
+  'mailinator.com',
+  'guerrillamail.com',
+  '10minutemail.com',
+  'tempmail.com',
+  'trashmail.com',
+  'yopmail.com',
+  'sharklasers.com',
+  'getnada.com',
+];
+
+/**
+ * Rule-based spam suspects. Combines cheap signals into a score with
+ * human-readable reasons so an admin can review and remove. Deliberately
+ * conservative - it only FLAGS, never auto-acts. Tuned to be quiet at low
+ * volume and useful once the NRG launch pushes traffic up.
+ */
+export async function getSpamSuspects() {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const [users, msgBySender, dupMsgs, refBySender] = await Promise.all([
+    prisma.user.findMany({
+      where: { deletedAt: null, role: { not: 'ADMIN' }, NOT: { email: { endsWith: '@vpn-demo.com' } } },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        createdAt: true,
+        memberProfile: { select: { photoUrl: true, bio: true } },
+      },
+    }),
+    prisma.message.groupBy({ by: ['senderId'], _count: { _all: true } }),
+    prisma.message.groupBy({
+      by: ['senderId', 'text'],
+      _count: { _all: true },
+      having: { text: { _count: { gte: 3 } } },
+    }),
+    prisma.referral.groupBy({
+      by: ['senderId'],
+      where: { createdAt: { gte: new Date(now - 30 * dayMs) } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const msgCount = new Map(msgBySender.map((r) => [r.senderId, r._count._all]));
+  const refCount = new Map(refBySender.map((r) => [r.senderId, r._count._all]));
+  const dupMax = new Map<string, number>();
+  for (const d of dupMsgs) {
+    dupMax.set(d.senderId, Math.max(dupMax.get(d.senderId) ?? 0, d._count._all));
+  }
+
+  const suspects: Array<{ userId: string; name: string; email: string; score: number; reasons: string[] }> = [];
+  for (const u of users) {
+    const reasons: string[] = [];
+    let score = 0;
+    const msgs = msgCount.get(u.id) ?? 0;
+    const refs = refCount.get(u.id) ?? 0;
+    const dup = dupMax.get(u.id) ?? 0;
+    const ageHrs = (now - u.createdAt.getTime()) / 3_600_000;
+    const emptyProfile = !u.memberProfile?.photoUrl && !u.memberProfile?.bio;
+    const domain = u.email.split('@')[1]?.toLowerCase() ?? '';
+
+    if (ageHrs < 48 && msgs >= 10) {
+      score += 3;
+      reasons.push(`${msgs} messages in first 48h`);
+    }
+    if (refs >= 25) {
+      score += 3;
+      reasons.push(`${refs} referrals in 30 days`);
+    }
+    if (dup >= 3) {
+      score += 3;
+      reasons.push(`same message sent ${dup} times`);
+    }
+    if (emptyProfile && msgs >= 8) {
+      score += 2;
+      reasons.push(`${msgs} messages with an empty profile`);
+    }
+    if (DISPOSABLE_DOMAINS.includes(domain)) {
+      score += 2;
+      reasons.push('disposable email domain');
+    }
+
+    if (score >= 3) {
+      suspects.push({
+        userId: u.id,
+        name: `${u.firstName} ${u.lastName}`.trim() || u.email,
+        email: u.email,
+        score,
+        reasons,
+      });
+    }
+  }
+  suspects.sort((a, b) => b.score - a.score);
+  return suspects.slice(0, 50);
+}

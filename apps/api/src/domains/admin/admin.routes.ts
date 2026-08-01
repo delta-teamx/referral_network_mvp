@@ -40,7 +40,7 @@ import {
   adminOverrideReferral,
   listDisputedReferrals,
 } from '../network/referrals/referrals.service.js';
-import { computeReferralAnalytics } from './analytics.service.js';
+import { computeReferralAnalytics, getSpamSuspects } from './analytics.service.js';
 
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
@@ -201,6 +201,16 @@ adminRouter.get(
   '/analytics',
   asyncHandler(async (_req, res) => {
     const data = await computeReferralAnalytics();
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Rule-based spam suspects (flags only - admin reviews and acts).
+adminRouter.get(
+  '/spam-suspects',
+  asyncHandler(async (_req, res) => {
+    const data = await getSpamSuspects();
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
