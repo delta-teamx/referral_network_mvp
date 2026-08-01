@@ -4,7 +4,21 @@ import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, Crown, MapPin, MessageSquare, Send, Users } from 'lucide-react';
+import {
+  Calendar,
+  Check,
+  Clock,
+  Copy,
+  Crown,
+  Link2,
+  Lock,
+  MapPin,
+  MessageSquare,
+  Send,
+  Settings,
+  Users,
+  X,
+} from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -32,6 +46,15 @@ interface GroupDetail {
   members: GroupMemberRow[];
   events: GroupEventRow[];
   _count: { members: number };
+  // Closed-group access model (may be absent on older API responses).
+  locked?: boolean;
+  lockedInterior?: boolean;
+  joinPolicy?: 'open' | 'request' | 'invite';
+  pendingRequest?: boolean;
+  viewerRole?: 'MEMBER' | 'LEADER' | 'CO_LEADER' | null;
+  memberCount?: number;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
 }
 interface MyGroup {
   id: string;
@@ -62,12 +85,21 @@ interface ChatMessage {
 }
 
 function GroupsInner() {
-  const slug = useSearchParams().get('slug') ?? '';
+  const params = useSearchParams();
+  const slug = params.get('slug') ?? '';
+  const initialManage = params.get('view') === 'manage';
   const accessToken = useAuthStore((s) => s.accessToken);
   const me = useAuthStore((s) => s.user);
 
   if (!slug) return <MyGroupsList accessToken={accessToken} />;
-  return <GroupDetailView slug={slug} accessToken={accessToken} meId={me?.id ?? null} />;
+  return (
+    <GroupDetailView
+      slug={slug}
+      accessToken={accessToken}
+      meId={me?.id ?? null}
+      initialManage={initialManage}
+    />
+  );
 }
 
 function MyGroupsList({ accessToken }: { accessToken: string | null }) {
@@ -248,14 +280,19 @@ function GroupDetailView({
   slug,
   accessToken,
   meId,
+  initialManage,
 }: {
   slug: string;
   accessToken: string | null;
   meId: string | null;
+  initialManage: boolean;
 }) {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [requestNote, setRequestNote] = useState('');
+  const [requestSent, setRequestSent] = useState(false);
+  const [showManage, setShowManage] = useState(initialManage);
 
   const loadGroup = useCallback(async () => {
     try {
@@ -272,7 +309,13 @@ function GroupDetailView({
     void loadGroup();
   }, [loadGroup]);
 
-  const isMember = !!group && !!meId && group.members.some((m) => m.user.id === meId);
+  const isMember =
+    !!group &&
+    ((!!meId && group.members.some((m) => m.user.id === meId)) ||
+      (group.viewerRole != null && group.viewerRole !== undefined));
+  const isAdmin = group?.viewerRole === 'LEADER' || group?.viewerRole === 'CO_LEADER';
+  const locked = !!group?.locked;
+  const memberCount = group?.memberCount ?? group?._count.members ?? 0;
 
   async function join() {
     if (!group || !accessToken) return;
@@ -283,6 +326,25 @@ function GroupDetailView({
       await loadGroup();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not join');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function requestJoin() {
+    if (!group || !accessToken) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post(
+        `/api/v1/groups/${group.id}/request`,
+        { message: requestNote.trim() || undefined },
+        { accessToken: accessToken ?? undefined },
+      );
+      setRequestSent(true);
+      await loadGroup();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send request');
     } finally {
       setBusy(false);
     }
@@ -314,6 +376,69 @@ function GroupDetailView({
     return <div className="p-8"><div className="h-40 animate-pulse rounded-2xl bg-white shadow-sm" /></div>;
   }
 
+  // Closed group, viewer is not a member: show the visible shell + a way in.
+  if (locked && !isMember) {
+    const pending = group.pendingRequest || requestSent;
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <Link href="/dashboard/groups" className="text-sm text-primary">← My groups</Link>
+        <div className="mx-auto mt-4 max-w-lg rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          {group.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={group.logoUrl} alt={group.name} className="mx-auto mb-4 h-16 w-16 rounded-2xl object-cover" />
+          ) : (
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light text-primary">
+              <Lock size={26} />
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
+          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-500">
+            <MapPin size={13} /> {group.city}, {group.state} · {memberCount} members
+          </p>
+          {group.description && <p className="mt-3 text-sm text-gray-700">{group.description}</p>}
+
+          <div className="mt-6 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+            <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-gray-600">
+              <Lock size={14} /> This is a private group
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              The member list, events and chat are visible once you are approved to join.
+            </p>
+          </div>
+
+          {pending ? (
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+              Your request to join is pending approval. We&rsquo;ll email you as soon as a group
+              leader approves it.
+            </div>
+          ) : (
+            <div className="mt-6 text-left">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Request to join
+              </label>
+              <textarea
+                value={requestNote}
+                onChange={(e) => setRequestNote(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Add a short note for the group leaders (optional)…"
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={() => void requestJoin()}
+                disabled={busy}
+                className="mt-3 w-full rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+              >
+                {busy ? 'Sending…' : 'Request to join'}
+              </button>
+              {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <Link href="/dashboard/groups" className="text-sm text-primary">← My groups</Link>
@@ -323,7 +448,7 @@ function GroupDetailView({
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
             <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
-              <MapPin size={13} /> {group.city}, {group.state} · {group._count.members}/{group.maxMembers} members
+              <MapPin size={13} /> {group.city}, {group.state} · {memberCount}/{group.maxMembers} members
             </p>
             {group.meetingSchedule && (
               <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
@@ -331,27 +456,41 @@ function GroupDetailView({
               </p>
             )}
           </div>
-          {isMember ? (
-            <button
-              onClick={() => void leave()}
-              disabled={busy}
-              className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
-            >
-              Leave group
-            </button>
-          ) : (
-            <button
-              onClick={() => void join()}
-              disabled={busy}
-              className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
-            >
-              Join group
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowManage((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary-light px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+              >
+                <Settings size={14} /> {showManage ? 'Close manage' : 'Manage group'}
+              </button>
+            )}
+            {isMember ? (
+              <button
+                onClick={() => void leave()}
+                disabled={busy}
+                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+              >
+                Leave group
+              </button>
+            ) : (
+              <button
+                onClick={() => void join()}
+                disabled={busy}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+              >
+                Join group
+              </button>
+            )}
+          </div>
         </div>
         {group.description && <p className="mt-3 text-sm text-gray-700">{group.description}</p>}
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       </header>
+
+      {isAdmin && showManage && (
+        <GroupManagePanel groupId={group.id} accessToken={accessToken} />
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Chat */}
@@ -423,6 +562,241 @@ function GroupDetailView({
         </aside>
       </div>
     </div>
+  );
+}
+
+interface InviteLink {
+  token: string;
+  url: string;
+  expiresAt: string;
+  grantsPremium: boolean;
+  uses: number;
+}
+interface JoinRequestRow {
+  id: string;
+  message: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+    memberProfile: { businessName: string | null; industry: string | null; city: string | null; state: string | null } | null;
+  };
+}
+
+function timeLeft(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 'expired';
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  if (h >= 1) return `${h}h ${m}m left`;
+  return `${m}m left`;
+}
+
+function GroupManagePanel({
+  groupId,
+  accessToken,
+}: {
+  groupId: string;
+  accessToken: string | null;
+}) {
+  const [link, setLink] = useState<InviteLink | null>(null);
+  const [requests, setRequests] = useState<JoinRequestRow[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const [l, r] = await Promise.all([
+        api.get<InviteLink | null>(`/api/v1/groups/${groupId}/invite-link`, { accessToken }),
+        api.get<JoinRequestRow[]>(`/api/v1/groups/${groupId}/requests`, { accessToken }),
+      ]);
+      setLink(l);
+      setRequests(r);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not load');
+    }
+  }, [groupId, accessToken]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function mint() {
+    if (!accessToken) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const l = await api.post<InviteLink>(
+        `/api/v1/groups/${groupId}/invite-link`,
+        { hours: 48, grantsPremium: true },
+        { accessToken },
+      );
+      setLink(l);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not create link');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke() {
+    if (!accessToken) return;
+    if (!window.confirm('Expire this invite link now? Anyone who has it will no longer be able to join.')) return;
+    setBusy(true);
+    try {
+      await api.delete(`/api/v1/groups/${groupId}/invite-link`, { accessToken });
+      setLink(null);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not revoke');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyLink() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  async function decide(id: string, decision: 'approve' | 'decline') {
+    if (!accessToken) return;
+    try {
+      await api.post(`/api/v1/groups/requests/${id}/decide`, { decision }, { accessToken });
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not update request');
+    }
+  }
+
+  return (
+    <section className="mt-4 rounded-2xl border border-primary/20 bg-primary-light/40 p-5">
+      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <Settings size={15} className="text-primary" /> Group manager
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        Leaders and co-leaders only. Share the launch invite link and approve requests to join.
+      </p>
+      {err && <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{err}</p>}
+
+      {/* Invite link */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+          <Link2 size={14} className="text-primary" /> Shared invite link
+        </p>
+        {link ? (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={link.url}
+                className="flex-1 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+              />
+              <button
+                onClick={() => void copyLink()}
+                className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+              <span className="inline-flex items-center gap-1">
+                <Clock size={12} /> {timeLeft(link.expiresAt)}
+              </span>
+              {link.grantsPremium && (
+                <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
+                  <Crown size={12} /> Grants lifetime Premium
+                </span>
+              )}
+              <span>{link.uses} joined via this link</span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => void mint()}
+                disabled={busy}
+                className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+              >
+                Regenerate (new 48h link)
+              </button>
+              <button
+                onClick={() => void revoke()}
+                disabled={busy}
+                className="rounded-full border border-danger/30 px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger/5 disabled:opacity-60"
+              >
+                Expire now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3">
+            <p className="text-xs text-gray-500">
+              No active link. Generate one to share with the partner team - it lasts 48 hours and
+              anyone who joins through it gets lifetime Premium and is added automatically.
+            </p>
+            <button
+              onClick={() => void mint()}
+              disabled={busy}
+              className="mt-3 inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+            >
+              <Link2 size={14} /> {busy ? 'Creating…' : 'Generate 48-hour invite link'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Join requests */}
+      <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+          <Users size={14} className="text-primary" /> Requests to join
+          <span className="text-gray-400">({requests.length})</span>
+        </p>
+        {requests.length === 0 ? (
+          <p className="mt-2 text-xs text-gray-500">No pending requests.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {requests.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {r.user.firstName} {r.user.lastName}
+                    {r.user.memberProfile?.businessName && (
+                      <span className="text-gray-500"> · {r.user.memberProfile.businessName}</span>
+                    )}
+                  </p>
+                  {r.message && <p className="mt-0.5 text-xs text-gray-600">{r.message}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void decide(r.id, 'approve')}
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                  >
+                    <Check size={13} /> Approve
+                  </button>
+                  <button
+                    onClick={() => void decide(r.id, 'decline')}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100"
+                  >
+                    <X size={13} /> Decline
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 

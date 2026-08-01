@@ -18,6 +18,11 @@
   status = 200
 
 [[redirects]]
+  from = "/join-group/*"
+  to = "/join-group/index.html"
+  status = 200
+
+[[redirects]]
   from = "/listing/*"
   to = "/listing/listing/index.html"
   status = 200

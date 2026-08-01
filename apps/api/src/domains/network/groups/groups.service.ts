@@ -530,7 +530,7 @@ export async function joinViaInviteLink(token: string, userId: string) {
           firstName: user.firstName,
           groupName: group.name,
           premium: link.grantsPremium,
-          groupUrl: `${APP_URL}/dashboard/groups/${group.slug}`,
+          groupUrl: `${APP_URL}/dashboard/groups?slug=${group.slug}`,
         },
       }).catch(() => undefined);
     }
@@ -579,7 +579,7 @@ export async function requestToJoin(groupId: string, userId: string, message?: s
       }),
     ]);
     const applicantName = `${applicant?.firstName ?? ''} ${applicant?.lastName ?? ''}`.trim() || 'A member';
-    const reviewUrl = `${APP_URL}/dashboard/groups/${group.slug}/manage`;
+    const reviewUrl = `${APP_URL}/dashboard/groups?slug=${group.slug}&view=manage`;
     for (const l of leaders) {
       void createNotification({
         userId: l.user.id,
@@ -707,7 +707,7 @@ export async function decideJoinRequest(
         data: {
           firstName: member.firstName,
           groupName: request.group.name,
-          groupUrl: `${APP_URL}/dashboard/groups/${request.group.slug}`,
+          groupUrl: `${APP_URL}/dashboard/groups?slug=${request.group.slug}`,
         },
       }).catch(() => undefined);
     }
