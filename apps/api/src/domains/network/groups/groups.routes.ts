@@ -1,19 +1,26 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
-import { authenticate } from '../../../middleware/authenticate.js';
+import { authenticate, optionalAuthenticate } from '../../../middleware/authenticate.js';
 import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { AppError } from '../../../utils/AppError.js';
 import {
   createGroup,
+  decideJoinRequest,
+  getActiveInviteLink,
   getGroupBySlug,
   joinGroup,
+  joinViaInviteLink,
   leaveGroup,
   listGroupMessages,
   listGroups,
+  listJoinRequests,
   listMyGroups,
+  mintInviteLink,
   postGroupMessage,
+  requestToJoin,
+  revokeInviteLink,
 } from './groups.service.js';
 
 export const groupsRouter: Router = Router();
@@ -34,10 +41,13 @@ groupsRouter.get(
   }),
 );
 
+// Optionally authenticated: a signed-in member sees the full interior; a
+// visitor (or non-member of a closed group) gets the visible shell only.
 groupsRouter.get(
   '/by-slug/:slug',
+  optionalAuthenticate,
   asyncHandler(async (req, res) => {
-    const group = await getGroupBySlug(req.params.slug ?? '');
+    const group = await getGroupBySlug(req.params.slug ?? '', req.user?.id);
     const body: ApiResponse<typeof group> = { success: true, data: group };
     res.json(body);
   }),
@@ -139,6 +149,96 @@ groupsRouter.patch(
     const { updateGroupSettings } = await import('./groups.service.js');
     const group = await updateGroupSettings(req.params.id ?? '', req.user.id, req.body);
     const body: ApiResponse<typeof group> = { success: true, data: group };
+    res.json(body);
+  }),
+);
+
+// ---- Closed-group access: invite links + request-to-join --------------------
+
+// Join through the shared invite link (auto-join + lifetime Premium).
+groupsRouter.post(
+  '/join-link/:token',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await joinViaInviteLink(req.params.token ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Request to join a closed group (existing members submit for approval).
+const requestSchema = z.object({ message: z.string().trim().max(500).optional() });
+groupsRouter.post(
+  '/:id/request',
+  validate(requestSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await requestToJoin(req.params.id ?? '', req.user.id, req.body.message);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.status(201).json(body);
+  }),
+);
+
+// ---- Group-admin surface (leaders / co-leaders of the group) ----------------
+
+// Mint a fresh time-boxed shared invite link (default 48h).
+const mintSchema = z.object({
+  hours: z.number().int().min(1).max(720).optional(),
+  grantsPremium: z.boolean().optional(),
+});
+groupsRouter.post(
+  '/:id/invite-link',
+  validate(mintSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await mintInviteLink(req.params.id ?? '', req.user.id, req.body);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.status(201).json(body);
+  }),
+);
+
+// Current active invite link for the group (leaders only).
+groupsRouter.get(
+  '/:id/invite-link',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await getActiveInviteLink(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Expire the active invite link early (leaders only).
+groupsRouter.delete(
+  '/:id/invite-link',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await revokeInviteLink(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Pending join requests (leaders only).
+groupsRouter.get(
+  '/:id/requests',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await listJoinRequests(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Approve or decline a pending request (leaders only).
+const decideSchema = z.object({ decision: z.enum(['approve', 'decline']) });
+groupsRouter.post(
+  '/requests/:requestId/decide',
+  validate(decideSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const data = await decideJoinRequest(req.params.requestId ?? '', req.user.id, req.body.decision);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );

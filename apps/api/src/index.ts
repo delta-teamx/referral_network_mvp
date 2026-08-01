@@ -505,6 +505,36 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE INDEX IF NOT EXISTS "RewardRedemption_userId_idx" ON "RewardRedemption" ("userId");`,
       `CREATE INDEX IF NOT EXISTS "RewardRedemption_status_expiresAt_idx" ON "RewardRedemption" ("status", "expiresAt");`,
+      // Closed-group access model (NRG): join policy + locked interior on Group,
+      // plus the shared invite-link and join-request tables.
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "joinPolicy" TEXT NOT NULL DEFAULT 'open';`,
+      `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "lockedInterior" BOOLEAN NOT NULL DEFAULT false;`,
+      `CREATE TABLE IF NOT EXISTS "GroupInviteLink" (
+         "id" TEXT PRIMARY KEY,
+         "groupId" TEXT NOT NULL,
+         "token" TEXT NOT NULL UNIQUE,
+         "createdById" TEXT NOT NULL,
+         "grantsPremium" BOOLEAN NOT NULL DEFAULT true,
+         "active" BOOLEAN NOT NULL DEFAULT true,
+         "uses" INTEGER NOT NULL DEFAULT 0,
+         "maxUses" INTEGER,
+         "expiresAt" TIMESTAMP(3) NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE INDEX IF NOT EXISTS "GroupInviteLink_groupId_active_idx" ON "GroupInviteLink" ("groupId", "active");`,
+      `CREATE INDEX IF NOT EXISTS "GroupInviteLink_token_idx" ON "GroupInviteLink" ("token");`,
+      `CREATE TABLE IF NOT EXISTS "GroupJoinRequest" (
+         "id" TEXT PRIMARY KEY,
+         "groupId" TEXT NOT NULL,
+         "userId" TEXT NOT NULL,
+         "status" TEXT NOT NULL DEFAULT 'pending',
+         "message" TEXT,
+         "decidedById" TEXT,
+         "decidedAt" TIMESTAMP(3),
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "GroupJoinRequest_groupId_userId_key" ON "GroupJoinRequest" ("groupId", "userId");`,
+      `CREATE INDEX IF NOT EXISTS "GroupJoinRequest_groupId_status_idx" ON "GroupJoinRequest" ("groupId", "status");`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

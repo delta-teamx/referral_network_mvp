@@ -136,6 +136,7 @@ model User {
   pipelineCards          PipelineCard[]      @relation("PipelineOwner")
   pipelineAsContact      PipelineCard[]      @relation("PipelineContact")
   supportTickets         SupportTicket[]     @relation("SupportTicketUser")
+  groupJoinRequests      GroupJoinRequest[]  @relation("GroupJoinRequestUser")
 
   @@index([email])
   @@index([role])
@@ -477,6 +478,12 @@ model Group {
   maxMembers      Int      @default(30)
   isPublic        Boolean  @default(true)
   status          String   @default("active")
+  // How new members get in: "open" (join instantly), "request" (leader must
+  // approve), or "invite" (only via an invite link / leader add).
+  joinPolicy      String   @default("open")
+  // Closed groups: non-members see the shell (name, logo, description, member
+  // count) but NOT the interior (roster, events, messages).
+  lockedInterior  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -494,9 +501,50 @@ model Group {
   events        GroupEvent[]
   introductions Introduction[]
   messages      GroupMessage[]
+  inviteLinks   GroupInviteLink[]
+  joinRequests  GroupJoinRequest[]
 
   @@index([slug])
   @@index([city, state])
+}
+
+/// A single shared, time-boxed invite link for a group (e.g. the NRG launch
+/// link). Anyone who joins through it before it expires is auto-added and, when
+/// grantsPremium is set, upgraded to lifetime Premium.
+model GroupInviteLink {
+  id            String   @id @default(uuid())
+  groupId       String
+  token         String   @unique
+  createdById   String
+  grantsPremium Boolean  @default(true)
+  active        Boolean  @default(true)
+  uses          Int      @default(0)
+  maxUses       Int? // null = unlimited within the window
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, active])
+  @@index([token])
+}
+
+/// A member's request to join a closed group, pending leader approval.
+model GroupJoinRequest {
+  id          String    @id @default(uuid())
+  groupId     String
+  userId      String
+  status      String    @default("pending") // pending | approved | declined
+  message     String?
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation("GroupJoinRequestUser", fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([groupId, status])
 }
 
 // Platform contracts: two members formalise a collaboration by signing the

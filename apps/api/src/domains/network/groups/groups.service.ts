@@ -1,8 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { TIERS, type Tier } from '../../billing/billing.tiers.js';
+import { sendEmail } from '../../core/notifications/email.service.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
+
+const APP_URL = 'https://dashboard.referralnova.com';
 
 /**
  * Groups - BNI-style local networking circles. A group is public-discoverable
@@ -188,20 +193,65 @@ export async function getGroupBySlug(slug: string, viewerId?: string) {
   if (!group) throw AppError.notFound('Group not found');
 
   const viewerMembership = viewerId ? group.members.find((m) => m.user.id === viewerId) : null;
+  const viewerRole = (viewerMembership?.role ?? null) as GroupRole | null;
+  const isMember = viewerMembership != null;
+
+  // Closed group, viewer not inside: return the visible shell only. The
+  // interior (roster, events, messages) is locked - the UI shows a "request to
+  // join" or "you have an invite" prompt instead.
+  if (group.lockedInterior && !isMember) {
+    const memberCount = group._count.members;
+    let pendingRequest = false;
+    if (viewerId) {
+      const req = await prisma.groupJoinRequest.findUnique({
+        where: { groupId_userId: { groupId: group.id, userId: viewerId } },
+        select: { status: true },
+      });
+      pendingRequest = req?.status === 'pending';
+    }
+    return {
+      id: group.id,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      city: group.city,
+      state: group.state,
+      logoUrl: group.logoUrl,
+      primaryColor: group.primaryColor,
+      isPublic: group.isPublic,
+      status: group.status,
+      joinPolicy: group.joinPolicy,
+      lockedInterior: true,
+      locked: true as const,
+      memberCount,
+      members: [],
+      events: [],
+      viewerRole,
+      pendingRequest,
+      _count: group._count,
+    };
+  }
 
   return {
     ...group,
-    viewerRole: (viewerMembership?.role ?? null) as GroupRole | null,
+    locked: false as const,
+    joinPolicy: group.joinPolicy,
+    memberCount: group._count.members,
+    pendingRequest: false,
+    viewerRole,
   };
 }
 
 export async function joinGroup(groupId: string, userId: string) {
   const group = await prisma.group.findFirst({
     where: { id: groupId, status: 'active' },
-    select: { id: true, isPublic: true, maxMembers: true },
+    select: { id: true, isPublic: true, maxMembers: true, joinPolicy: true },
   });
   if (!group) throw AppError.notFound('Group not found');
-  if (!group.isPublic) {
+  if (group.joinPolicy === 'request') {
+    throw AppError.badRequest('This group requires approval. Submit a request to join.');
+  }
+  if (group.joinPolicy === 'invite' || !group.isPublic) {
     throw AppError.badRequest('This group is invite-only. Ask a leader to add you.');
   }
 
@@ -348,4 +398,320 @@ export async function updateGroupSettings(
     },
     select: groupListSelect,
   });
+}
+
+// ---- Closed-group access: leaders, invite links, join requests --------------
+
+/** Assert the user is a LEADER or CO_LEADER of the group; returns their role. */
+async function assertGroupAdmin(groupId: string, userId: string): Promise<GroupRole> {
+  const member = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+    select: { role: true },
+  });
+  if (!member || (member.role !== 'LEADER' && member.role !== 'CO_LEADER')) {
+    throw AppError.forbidden('Only group leaders can do this.');
+  }
+  return member.role as GroupRole;
+}
+
+/**
+ * Mint a fresh, time-boxed shared invite link (default 48h). Only one link is
+ * active at a time - minting a new one deactivates any prior active links.
+ * Anyone who joins through it before it expires is auto-added and, when
+ * grantsPremium is set, upgraded to lifetime Premium.
+ */
+export async function mintInviteLink(
+  groupId: string,
+  userId: string,
+  opts: { hours?: number; grantsPremium?: boolean } = {},
+) {
+  await assertGroupAdmin(groupId, userId);
+  const hours = Math.max(1, Math.min(720, Math.round(opts.hours ?? 48)));
+  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
+  const token = randomUUID().replace(/-/g, '');
+
+  const link = await prisma.$transaction(async (tx) => {
+    await tx.groupInviteLink.updateMany({
+      where: { groupId, active: true },
+      data: { active: false },
+    });
+    return tx.groupInviteLink.create({
+      data: {
+        groupId,
+        token,
+        createdById: userId,
+        grantsPremium: opts.grantsPremium ?? true,
+        expiresAt,
+      },
+    });
+  });
+  return { ...link, url: `${APP_URL}/join-group/${link.token}` };
+}
+
+/** The current active, unexpired invite link for a group, if any. */
+export async function getActiveInviteLink(groupId: string, userId: string) {
+  await assertGroupAdmin(groupId, userId);
+  const link = await prisma.groupInviteLink.findFirst({
+    where: { groupId, active: true, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'desc' },
+  });
+  return link ? { ...link, url: `${APP_URL}/join-group/${link.token}` } : null;
+}
+
+/** Expire (deactivate) the group's active invite link early. */
+export async function revokeInviteLink(groupId: string, userId: string) {
+  await assertGroupAdmin(groupId, userId);
+  await prisma.groupInviteLink.updateMany({
+    where: { groupId, active: true },
+    data: { active: false },
+  });
+  return { ok: true };
+}
+
+/**
+ * Join a group through a shared invite link. Validates the link is active and
+ * within its window, adds the caller (idempotent), grants lifetime Premium when
+ * the link is configured to, and returns the group summary.
+ */
+export async function joinViaInviteLink(token: string, userId: string) {
+  const link = await prisma.groupInviteLink.findUnique({ where: { token } });
+  if (!link || !link.active) throw AppError.badRequest('This invite link is no longer active.');
+  if (link.expiresAt.getTime() <= Date.now()) {
+    throw AppError.badRequest('This invite link has expired.');
+  }
+  if (link.maxUses != null && link.uses >= link.maxUses) {
+    throw AppError.badRequest('This invite link has reached its limit.');
+  }
+
+  const group = await prisma.group.findFirst({
+    where: { id: link.groupId, status: 'active' },
+    select: { id: true, name: true, slug: true, maxMembers: true },
+  });
+  if (!group) throw AppError.notFound('Group not found');
+
+  const alreadyMember = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`group:${group.id}`}))`;
+    const existing = await tx.groupMember.findUnique({
+      where: { groupId_userId: { groupId: group.id, userId } },
+      select: { id: true },
+    });
+    if (existing) return true;
+
+    const count = await tx.groupMember.count({ where: { groupId: group.id } });
+    if (count >= group.maxMembers) throw AppError.badRequest('This group is at capacity.');
+
+    await tx.groupMember.create({ data: { groupId: group.id, userId, role: 'MEMBER' } });
+    await tx.groupInviteLink.update({
+      where: { id: link.id },
+      data: { uses: { increment: 1 } },
+    });
+    return false;
+  });
+
+  // Grant lifetime Premium to launch-link joiners (idempotent, best-effort).
+  let premiumGranted = false;
+  if (link.grantsPremium && !alreadyMember) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionTier: true, email: true, firstName: true },
+    });
+    if (user && user.subscriptionTier !== 'PREMIUM') {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { subscriptionTier: 'PREMIUM', tokenVersion: { increment: 1 } },
+      });
+      premiumGranted = true;
+    }
+    if (user?.email) {
+      void sendEmail({
+        to: user.email,
+        template: 'group_invite_welcome',
+        data: {
+          firstName: user.firstName,
+          groupName: group.name,
+          premium: link.grantsPremium,
+          groupUrl: `${APP_URL}/dashboard/groups/${group.slug}`,
+        },
+      }).catch(() => undefined);
+    }
+  }
+
+  if (!alreadyMember) {
+    await eventBus.publish('group.member_joined', { groupId: group.id, userId });
+  }
+  return { group, alreadyMember, premiumGranted };
+}
+
+/**
+ * Submit a request to join a closed group. Creates a pending request (idempotent
+ * per user+group) and emails the group's leaders so they can approve it.
+ */
+export async function requestToJoin(groupId: string, userId: string, message?: string) {
+  const group = await prisma.group.findFirst({
+    where: { id: groupId, status: 'active' },
+    select: { id: true, name: true, slug: true },
+  });
+  if (!group) throw AppError.notFound('Group not found');
+
+  const existingMember = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+    select: { id: true },
+  });
+  if (existingMember) throw AppError.badRequest('You are already a member of this group.');
+
+  const note = message ? sanitizeText(message).slice(0, 500) : null;
+
+  // Upsert so a repeat submit refreshes a pending/declined request rather than
+  // colliding on the unique (groupId, userId) index.
+  const request = await prisma.groupJoinRequest.upsert({
+    where: { groupId_userId: { groupId, userId } },
+    create: { groupId, userId, message: note, status: 'pending' },
+    update: { status: 'pending', message: note, decidedById: null, decidedAt: null },
+  });
+
+  // Notify leaders in-app + by email (best-effort).
+  void (async () => {
+    const [applicant, leaders] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } }),
+      prisma.groupMember.findMany({
+        where: { groupId, role: { in: ['LEADER', 'CO_LEADER'] } },
+        select: { user: { select: { id: true, email: true, firstName: true } } },
+      }),
+    ]);
+    const applicantName = `${applicant?.firstName ?? ''} ${applicant?.lastName ?? ''}`.trim() || 'A member';
+    const reviewUrl = `${APP_URL}/dashboard/groups/${group.slug}/manage`;
+    for (const l of leaders) {
+      void createNotification({
+        userId: l.user.id,
+        type: 'group_join_request',
+        title: `${applicantName} asked to join ${group.name}`,
+        body: note || 'Review the request in the group manager.',
+        data: { groupId, requestId: request.id },
+      }).catch(() => undefined);
+      if (l.user.email) {
+        void sendEmail({
+          to: l.user.email,
+          template: 'group_join_request',
+          data: {
+            firstName: l.user.firstName,
+            applicantName,
+            groupName: group.name,
+            note: note ?? '',
+            reviewUrl,
+          },
+        }).catch(() => undefined);
+      }
+    }
+  })().catch(() => undefined);
+
+  return request;
+}
+
+/** Pending join requests for a group (leaders only). */
+export async function listJoinRequests(groupId: string, userId: string) {
+  await assertGroupAdmin(groupId, userId);
+  return prisma.groupJoinRequest.findMany({
+    where: { groupId, status: 'pending' },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      message: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          memberProfile: { select: { businessName: true, industry: true, city: true, state: true } },
+        },
+      },
+    },
+  });
+}
+
+/** Approve or decline a pending join request (leaders only). */
+export async function decideJoinRequest(
+  requestId: string,
+  userId: string,
+  decision: 'approve' | 'decline',
+) {
+  const request = await prisma.groupJoinRequest.findUnique({
+    where: { id: requestId },
+    select: {
+      id: true,
+      groupId: true,
+      userId: true,
+      status: true,
+      group: { select: { name: true, slug: true, maxMembers: true } },
+    },
+  });
+  if (!request) throw AppError.notFound('Request not found');
+  await assertGroupAdmin(request.groupId, userId);
+  if (request.status !== 'pending') {
+    throw AppError.badRequest('This request has already been handled.');
+  }
+
+  if (decision === 'decline') {
+    await prisma.groupJoinRequest.update({
+      where: { id: request.id },
+      data: { status: 'declined', decidedById: userId, decidedAt: new Date() },
+    });
+    return { ok: true, status: 'declined' as const };
+  }
+
+  // Approve: add as a member (capacity-checked) and mark the request.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`group:${request.groupId}`}))`;
+    const existing = await tx.groupMember.findUnique({
+      where: { groupId_userId: { groupId: request.groupId, userId: request.userId } },
+      select: { id: true },
+    });
+    if (!existing) {
+      const count = await tx.groupMember.count({ where: { groupId: request.groupId } });
+      if (count >= request.group.maxMembers) {
+        throw AppError.badRequest('This group is at capacity.');
+      }
+      await tx.groupMember.create({
+        data: { groupId: request.groupId, userId: request.userId, role: 'MEMBER' },
+      });
+    }
+    await tx.groupJoinRequest.update({
+      where: { id: request.id },
+      data: { status: 'approved', decidedById: userId, decidedAt: new Date() },
+    });
+  });
+
+  await eventBus.publish('group.member_joined', {
+    groupId: request.groupId,
+    userId: request.userId,
+  });
+
+  // Tell the approved member they're in (bell + email, best-effort).
+  void (async () => {
+    const member = await prisma.user.findUnique({
+      where: { id: request.userId },
+      select: { email: true, firstName: true },
+    });
+    void createNotification({
+      userId: request.userId,
+      type: 'group_request_approved',
+      title: `You're in - welcome to ${request.group.name} 🎉`,
+      body: 'Your request was approved. Open the group to get started.',
+      data: { groupId: request.groupId },
+    }).catch(() => undefined);
+    if (member?.email) {
+      void sendEmail({
+        to: member.email,
+        template: 'group_request_approved',
+        data: {
+          firstName: member.firstName,
+          groupName: request.group.name,
+          groupUrl: `${APP_URL}/dashboard/groups/${request.group.slug}`,
+        },
+      }).catch(() => undefined);
+    }
+  })().catch(() => undefined);
+
+  return { ok: true, status: 'approved' as const };
 }

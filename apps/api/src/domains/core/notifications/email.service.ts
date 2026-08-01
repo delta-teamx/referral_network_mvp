@@ -31,7 +31,10 @@ export type EmailTemplate =
   | 'message_received'
   | 'intro_request'
   | 'booking_request'
-  | 'booking_canceled';
+  | 'booking_canceled'
+  | 'group_join_request'
+  | 'group_request_approved'
+  | 'group_invite_welcome';
 
 export interface EmailAttachment {
   filename: string;
@@ -320,6 +323,74 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             P(`Your call with ${escapeHtml(withName)}${whenLabel ? ` on <strong>${escapeHtml(whenLabel)}</strong>` : ''} has been canceled.`) +
             P(`No problem - you can rebook whenever it suits you both.`) +
             button('Go to bookings', url),
+        ),
+      };
+    }
+    case 'group_join_request': {
+      // Sent to a group leader/co-leader when someone requests to join.
+      const firstName = String(d.firstName ?? 'there');
+      const applicantName = String(d.applicantName ?? 'A member');
+      const groupName = String(d.groupName ?? 'your group');
+      const note = d.note ? String(d.note) : '';
+      const url = String(d.reviewUrl ?? `${BRAND.app}/dashboard/groups`);
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `${applicantName} asked to join ${groupName}`,
+        text:
+          `Hi ${firstName},\n\n${applicantName} has requested to join ${groupName}.\n\n` +
+          (note ? `Their note: ${note}\n\n` : '') +
+          `Review and approve the request here: ${url}`,
+        html: brandedLayout(
+          `New request to join ${escapeHtml(groupName)}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`<strong>${escapeHtml(applicantName)}</strong> has requested to join <strong>${escapeHtml(groupName)}</strong>.`) +
+            (note ? `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">${escapeHtml(note)}</div>` : '') +
+            P(`Approve them to add them to the group, or leave it pending.`) +
+            button('Review the request', url),
+        ),
+      };
+    }
+    case 'group_request_approved': {
+      // Sent to a member when a leader approves their request - the "you're in".
+      const firstName = String(d.firstName ?? 'there');
+      const groupName = String(d.groupName ?? 'the group');
+      const url = String(d.groupUrl ?? `${BRAND.app}/dashboard/groups`);
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `You're in - welcome to ${groupName}`,
+        text:
+          `Hi ${firstName},\n\nGreat news - your request to join ${groupName} was approved. You're in!\n\n` +
+          `Open the group to meet members and see what's happening: ${url}`,
+        html: brandedLayout(
+          `You're in - welcome to ${escapeHtml(groupName)}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Great news - your request to join <strong>${escapeHtml(groupName)}</strong> was approved. You're officially in.`) +
+            P(`Open the group to meet the other members, see upcoming events, and join the conversation.`) +
+            button('Open the group', url),
+        ),
+      };
+    }
+    case 'group_invite_welcome': {
+      // Sent when someone joins through the shared invite link (auto-approved).
+      const firstName = String(d.firstName ?? 'there');
+      const groupName = String(d.groupName ?? 'the group');
+      const premium = d.premium === true;
+      const url = String(d.groupUrl ?? `${BRAND.app}/dashboard/groups`);
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `Welcome to ${groupName}`,
+        text:
+          `Hi ${firstName},\n\nYou've joined ${groupName}.` +
+          (premium ? ` As a launch member, lifetime Premium access is now unlocked on your account.` : '') +
+          `\n\nOpen the group to get started: ${url}`,
+        html: brandedLayout(
+          `Welcome to ${escapeHtml(groupName)}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`You've joined <strong>${escapeHtml(groupName)}</strong>. Welcome aboard!`) +
+            (premium
+              ? `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">As a launch member, <strong>lifetime Premium access</strong> is now unlocked on your account - every paid feature, on us.</div>`
+              : '') +
+            button('Open the group', url),
         ),
       };
     }
