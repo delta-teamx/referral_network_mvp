@@ -29,12 +29,16 @@ import { APP_BASE_URL } from '../../../lib/domains';
  */
 const NRG_BRAND = {
   name: 'NRG',
-  fullName: 'NRG Network',
-  logoUrl: null as string | null, // TODO: NRG logo asset
-  color: '#0F766E', // TODO: NRG brand hex (placeholder teal)
-  tagline: 'The NRG referral community, powered by Referral Nova',
+  fullName: 'Network Referral Group',
+  slogan: 'Energy for Business',
+  // Drop the hosted NRG logo URL here to show the real mark instead of the
+  // styled "NRG" text lockup (a leader can also upload it in the group manager).
+  logoUrl: null as string | null,
+  color: '#F5821F', // NRG orange
+  colorAccent: '#FDB515', // NRG amber/gold
+  tagline: 'Network Referral Group, powered by Referral Nova',
   blurb:
-    'NRG is partnering with Referral Nova to give members a private, AI-powered referral network - lifetime Premium access included.',
+    'NRG is partnering with Referral Nova to give members a private, AI-powered referral network built around live Zoom events - with lifetime Premium access included.',
 };
 
 // Permanent tracking params so signups from this page are attributable.
@@ -108,17 +112,24 @@ export default function NrgLandingPage() {
         >
           {/* Co-branded lockup (placeholder logos) */}
           <motion.div variants={fadeInUp} className="mb-8 flex items-center justify-center gap-4">
-            <span
-              className="flex h-14 items-center rounded-2xl px-5 text-xl font-black tracking-tight text-white shadow-sm"
-              style={{ backgroundColor: NRG_BRAND.color }}
-            >
-              {NRG_BRAND.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={NRG_BRAND.logoUrl} alt={NRG_BRAND.fullName} className="h-8" />
-              ) : (
-                NRG_BRAND.name
-              )}
-            </span>
+            {NRG_BRAND.logoUrl ? (
+              <span className="flex h-14 items-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={NRG_BRAND.logoUrl} alt={NRG_BRAND.fullName} className="h-10" />
+              </span>
+            ) : (
+              <span
+                className="flex h-14 flex-col items-center justify-center rounded-2xl px-5 text-white shadow-sm"
+                style={{
+                  background: `linear-gradient(180deg, ${NRG_BRAND.color} 0%, ${NRG_BRAND.colorAccent} 100%)`,
+                }}
+              >
+                <span className="text-xl font-black leading-none tracking-tight">{NRG_BRAND.name}</span>
+                <span className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.15em] text-white/90">
+                  {NRG_BRAND.slogan}
+                </span>
+              </span>
+            )}
             <span className="text-2xl font-light text-gray-300">×</span>
             <span className="flex h-14 items-center rounded-2xl bg-primary px-5 text-xl font-black tracking-tight text-white shadow-sm">
               Referral Nova
@@ -224,7 +235,7 @@ export default function NrgLandingPage() {
         <div
           className="mx-auto max-w-3xl rounded-3xl px-8 py-14 text-center text-white shadow-lg"
           style={{
-            background: `linear-gradient(135deg, ${NRG_BRAND.color} 0%, #1D4ED8 100%)`,
+            background: `linear-gradient(135deg, ${NRG_BRAND.color} 0%, ${NRG_BRAND.colorAccent} 100%)`,
           }}
         >
           <h2 className="text-3xl font-bold">Join the NRG referral network</h2>

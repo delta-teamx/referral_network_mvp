@@ -808,7 +808,7 @@ export async function seedNrgGroup(): Promise<void> {
         joinPolicy: 'request',
         lockedInterior: true,
         maxMembers: 200,
-        primaryColor: '#0F766E',
+        primaryColor: '#F5821F', // NRG orange
       },
       select: { id: true },
     });
