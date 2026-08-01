@@ -40,6 +40,57 @@ interface FeedEvent {
   text: string;
 }
 
+interface SpamRules {
+  flagThreshold: number;
+  burstWeight: number;
+  burstHours: number;
+  burstMsgs: number;
+  referralsWeight: number;
+  referralsCount: number;
+  referralsDays: number;
+  dupWeight: number;
+  dupCount: number;
+  emptyProfileWeight: number;
+  emptyProfileMsgs: number;
+  disposableWeight: number;
+}
+
+// Grouped for the tuning panel: [rule label, [field, field label] pairs].
+const SPAM_RULE_GROUPS: Array<{ title: string; fields: Array<[keyof SpamRules, string]> }> = [
+  { title: 'Flag threshold', fields: [['flagThreshold', 'Flag at score ≥']] },
+  {
+    title: 'Burst messaging',
+    fields: [
+      ['burstMsgs', 'Messages'],
+      ['burstHours', 'Within hours'],
+      ['burstWeight', 'Weight'],
+    ],
+  },
+  {
+    title: 'Mass referrals',
+    fields: [
+      ['referralsCount', 'Referrals'],
+      ['referralsDays', 'Within days'],
+      ['referralsWeight', 'Weight'],
+    ],
+  },
+  {
+    title: 'Duplicate messages',
+    fields: [
+      ['dupCount', 'Same text ×'],
+      ['dupWeight', 'Weight'],
+    ],
+  },
+  {
+    title: 'Empty profile',
+    fields: [
+      ['emptyProfileMsgs', 'Messages'],
+      ['emptyProfileWeight', 'Weight'],
+    ],
+  },
+  { title: 'Disposable email', fields: [['disposableWeight', 'Weight']] },
+];
+
 const FEED_DOT: Record<string, string> = {
   signup: 'bg-emerald-400',
   message: 'bg-blue-400',
@@ -74,6 +125,9 @@ export default function AdminAnalyticsPage() {
   const [feed, setFeed] = useState<FeedEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actioned, setActioned] = useState<Set<string>>(new Set());
+  const [rules, setRules] = useState<SpamRules | null>(null);
+  const [tuning, setTuning] = useState(false);
+  const [savingRules, setSavingRules] = useState(false);
 
   // Near-real-time activity feed (polls every 15s).
   useEffect(() => {
@@ -105,6 +159,35 @@ export default function AdminAnalyticsPage() {
     }
   }
 
+  async function loadRules() {
+    if (!accessToken) return;
+    try {
+      const cfg = await api.get<{ spamRules: SpamRules }>('/api/v1/admin/config', { accessToken });
+      if (cfg.spamRules) setRules(cfg.spamRules);
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  async function saveRules() {
+    if (!accessToken || !rules) return;
+    setSavingRules(true);
+    try {
+      const cfg = await api.patch<{ spamRules: SpamRules }>(
+        '/api/v1/admin/config',
+        { spamRules: rules },
+        { accessToken },
+      );
+      if (cfg.spamRules) setRules(cfg.spamRules);
+      await loadSuspects();
+      setTuning(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Save failed');
+    } finally {
+      setSavingRules(false);
+    }
+  }
+
   useEffect(() => {
     if (!accessToken) return;
     void (async () => {
@@ -116,6 +199,7 @@ export default function AdminAnalyticsPage() {
       }
     })();
     void loadSuspects();
+    void loadRules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
@@ -293,14 +377,72 @@ export default function AdminAnalyticsPage() {
 
           {/* Spam suspects */}
           <section className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
-              <AlertTriangle size={15} className="text-rose-400" /> Spam suspects
-              <span className="text-gray-500">({suspects.length})</span>
-            </h2>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+                <AlertTriangle size={15} className="text-rose-400" /> Spam suspects
+                <span className="text-gray-500">({suspects.length})</span>
+              </h2>
+              {rules && (
+                <button
+                  onClick={() => setTuning((v) => !v)}
+                  className="rounded-full border border-gray-700 px-3 py-1 text-xs font-semibold text-gray-300 hover:bg-gray-800"
+                >
+                  {tuning ? 'Close' : 'Tune rules'}
+                </button>
+              )}
+            </div>
             <p className="mb-3 text-xs text-gray-400">
               Flagged by automated rules (burst messaging, mass referrals, duplicate messages, empty
               profiles, disposable emails). Review before acting - these are flags, not proof.
             </p>
+
+            {tuning && rules && (
+              <div className="mb-4 rounded-xl border border-gray-800 bg-gray-950/60 p-4">
+                <p className="mb-3 text-xs text-gray-400">
+                  A user is flagged once their total score reaches the flag threshold. Each rule adds
+                  its weight when its condition trips. Changes apply immediately after saving.
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {SPAM_RULE_GROUPS.map((group) => (
+                    <div key={group.title} className="rounded-lg border border-gray-800 p-3">
+                      <p className="mb-2 text-xs font-semibold text-gray-200">{group.title}</p>
+                      <div className="space-y-2">
+                        {group.fields.map(([field, label]) => (
+                          <label key={field} className="flex items-center justify-between gap-2 text-xs text-gray-400">
+                            <span>{label}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={rules[field]}
+                              onChange={(e) =>
+                                setRules({ ...rules, [field]: Number(e.target.value) })
+                              }
+                              className="w-20 rounded-md border border-gray-700 bg-gray-900 px-2 py-1 text-right text-white"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => void loadRules()}
+                    disabled={savingRules}
+                    className="rounded-full border border-gray-700 px-4 py-1.5 text-xs font-semibold text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={() => void saveRules()}
+                    disabled={savingRules}
+                    className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  >
+                    {savingRules ? 'Saving…' : 'Save & rescan'}
+                  </button>
+                </div>
+              </div>
+            )}
             {suspects.length === 0 ? (
               <p className="rounded-xl border border-dashed border-gray-700 p-6 text-center text-sm text-gray-500">
                 No spam suspects right now.

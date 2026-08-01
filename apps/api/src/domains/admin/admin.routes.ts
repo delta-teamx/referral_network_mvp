@@ -31,8 +31,10 @@ import {
 import {
   getContributionPoints,
   getFreeEngagementLimit,
+  getSpamRules,
   setContributionPoints,
   setFreeEngagementLimit,
+  setSpamRules,
 } from '../core/settings/settings.service.js';
 import { adjustMemberPoints } from '../network/referral-tracking/contribution.service.js';
 import { getRewardCatalog, setRewardCatalog } from '../network/rewards/rewards.service.js';
@@ -246,12 +248,13 @@ adminRouter.get(
 adminRouter.get(
   '/config',
   asyncHandler(async (_req, res) => {
-    const [contributionPoints, freeEngagementLimit, rewardCatalog] = await Promise.all([
+    const [contributionPoints, freeEngagementLimit, rewardCatalog, spamRules] = await Promise.all([
       getContributionPoints(),
       getFreeEngagementLimit(),
       getRewardCatalog(),
+      getSpamRules(),
     ]);
-    const data = { contributionPoints, freeEngagementLimit, rewardCatalog };
+    const data = { contributionPoints, freeEngagementLimit, rewardCatalog, spamRules };
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
@@ -290,6 +293,22 @@ const configSchema = z.object({
     })
     .optional(),
   freeEngagementLimit: z.number().optional(),
+  spamRules: z
+    .object({
+      flagThreshold: z.number().optional(),
+      burstWeight: z.number().optional(),
+      burstHours: z.number().optional(),
+      burstMsgs: z.number().optional(),
+      referralsWeight: z.number().optional(),
+      referralsCount: z.number().optional(),
+      referralsDays: z.number().optional(),
+      dupWeight: z.number().optional(),
+      dupCount: z.number().optional(),
+      emptyProfileWeight: z.number().optional(),
+      emptyProfileMsgs: z.number().optional(),
+      disposableWeight: z.number().optional(),
+    })
+    .optional(),
 });
 adminRouter.patch(
   '/config',
@@ -302,7 +321,10 @@ adminRouter.patch(
       typeof req.body.freeEngagementLimit === 'number'
         ? await setFreeEngagementLimit(req.body.freeEngagementLimit)
         : await getFreeEngagementLimit();
-    const data = { contributionPoints, freeEngagementLimit };
+    const spamRules = req.body.spamRules
+      ? await setSpamRules(req.body.spamRules)
+      : await getSpamRules();
+    const data = { contributionPoints, freeEngagementLimit, spamRules };
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

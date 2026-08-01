@@ -61,6 +61,59 @@ export async function setContributionPoints(
   return next;
 }
 
+// ── Spam detection rules (admin-tunable weights + thresholds) ─────────────────
+
+/**
+ * Weights and trigger thresholds for the spam scanner. Each rule contributes
+ * its weight when its condition trips; a user is flagged once their total
+ * score reaches `flagThreshold`. All values are admin-editable so the team can
+ * loosen or tighten detection without a redeploy.
+ */
+export const DEFAULT_SPAM_RULES = {
+  flagThreshold: 3,
+  // Burst: many messages very soon after signup.
+  burstWeight: 3,
+  burstHours: 48,
+  burstMsgs: 10,
+  // High referral volume in a short window.
+  referralsWeight: 3,
+  referralsCount: 25,
+  referralsDays: 30,
+  // The same message text sent over and over.
+  dupWeight: 3,
+  dupCount: 3,
+  // Lots of messages from an empty (photoless, bio-less) profile.
+  emptyProfileWeight: 2,
+  emptyProfileMsgs: 8,
+  // Known disposable / throwaway email domain.
+  disposableWeight: 2,
+} as const;
+
+export type SpamRuleKey = keyof typeof DEFAULT_SPAM_RULES;
+const SPAM_RULES_KEY = 'spam_rules';
+
+/** Merged spam config: admin overrides on top of code defaults. */
+export async function getSpamRules(): Promise<Record<SpamRuleKey, number>> {
+  const override = await getSetting<Partial<Record<SpamRuleKey, number>>>(SPAM_RULES_KEY, {});
+  return { ...DEFAULT_SPAM_RULES, ...override };
+}
+
+/** Persist edited spam config (only known keys, coerced to sane integers). */
+export async function setSpamRules(
+  input: Partial<Record<SpamRuleKey, number>>,
+): Promise<Record<SpamRuleKey, number>> {
+  const current = await getSpamRules();
+  const next = { ...current };
+  for (const key of Object.keys(DEFAULT_SPAM_RULES) as SpamRuleKey[]) {
+    const v = input[key];
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      next[key] = Math.max(0, Math.min(100000, Math.round(v)));
+    }
+  }
+  await setSetting(SPAM_RULES_KEY, next);
+  return next;
+}
+
 // ── Free-plan engagement limit (intro requests / new conversations) ───────────
 
 const FREE_ENGAGEMENT_LIMIT_KEY = 'free_engagement_limit';

@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma.js';
+import { getSpamRules } from '../core/settings/settings.service.js';
 
 /**
  * Admin analytics for the referral + rewards funnel. Read-only aggregations
@@ -331,6 +332,10 @@ const DISPOSABLE_DOMAINS = [
 export async function getSpamSuspects() {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
+  const rules = await getSpamRules();
+  // Dup-message SQL grouping needs a literal minimum; scan from 2 up so the
+  // admin can tune the flag count down without missing rows, then filter.
+  const dupScanFloor = Math.max(2, Math.min(rules.dupCount, 1000));
 
   const [users, msgBySender, dupMsgs, refBySender] = await Promise.all([
     prisma.user.findMany({
@@ -348,11 +353,11 @@ export async function getSpamSuspects() {
     prisma.message.groupBy({
       by: ['senderId', 'text'],
       _count: { _all: true },
-      having: { text: { _count: { gte: 3 } } },
+      having: { text: { _count: { gte: dupScanFloor } } },
     }),
     prisma.referral.groupBy({
       by: ['senderId'],
-      where: { createdAt: { gte: new Date(now - 30 * dayMs) } },
+      where: { createdAt: { gte: new Date(now - rules.referralsDays * dayMs) } },
       _count: { _all: true },
     }),
   ]);
@@ -375,28 +380,28 @@ export async function getSpamSuspects() {
     const emptyProfile = !u.memberProfile?.photoUrl && !u.memberProfile?.bio;
     const domain = u.email.split('@')[1]?.toLowerCase() ?? '';
 
-    if (ageHrs < 48 && msgs >= 10) {
-      score += 3;
-      reasons.push(`${msgs} messages in first 48h`);
+    if (ageHrs < rules.burstHours && msgs >= rules.burstMsgs) {
+      score += rules.burstWeight;
+      reasons.push(`${msgs} messages in first ${rules.burstHours}h`);
     }
-    if (refs >= 25) {
-      score += 3;
-      reasons.push(`${refs} referrals in 30 days`);
+    if (refs >= rules.referralsCount) {
+      score += rules.referralsWeight;
+      reasons.push(`${refs} referrals in ${rules.referralsDays} days`);
     }
-    if (dup >= 3) {
-      score += 3;
+    if (dup >= rules.dupCount) {
+      score += rules.dupWeight;
       reasons.push(`same message sent ${dup} times`);
     }
-    if (emptyProfile && msgs >= 8) {
-      score += 2;
+    if (emptyProfile && msgs >= rules.emptyProfileMsgs) {
+      score += rules.emptyProfileWeight;
       reasons.push(`${msgs} messages with an empty profile`);
     }
     if (DISPOSABLE_DOMAINS.includes(domain)) {
-      score += 2;
+      score += rules.disposableWeight;
       reasons.push('disposable email domain');
     }
 
-    if (score >= 3) {
+    if (score >= rules.flagThreshold) {
       suspects.push({
         userId: u.id,
         name: `${u.firstName} ${u.lastName}`.trim() || u.email,
