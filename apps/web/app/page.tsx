@@ -26,9 +26,33 @@ import { useEffect } from 'react';
 import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
 import { FoundingOffer } from '../components/marketing/FoundingOffer';
+import { JsonLd, faqSchema } from '../components/seo/JsonLd';
 import { useI18n } from '../lib/i18n';
 import { isAppHost } from '../lib/domains';
 import { useAuthStore } from '../stores/auth';
+
+const HOME_FAQS = [
+  {
+    q: 'What is Referral Nova?',
+    a: 'Referral Nova is an AI-powered referral network that creates meaningful business introductions instead of social media connections. Its matching engine pairs your business with trusted, complementary partners so qualified referrals flow both ways, and tracks each referral from introduction to closed deal.',
+  },
+  {
+    q: 'How is Referral Nova different from LinkedIn?',
+    a: 'LinkedIn is a social network for collecting connections. Referral Nova is a referral network for generating qualified introductions. Instead of you searching and hoping, the AI proactively matches you with partners who can actually refer you business - and tracks the referrals that result.',
+  },
+  {
+    q: 'How does the AI matching work?',
+    a: 'Referral Nova builds a profile of your business - what you do, who you serve, your industry and location - then scores potential partners on how well you complement each other and how likely you are to refer. The strongest matches are surfaced as suggested introductions.',
+  },
+  {
+    q: 'Is Referral Nova free?',
+    a: 'Yes, there is a free plan, plus paid tiers for higher referral volume and more AI matching. The first 200 founding members keep Premium free for life. See the pricing page for current plans.',
+  },
+  {
+    q: 'Who is Referral Nova for?',
+    a: 'Referral Nova is built for service businesses and professionals who grow through referrals - realtors, contractors, med spas, financial and insurance professionals, agencies, and the partners around them - as well as networking groups that want to run their own community with AI matching built in.',
+  },
+];
 
 export default function HomePage() {
   const { t } = useI18n();
@@ -741,6 +765,24 @@ export default function HomePage() {
           <p className="mt-6 text-xs text-gray-500">
             Groups + organizations: <Link href="/for-groups" className="font-semibold text-primary hover:underline">see white-label pricing →</Link>
           </p>
+        </div>
+      </section>
+
+      {/* ═══ FAQ (with FAQPage schema for AEO) ═══ */}
+      <section className="bg-white py-20">
+        <JsonLd data={faqSchema(HOME_FAQS)} />
+        <div className="mx-auto max-w-3xl px-6">
+          <h2 className="text-center text-3xl font-bold text-gray-900 md:text-4xl">
+            Frequently asked questions
+          </h2>
+          <dl className="mt-10 space-y-4">
+            {HOME_FAQS.map((f) => (
+              <div key={f.q} className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                <dt className="font-semibold text-gray-900">{f.q}</dt>
+                <dd className="mt-2 leading-relaxed text-gray-600">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 

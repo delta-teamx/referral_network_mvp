@@ -40,6 +40,14 @@ const LINK_GROUPS = [
     ],
   },
   {
+    heading: 'Industries',
+    links: [
+      { href: '/industries/referrals-for-realtors', label: 'Realtors' },
+      { href: '/industries/referrals-for-contractors', label: 'Contractors' },
+      { href: '/industries/referrals-for-med-spas', label: 'Med spas' },
+    ],
+  },
+  {
     heading: 'Company',
     links: [
       { href: '/about', label: 'About us' },
@@ -54,7 +62,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-950 px-6 py-16 text-gray-300">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {/* Brand column */}
           <div className="sm:col-span-2 md:col-span-1">
             <a href="/">

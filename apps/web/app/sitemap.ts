@@ -25,6 +25,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/compare/referral-nova-vs-bni', priority: 0.9, changeFrequency: 'monthly' },
     { path: '/compare/referral-nova-vs-traditional-networking', priority: 0.8, changeFrequency: 'monthly' },
     { path: '/learn/how-ai-referral-networks-work', priority: 0.8, changeFrequency: 'monthly' },
+    // Industry pages.
+    { path: '/industries/referrals-for-realtors', priority: 0.8, changeFrequency: 'monthly' },
+    { path: '/industries/referrals-for-contractors', priority: 0.8, changeFrequency: 'monthly' },
+    { path: '/industries/referrals-for-med-spas', priority: 0.8, changeFrequency: 'monthly' },
     { path: '/nrg', priority: 0.6, changeFrequency: 'monthly' },
     { path: '/privacy', priority: 0.3, changeFrequency: 'yearly' },
     { path: '/terms', priority: 0.3, changeFrequency: 'yearly' },
