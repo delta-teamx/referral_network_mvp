@@ -27,7 +27,8 @@ export type EmailTemplate =
   | 'support_escalation'
   | 'reengagement'
   | 'complete_profile'
-  | 'roul_message';
+  | 'roul_message'
+  | 'message_received';
 
 export interface EmailAttachment {
   filename: string;
@@ -231,6 +232,31 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         html: brandedLayout(
           `You're one step away, ${escapeHtml(firstName)}`,
           paras.map(P).join('') + button('Complete my profile', onboardUrl),
+        ),
+      };
+    }
+    case 'message_received': {
+      const firstName = String(d.firstName ?? 'there');
+      const fromName = String(d.fromName ?? 'A member');
+      const preview = String(d.preview ?? '');
+      const messagesUrl = `${BRAND.app}/dashboard/messages`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const quoted = preview
+        ? `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">${escapeHtml(preview)}</div>`
+        : '';
+      return {
+        subject: `${fromName} sent you a message on Referral Nova`,
+        text:
+          `Hi ${firstName},\n\n` +
+          `${fromName} messaged you on Referral Nova.\n\n` +
+          (preview ? `"${preview}"\n\n` : '') +
+          `Open your messages to reply: ${messagesUrl}`,
+        html: brandedLayout(
+          `${escapeHtml(fromName)} sent you a message`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`${escapeHtml(fromName)} just messaged you on Referral Nova. A quick reply is often where a referral starts.`) +
+            quoted +
+            button('Read and reply', messagesUrl),
         ),
       };
     }

@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { env } from '../../../config/env.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
+import { sendEmail } from '../../core/notifications/email.service.js';
 import { assertEngagementQuota } from '../../billing/billing.tiers.js';
 
 /**
@@ -266,7 +267,7 @@ export async function sendMessage(
     const [other, sender, convo, roulId] = await Promise.all([
       prisma.conversationParticipant.findFirst({
         where: { conversationId, userId: { not: senderId } },
-        select: { userId: true },
+        select: { user: { select: { id: true, email: true, firstName: true } } },
       }),
       prisma.user.findUnique({
         where: { id: senderId },
@@ -277,16 +278,49 @@ export async function sendMessage(
     ]);
     const isOfficial = Boolean(convo?.isOfficial);
     const fromRoul = senderId === roulId;
+    const senderName = sender ? `${sender.firstName} ${sender.lastName}`.trim() : 'a member';
     if (other) {
       await createNotification({
-        userId: other.userId,
+        userId: other.user.id,
         type: 'message',
-        title: isOfficial && fromRoul
-          ? 'New message from ROUL Support'
-          : `New message from ${sender ? `${sender.firstName} ${sender.lastName}` : 'a member'}`,
+        title:
+          isOfficial && fromRoul ? 'New message from ROUL Support' : `New message from ${senderName}`,
         body: message.text.slice(0, 120),
         data: { conversationId },
       });
+
+      // Email the recipient so they reply even when they're not in the app -
+      // the #1 lever on reply rate. Skip ROUL/official threads (ROUL sends its
+      // own email) and throttle to at most one message email per 30 min so a
+      // burst of messages never spams the inbox.
+      if (!isOfficial && other.user.email) {
+        const bucket = Math.floor(Date.now() / (30 * 60 * 1000));
+        try {
+          await prisma.domainEvent.create({
+            data: {
+              id: `msg_email:${other.user.id}:${bucket}`,
+              type: 'email.message_received',
+              aggregateId: other.user.id,
+              payload: {},
+            },
+          });
+          await sendEmail({
+            to: other.user.email,
+            template: 'message_received',
+            data: {
+              firstName: other.user.firstName,
+              fromName: senderName,
+              preview: message.text.slice(0, 140),
+            },
+          });
+        } catch (err) {
+          // P2002 = already emailed this recipient in the current 30-min window.
+          if (!(err && typeof err === 'object' && (err as { code?: string }).code === 'P2002')) {
+            // eslint-disable-next-line no-console
+            console.error('[messaging] message email failed', err);
+          }
+        }
+      }
     }
     // A member reply on an official ROUL thread pings the human team so the
     // loop closes - "they reply, we get back to them".
