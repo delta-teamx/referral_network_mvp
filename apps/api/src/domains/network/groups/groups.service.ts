@@ -170,8 +170,10 @@ export async function getGroupBySlug(slug: string, viewerId?: string) {
           id: true,
           role: true,
           joinedAt: true,
+          // NOTE: no email here. This is served from an UNAUTHENTICATED
+          // by-slug route, so member emails must never be in the payload.
           user: {
-            select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
           },
         },
       },
