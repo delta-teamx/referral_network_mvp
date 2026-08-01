@@ -31,9 +31,7 @@ const NRG_BRAND = {
   name: 'NRG',
   fullName: 'Network Referral Group',
   slogan: 'Energy for Business',
-  // Drop the hosted NRG logo URL here to show the real mark instead of the
-  // styled "NRG" text lockup (a leader can also upload it in the group manager).
-  logoUrl: null as string | null,
+  logoUrl: '/nrg-logo.png' as string | null,
   color: '#F5821F', // NRG orange
   colorAccent: '#FDB515', // NRG amber/gold
   tagline: 'Network Referral Group, powered by Referral Nova',
@@ -113,9 +111,13 @@ export default function NrgLandingPage() {
           {/* Co-branded lockup (placeholder logos) */}
           <motion.div variants={fadeInUp} className="mb-8 flex items-center justify-center gap-4">
             {NRG_BRAND.logoUrl ? (
-              <span className="flex h-14 items-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
+              <span className="flex h-16 items-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={NRG_BRAND.logoUrl} alt={NRG_BRAND.fullName} className="h-10" />
+                <img
+                  src={NRG_BRAND.logoUrl}
+                  alt="NRG - Network Referral Group - Energy for Business"
+                  className="h-12 w-auto"
+                />
               </span>
             ) : (
               <span

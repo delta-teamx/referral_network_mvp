@@ -1,5 +1,6 @@
 import type { EventBus } from '../../core/events/EventBus.js';
 import { prisma } from '../../../config/prisma.js';
+import { ensureNrgLeaderMembership } from './groups.service.js';
 
 /**
  * Group subscribers - make group membership actually interconnect people.
@@ -49,5 +50,10 @@ export function registerGroupSubscribers(bus: EventBus): void {
     if (rows.length > 0) {
       await prisma.businessConnection.createMany({ data: rows, skipDuplicates: true });
     }
+  });
+
+  // Named NRG leaders (Mike, Lori) get leader access the instant they register.
+  bus.subscribe('user.signed_up', async ({ userId, email }) => {
+    await ensureNrgLeaderMembership(userId, email);
   });
 }

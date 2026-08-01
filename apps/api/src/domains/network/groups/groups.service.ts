@@ -809,6 +809,7 @@ export async function seedNrgGroup(): Promise<void> {
         lockedInterior: true,
         maxMembers: 200,
         primaryColor: '#F5821F', // NRG orange
+        logoUrl: 'https://referralnova.com/nrg-logo.png',
       },
       select: { id: true },
     });
@@ -843,6 +844,34 @@ export async function seedNrgGroup(): Promise<void> {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('[seed] seedNrgGroup failed (non-fatal):', String(err));
+  }
+}
+
+/**
+ * If a newly-registered user is a named NRG leader, add them to the NRG group
+ * with their leader role immediately - so Mike/Lori get access the moment they
+ * sign up, not on the next API reboot. No-op for everyone else, and safe if the
+ * group has not been created yet (the boot seed wires them later in that case).
+ */
+export async function ensureNrgLeaderMembership(userId: string, email: string): Promise<void> {
+  const role = NRG_LEADERS.find((l) => l.email.toLowerCase() === email.toLowerCase())?.role;
+  if (!role) return;
+  try {
+    const group = await prisma.group.findUnique({ where: { slug: NRG_SLUG }, select: { id: true } });
+    if (!group) return;
+    const created = await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId: group.id, userId } },
+      update: {},
+      create: { groupId: group.id, userId, role },
+      select: { role: true },
+    });
+    // Interconnect the new leader with existing members (best-effort).
+    await eventBus.publish('group.member_joined', { groupId: group.id, userId });
+    // eslint-disable-next-line no-console
+    console.log(`[nrg] wired leader ${email} as ${created.role}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[nrg] ensureNrgLeaderMembership failed (non-fatal):', String(err));
   }
 }
 
