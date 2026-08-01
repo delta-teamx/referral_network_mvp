@@ -40,7 +40,12 @@ import {
   adminOverrideReferral,
   listDisputedReferrals,
 } from '../network/referrals/referrals.service.js';
-import { computeReferralAnalytics, getSpamSuspects, getUserActivity } from './analytics.service.js';
+import {
+  computeReferralAnalytics,
+  getActivityFeed,
+  getSpamSuspects,
+  getUserActivity,
+} from './analytics.service.js';
 
 export const adminRouter: Router = Router();
 adminRouter.use(authenticate);
@@ -211,6 +216,16 @@ adminRouter.get(
   '/spam-suspects',
   asyncHandler(async (_req, res) => {
     const data = await getSpamSuspects();
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+// Platform-wide activity feed (near-real-time monitor).
+adminRouter.get(
+  '/activity-feed',
+  asyncHandler(async (_req, res) => {
+    const data = await getActivityFeed();
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

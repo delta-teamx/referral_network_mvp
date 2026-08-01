@@ -33,6 +33,30 @@ interface SpamSuspect {
   reasons: string[];
 }
 
+interface FeedEvent {
+  type: string;
+  at: string;
+  who: string;
+  text: string;
+}
+
+const FEED_DOT: Record<string, string> = {
+  signup: 'bg-emerald-400',
+  message: 'bg-blue-400',
+  referral: 'bg-amber-400',
+  booking: 'bg-violet-400',
+  reward: 'bg-pink-400',
+  invite: 'bg-teal-400',
+};
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="rounded-2xl border border-gray-800 bg-gray-900 p-4">
@@ -47,8 +71,29 @@ export default function AdminAnalyticsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [data, setData] = useState<Analytics | null>(null);
   const [suspects, setSuspects] = useState<SpamSuspect[]>([]);
+  const [feed, setFeed] = useState<FeedEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actioned, setActioned] = useState<Set<string>>(new Set());
+
+  // Near-real-time activity feed (polls every 15s).
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const f = await api.get<FeedEvent[]>('/api/v1/admin/activity-feed', { accessToken: accessToken ?? undefined });
+        if (!cancelled) setFeed(f);
+      } catch {
+        /* silent */
+      }
+    }
+    void poll();
+    const t = setInterval(() => void poll(), 15_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [accessToken]);
 
   async function loadSuspects() {
     if (!accessToken) return;
@@ -114,6 +159,32 @@ export default function AdminAnalyticsPage() {
           {error}
         </p>
       )}
+
+      {/* Live activity monitor */}
+      <section className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          </span>
+          Live activity <span className="text-gray-500">· updates every 15s</span>
+        </h2>
+        {feed.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent activity.</p>
+        ) : (
+          <ul className="max-h-80 space-y-1.5 overflow-y-auto">
+            {feed.map((e, i) => (
+              <li key={i} className="flex items-center gap-3 text-sm">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${FEED_DOT[e.type] ?? 'bg-gray-500'}`} />
+                <span className="min-w-0 flex-1 truncate text-gray-200">
+                  <span className="font-medium text-white">{e.who}</span> {e.text}
+                </span>
+                <span className="shrink-0 text-xs text-gray-500">{timeAgo(e.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {!data ? (
         <div className="h-64 animate-pulse rounded-2xl bg-gray-900" />

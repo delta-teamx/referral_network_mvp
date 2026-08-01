@@ -139,6 +139,85 @@ export async function computeReferralAnalytics() {
 }
 
 /**
+ * Platform-wide activity feed for the admin monitor - recent real actions
+ * (signups, messages, referrals, bookings, reward redemptions, invites that
+ * joined) merged from their source tables by time, newest first. Read-only.
+ */
+export async function getActivityFeed(limit = 60) {
+  const take = 25;
+  const [signups, messages, referrals, bookings, rewards, invites] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: { not: 'ADMIN' }, deletedAt: null, NOT: { email: { endsWith: '@vpn-demo.com' } } },
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: { firstName: true, lastName: true, createdAt: true },
+    }),
+    prisma.message.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: { createdAt: true, sender: { select: { firstName: true, lastName: true } } },
+    }),
+    prisma.referral.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: { createdAt: true, clientName: true, sender: { select: { firstName: true, lastName: true } } },
+    }),
+    prisma.bookingCall.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: { createdAt: true, hostId: true, guestId: true },
+    }),
+    prisma.rewardRedemption.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: { createdAt: true, userId: true, rewardKey: true },
+    }),
+    prisma.referralTracking.findMany({
+      where: { status: { in: ['onboarded', 'paid'] }, inviteeJoinedAt: { not: null } },
+      orderBy: { inviteeJoinedAt: 'desc' },
+      take,
+      select: { inviteeJoinedAt: true, referrer: { select: { firstName: true, lastName: true } } },
+    }),
+  ]);
+
+  // Batch-resolve names for booking host/guest + reward users (no relation join).
+  const ids = [
+    ...new Set([...bookings.flatMap((b) => [b.hostId, b.guestId]), ...rewards.map((r) => r.userId)]),
+  ];
+  const people = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, firstName: true, lastName: true } })
+    : [];
+  const nameById = new Map(people.map((u) => [u.id, `${u.firstName} ${u.lastName}`.trim() || 'A member']));
+  const nm = (u?: { firstName: string; lastName: string } | null) =>
+    u ? `${u.firstName} ${u.lastName}`.trim() || 'A member' : 'A member';
+
+  const events: Array<{ type: string; at: Date; who: string; text: string }> = [];
+  for (const s of signups) events.push({ type: 'signup', at: s.createdAt, who: nm(s), text: 'joined Referral Nova' });
+  for (const m of messages) events.push({ type: 'message', at: m.createdAt, who: nm(m.sender), text: 'sent a message' });
+  for (const r of referrals)
+    events.push({ type: 'referral', at: r.createdAt, who: nm(r.sender), text: `referred ${r.clientName ?? 'a client'}` });
+  for (const b of bookings)
+    events.push({
+      type: 'booking',
+      at: b.createdAt,
+      who: nameById.get(b.hostId) ?? 'A member',
+      text: `booked a call with ${nameById.get(b.guestId) ?? 'a member'}`,
+    });
+  for (const rw of rewards)
+    events.push({
+      type: 'reward',
+      at: rw.createdAt,
+      who: nameById.get(rw.userId) ?? 'A member',
+      text: `redeemed ${rw.rewardKey.replace(/_/g, ' ')}`,
+    });
+  for (const iv of invites)
+    if (iv.inviteeJoinedAt) events.push({ type: 'invite', at: iv.inviteeJoinedAt, who: nm(iv.referrer), text: 'had an invite join' });
+
+  events.sort((a, b) => b.at.getTime() - a.at.getTime());
+  return events.slice(0, limit);
+}
+
+/**
  * One member's activity snapshot for the admin per-user view: identity, profile
  * completeness, login recency, and real engagement (messages + reply rate,
  * pipeline, referrals, invites, bookings, points) plus their last few messages.
