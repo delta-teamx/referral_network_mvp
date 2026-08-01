@@ -137,6 +137,8 @@ model User {
   pipelineAsContact      PipelineCard[]      @relation("PipelineContact")
   supportTickets         SupportTicket[]     @relation("SupportTicketUser")
   groupJoinRequests      GroupJoinRequest[]  @relation("GroupJoinRequestUser")
+  groupEventRsvps        GroupEventRsvp[]    @relation("GroupEventRsvpUser")
+  groupAnnouncements     GroupAnnouncement[] @relation("GroupAnnouncementAuthor")
 
   @@index([email])
   @@index([role])
@@ -503,6 +505,7 @@ model Group {
   messages      GroupMessage[]
   inviteLinks   GroupInviteLink[]
   joinRequests  GroupJoinRequest[]
+  announcements GroupAnnouncement[]
 
   @@index([slug])
   @@index([city, state])
@@ -666,10 +669,40 @@ model GroupEvent {
   rsvpCount   Int      @default(0)
   createdAt   DateTime @default(now())
 
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  rsvps GroupEventRsvp[]
 
   @@index([groupId])
   @@index([date])
+}
+
+/// One member's "I'm going" on a group's Zoom event.
+model GroupEventRsvp {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event GroupEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User       @relation("GroupEventRsvpUser", fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+/// A leader-posted announcement pinned to a group (separate from group chat).
+model GroupAnnouncement {
+  id        String   @id @default(uuid())
+  groupId   String
+  authorId  String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author User  @relation("GroupAnnouncementAuthor", fields: [authorId], references: [id])
+
+  @@index([groupId, createdAt])
 }
 
 model Favorite {

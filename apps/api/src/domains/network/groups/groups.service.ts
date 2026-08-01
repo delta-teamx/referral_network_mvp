@@ -772,3 +772,264 @@ export async function decideJoinRequest(
 
   return { ok: true, status: 'approved' as const };
 }
+
+// ---- NRG partnership group seed ---------------------------------------------
+
+/** Slug of the official NRG group. */
+export const NRG_SLUG = 'nrg';
+/** Named NRG group leaders, wired as members on boot when their accounts exist. */
+const NRG_LEADERS: Array<{ email: string; role: 'LEADER' | 'CO_LEADER' }> = [
+  { email: 'mike@networkreferralgroup.com', role: 'LEADER' },
+  { email: 'lori@lorilandin.com', role: 'CO_LEADER' },
+];
+const ROUL_SUPPORT_EMAIL = 'roul-support@referralnova.com';
+
+/**
+ * Ensure the official NRG group exists and its admins are wired up. Idempotent
+ * and safe to run on every boot:
+ *  - creates the NRG group (closed / request-to-join) once, never overwriting
+ *    later admin edits to its name, branding or settings;
+ *  - adds the named NRG leaders (Mike, Lori) as they sign up;
+ *  - adds every platform admin as a CO_LEADER so the team can test and manage.
+ */
+export async function seedNrgGroup(): Promise<void> {
+  try {
+    const group = await prisma.group.upsert({
+      where: { slug: NRG_SLUG },
+      update: {},
+      create: {
+        slug: NRG_SLUG,
+        name: 'NRG',
+        description:
+          'The Network Referral Group community on Referral Nova - a private, invite-based network built around live Zoom events and warm introductions.',
+        city: 'National',
+        state: 'US',
+        isPublic: true,
+        joinPolicy: 'request',
+        lockedInterior: true,
+        maxMembers: 200,
+        primaryColor: '#0F766E',
+      },
+      select: { id: true },
+    });
+
+    // Resolve the leader accounts that currently exist.
+    const named = await prisma.user.findMany({
+      where: { email: { in: NRG_LEADERS.map((l) => l.email) }, deletedAt: null },
+      select: { id: true, email: true },
+    });
+    const roleByEmail = new Map(NRG_LEADERS.map((l) => [l.email, l.role]));
+
+    // Every platform admin (except the ROUL support bot) joins as CO_LEADER so
+    // they can test and manage what we ship.
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: ROUL_SUPPORT_EMAIL } },
+      select: { id: true },
+    });
+
+    const wanted = new Map<string, 'LEADER' | 'CO_LEADER'>();
+    for (const u of named) wanted.set(u.id, roleByEmail.get(u.email) ?? 'CO_LEADER');
+    for (const a of admins) if (!wanted.has(a.id)) wanted.set(a.id, 'CO_LEADER');
+
+    for (const [userId, role] of wanted) {
+      await prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId: group.id, userId } },
+        update: {}, // never downgrade a role that already exists
+        create: { groupId: group.id, userId, role },
+      });
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[seed] NRG group ready (${wanted.size} admin/leader members ensured)`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[seed] seedNrgGroup failed (non-fatal):', String(err));
+  }
+}
+
+// ---- Group Zoom events (leaders post, members RSVP) -------------------------
+
+/** Notify every member (except the actor) in-app - best-effort, non-blocking. */
+function notifyMembers(
+  groupId: string,
+  actorId: string,
+  type: string,
+  title: string,
+  body: string,
+  data: Record<string, unknown>,
+): void {
+  void (async () => {
+    const members = await prisma.groupMember.findMany({
+      where: { groupId, userId: { not: actorId } },
+      select: { userId: true },
+    });
+    for (const m of members) {
+      void createNotification({ userId: m.userId, type, title, body, data }).catch(() => undefined);
+    }
+  })().catch(() => undefined);
+}
+
+/** Create a Zoom event for the group (leaders only). */
+export async function createGroupEvent(
+  groupId: string,
+  userId: string,
+  input: { title: string; description?: string; date: Date; meetingUrl?: string; location?: string },
+) {
+  await assertGroupAdmin(groupId, userId);
+  const group = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+  const event = await prisma.groupEvent.create({
+    data: {
+      groupId,
+      title: sanitizeText(input.title).slice(0, 160),
+      description: input.description ? sanitizeText(input.description).slice(0, 2000) : null,
+      date: input.date,
+      meetingUrl: input.meetingUrl?.trim() || null,
+      location: input.location ? sanitizeText(input.location).slice(0, 160) : 'Virtual',
+    },
+  });
+  notifyMembers(
+    groupId,
+    userId,
+    'group_event',
+    `New event in ${group?.name ?? 'your group'}`,
+    input.title,
+    { groupId, eventId: event.id },
+  );
+  return event;
+}
+
+/** Upcoming events for a group with the viewer's RSVP status (members only). */
+export async function listGroupEvents(groupId: string, userId: string) {
+  await assertGroupMember(groupId, userId);
+  const events = await prisma.groupEvent.findMany({
+    where: { groupId, date: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
+    orderBy: { date: 'asc' },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      date: true,
+      location: true,
+      meetingUrl: true,
+      _count: { select: { rsvps: true } },
+      rsvps: { where: { userId }, select: { id: true } },
+    },
+  });
+  return events.map((e) => ({
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    date: e.date,
+    location: e.location,
+    meetingUrl: e.meetingUrl,
+    attendeeCount: e._count.rsvps,
+    viewerGoing: e.rsvps.length > 0,
+  }));
+}
+
+/** Toggle the caller's RSVP on a group event (members only). Returns new state. */
+export async function toggleEventRsvp(eventId: string, userId: string) {
+  const event = await prisma.groupEvent.findUnique({
+    where: { id: eventId },
+    select: { id: true, groupId: true },
+  });
+  if (!event) throw AppError.notFound('Event not found');
+  await assertGroupMember(event.groupId, userId);
+
+  const existing = await prisma.groupEventRsvp.findUnique({
+    where: { eventId_userId: { eventId, userId } },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.$transaction([
+      prisma.groupEventRsvp.delete({ where: { id: existing.id } }),
+      prisma.groupEvent.update({ where: { id: eventId }, data: { rsvpCount: { decrement: 1 } } }),
+    ]);
+    return { going: false };
+  }
+  // Create the RSVP; ignore a unique-collision from a double-tap race.
+  try {
+    await prisma.$transaction([
+      prisma.groupEventRsvp.create({ data: { eventId, userId } }),
+      prisma.groupEvent.update({ where: { id: eventId }, data: { rsvpCount: { increment: 1 } } }),
+    ]);
+  } catch (err) {
+    if (!(err instanceof Error && 'code' in err && (err as { code?: string }).code === 'P2002')) {
+      throw err;
+    }
+  }
+  return { going: true };
+}
+
+/** Delete a group event (leaders only). */
+export async function deleteGroupEvent(eventId: string, userId: string) {
+  const event = await prisma.groupEvent.findUnique({
+    where: { id: eventId },
+    select: { groupId: true },
+  });
+  if (!event) throw AppError.notFound('Event not found');
+  await assertGroupAdmin(event.groupId, userId);
+  await prisma.groupEvent.delete({ where: { id: eventId } });
+  return { ok: true };
+}
+
+// ---- Group announcements (leaders post, members read) -----------------------
+
+const announcementSelect = {
+  id: true,
+  title: true,
+  body: true,
+  createdAt: true,
+  author: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+} as const;
+
+/** Post an announcement to the group (leaders only). */
+export async function createAnnouncement(
+  groupId: string,
+  userId: string,
+  input: { title: string; body: string },
+) {
+  await assertGroupAdmin(groupId, userId);
+  const group = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
+  const announcement = await prisma.groupAnnouncement.create({
+    data: {
+      groupId,
+      authorId: userId,
+      title: sanitizeText(input.title).slice(0, 160),
+      body: sanitizeText(input.body).slice(0, 4000),
+    },
+    select: announcementSelect,
+  });
+  notifyMembers(
+    groupId,
+    userId,
+    'group_announcement',
+    `Announcement in ${group?.name ?? 'your group'}`,
+    input.title,
+    { groupId, announcementId: announcement.id },
+  );
+  return announcement;
+}
+
+/** Recent announcements for a group (members only). */
+export async function listAnnouncements(groupId: string, userId: string) {
+  await assertGroupMember(groupId, userId);
+  return prisma.groupAnnouncement.findMany({
+    where: { groupId },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: announcementSelect,
+  });
+}
+
+/** Delete an announcement (leaders only). */
+export async function deleteAnnouncement(announcementId: string, userId: string) {
+  const a = await prisma.groupAnnouncement.findUnique({
+    where: { id: announcementId },
+    select: { groupId: true },
+  });
+  if (!a) throw AppError.notFound('Announcement not found');
+  await assertGroupAdmin(a.groupId, userId);
+  await prisma.groupAnnouncement.delete({ where: { id: announcementId } });
+  return { ok: true };
+}

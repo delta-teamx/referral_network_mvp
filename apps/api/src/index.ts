@@ -23,6 +23,7 @@ import { connectionsRouter } from './domains/network/connections/connections.rou
 import { invitationsRouter } from './domains/network/invitations/invitations.routes.js';
 import { contractsRouter } from './domains/network/contracts/contracts.routes.js';
 import { groupsRouter } from './domains/network/groups/groups.routes.js';
+import { seedNrgGroup } from './domains/network/groups/groups.service.js';
 import { profilesRouter } from './domains/network/profiles/profiles.routes.js';
 import { aiRouter } from './domains/matching/ai/ai.routes.js';
 import { billingRouter } from './domains/billing/billing.routes.js';
@@ -545,6 +546,32 @@ async function ensureRuntimeSchema(): Promise<void> {
          ALTER TABLE "GroupJoinRequest" ADD CONSTRAINT "GroupJoinRequest_groupId_fkey"
            FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE;
        EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
+      // Group Zoom-event RSVPs + leader announcements.
+      `CREATE TABLE IF NOT EXISTS "GroupEventRsvp" (
+         "id" TEXT PRIMARY KEY,
+         "eventId" TEXT NOT NULL,
+         "userId" TEXT NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "GroupEventRsvp_eventId_userId_key" ON "GroupEventRsvp" ("eventId", "userId");`,
+      `CREATE INDEX IF NOT EXISTS "GroupEventRsvp_userId_idx" ON "GroupEventRsvp" ("userId");`,
+      `DO $$ BEGIN
+         ALTER TABLE "GroupEventRsvp" ADD CONSTRAINT "GroupEventRsvp_eventId_fkey"
+           FOREIGN KEY ("eventId") REFERENCES "GroupEvent"("id") ON DELETE CASCADE;
+       EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
+      `CREATE TABLE IF NOT EXISTS "GroupAnnouncement" (
+         "id" TEXT PRIMARY KEY,
+         "groupId" TEXT NOT NULL,
+         "authorId" TEXT NOT NULL,
+         "title" TEXT NOT NULL,
+         "body" TEXT NOT NULL,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+       );`,
+      `CREATE INDEX IF NOT EXISTS "GroupAnnouncement_groupId_createdAt_idx" ON "GroupAnnouncement" ("groupId", "createdAt");`,
+      `DO $$ BEGIN
+         ALTER TABLE "GroupAnnouncement" ADD CONSTRAINT "GroupAnnouncement_groupId_fkey"
+           FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE;
+       EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }
@@ -571,6 +598,9 @@ async function start(): Promise<void> {
     // eslint-disable-next-line no-console
     console.warn('[rbac] seed skipped (DB not reachable or migrations not applied):', String(err));
   }
+
+  // Ensure the official NRG group + its admins exist (idempotent, non-fatal).
+  await seedNrgGroup();
 
   // Background jobs - BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();
