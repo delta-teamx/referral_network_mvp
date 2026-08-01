@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { createZoomMeeting } from '../../integrations/zoom.service.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
+import { sendEmail } from '../../core/notifications/email.service.js';
 
 /**
  * Booking & availability service.
@@ -281,14 +282,35 @@ export async function createBooking(input: CreateBookingInput) {
     throw err;
   }
 
+  const whenLabel = input.startsAt.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
   // Alert the host in-app (best-effort).
   void createNotification({
     userId: input.hostUserId,
     type: 'booking_request',
     title: 'New call request',
-    body: `${guest.firstName} ${guest.lastName} requested a call on ${input.startsAt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Accept or decline in Bookings.`,
+    body: `${guest.firstName} ${guest.lastName} requested a call on ${whenLabel}. Accept or decline in Bookings.`,
     data: { bookingId: booking.id },
   }).catch(() => undefined);
+
+  // Email the host so they accept faster (a request that sits unseen is a lost
+  // meeting). Best-effort.
+  if (host.email) {
+    void sendEmail({
+      to: host.email,
+      template: 'booking_request',
+      data: {
+        firstName: host.firstName,
+        fromName: `${guest.firstName} ${guest.lastName}`.trim(),
+        whenLabel,
+      },
+    }).catch(() => undefined);
+  }
 
   return booking;
 }
@@ -374,7 +396,14 @@ export async function cancelBooking(bookingId: string, userId: string) {
       OR: [{ hostId: userId }, { guestId: userId }],
       status: { in: ['pending', 'confirmed'] },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      hostId: true,
+      guestId: true,
+      startsAt: true,
+      host: { select: { firstName: true, lastName: true, email: true } },
+      guest: { select: { firstName: true, lastName: true, email: true } },
+    },
   });
   if (!booking) throw AppError.notFound('Booking not found');
   const updated = await prisma.bookingCall.update({
@@ -383,6 +412,37 @@ export async function cancelBooking(bookingId: string, userId: string) {
     select: bookingSelect,
   });
   await eventBus.publish('booking.canceled', { bookingId: updated.id });
+
+  // Notify the OTHER party (not whoever cancelled) in-app + by email.
+  const canceledByHost = userId === booking.hostId;
+  const other = canceledByHost ? booking.guest : booking.host;
+  const canceller = canceledByHost ? booking.host : booking.guest;
+  const otherId = canceledByHost ? booking.guestId : booking.hostId;
+  const whenLabel = booking.startsAt.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  void createNotification({
+    userId: otherId,
+    type: 'booking_declined',
+    title: 'Call canceled',
+    body: `${canceller.firstName} ${canceller.lastName} canceled your call on ${whenLabel}. You can rebook anytime.`,
+    data: { bookingId: booking.id },
+  }).catch(() => undefined);
+  if (other.email) {
+    void sendEmail({
+      to: other.email,
+      template: 'booking_canceled',
+      data: {
+        firstName: other.firstName,
+        withName: `${canceller.firstName} ${canceller.lastName}`.trim(),
+        whenLabel,
+      },
+    }).catch(() => undefined);
+  }
   return updated;
 }
 

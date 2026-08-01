@@ -28,7 +28,10 @@ export type EmailTemplate =
   | 'reengagement'
   | 'complete_profile'
   | 'roul_message'
-  | 'message_received';
+  | 'message_received'
+  | 'intro_request'
+  | 'booking_request'
+  | 'booking_canceled';
 
 export interface EmailAttachment {
   filename: string;
@@ -257,6 +260,66 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             P(`${escapeHtml(fromName)} just messaged you on Referral Nova. A quick reply is often where a referral starts.`) +
             quoted +
             button('Read and reply', messagesUrl),
+        ),
+      };
+    }
+    case 'intro_request': {
+      const firstName = String(d.firstName ?? 'there');
+      const fromName = String(d.fromName ?? 'A member');
+      const reason = d.reason ? String(d.reason) : '';
+      const url = `${BRAND.app}/dashboard/leads`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `${fromName} wants to connect on Referral Nova`,
+        text:
+          `Hi ${firstName},\n\n${fromName} would like an introduction on Referral Nova.\n\n` +
+          (reason ? `${reason}\n\n` : '') +
+          `Accept the request to start the conversation: ${url}`,
+        html: brandedLayout(
+          `${escapeHtml(fromName)} wants to connect`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`${escapeHtml(fromName)} would like an introduction. Accepting opens a direct conversation, which is where referrals start.`) +
+            (reason ? `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">${escapeHtml(reason)}</div>` : '') +
+            button('Review the request', url),
+        ),
+      };
+    }
+    case 'booking_request': {
+      const firstName = String(d.firstName ?? 'there');
+      const fromName = String(d.fromName ?? 'A member');
+      const whenLabel = String(d.whenLabel ?? '');
+      const url = `${BRAND.app}/dashboard/bookings`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `${fromName} requested a call with you`,
+        text:
+          `Hi ${firstName},\n\n${fromName} requested a call${whenLabel ? ` on ${whenLabel}` : ''}.\n\n` +
+          `Accept or decline in your Bookings tab: ${url}`,
+        html: brandedLayout(
+          `${escapeHtml(fromName)} requested a call`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`${escapeHtml(fromName)} would like to meet${whenLabel ? ` on <strong>${escapeHtml(whenLabel)}</strong>` : ''}. Accept and we'll set up the Zoom link automatically.`) +
+            button('Review the request', url),
+        ),
+      };
+    }
+    case 'booking_canceled': {
+      const firstName = String(d.firstName ?? 'there');
+      const withName = String(d.withName ?? 'a member');
+      const whenLabel = String(d.whenLabel ?? '');
+      const url = `${BRAND.app}/dashboard/bookings`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `Your call with ${withName} was canceled`,
+        text:
+          `Hi ${firstName},\n\nYour call with ${withName}${whenLabel ? ` on ${whenLabel}` : ''} has been canceled.\n\n` +
+          `You can rebook anytime: ${url}`,
+        html: brandedLayout(
+          'A call was canceled',
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Your call with ${escapeHtml(withName)}${whenLabel ? ` on <strong>${escapeHtml(whenLabel)}</strong>` : ''} has been canceled.`) +
+            P(`No problem - you can rebook whenever it suits you both.`) +
+            button('Go to bookings', url),
         ),
       };
     }
