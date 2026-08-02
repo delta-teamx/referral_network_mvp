@@ -95,8 +95,10 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     console.error('[signup] post-signup side effects failed (account still created)', err);
   }
 
-  // Notify admins that someone signed up (best-effort; needs email configured).
-  void notifyAdminsOfSignup(user);
+  // Admins are notified ONCE, when the member completes onboarding (the
+  // onboarding.completed subscriber, guarded + includes their industry). We
+  // deliberately do NOT email admins here at signup, or they'd get two emails
+  // per member (one now, one at onboarding completion).
 
   return buildAuthSuccess(user);
 }

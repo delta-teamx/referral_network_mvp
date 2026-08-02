@@ -5,7 +5,6 @@ import { env } from '../../../config/env.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../events/index.js';
 import { toAuthenticatedUserDto } from '../users/users.service.js';
-import { notifyAdminsOfSignup } from './auth.service.js';
 import { resolveOAuthSignupTier } from '../../billing/founding.service.js';
 import {
   accessTokenSeconds,
@@ -132,8 +131,8 @@ async function upsertFromGoogleProfile(profile: GoogleUserInfo): Promise<{ user:
     },
   });
 
-  // Admins get the new-signup email for OAuth accounts too (best-effort).
-  void notifyAdminsOfSignup(created).catch(() => undefined);
+  // Admins are notified once at onboarding completion (see onboarding
+  // subscriber), not here - avoids two new-member emails per signup.
 
   await eventBus.publish('user.signed_up', {
     userId: created.id,
@@ -259,8 +258,8 @@ async function upsertFromFbProfile(profile: FbProfile): Promise<{ user: User; is
     },
   });
 
-  // Admins get the new-signup email for OAuth accounts too (best-effort).
-  void notifyAdminsOfSignup(created).catch(() => undefined);
+  // Admins are notified once at onboarding completion (see onboarding
+  // subscriber), not here - avoids two new-member emails per signup.
 
   await eventBus.publish('user.signed_up', {
     userId: created.id,
