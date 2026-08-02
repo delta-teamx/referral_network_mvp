@@ -34,6 +34,8 @@ export interface GroupListItem {
   isPublic: boolean;
   joinPolicy: string;
   lockedInterior: boolean;
+  logoUrl: string | null;
+  primaryColor: string | null;
 }
 
 const groupListSelect = {
@@ -48,6 +50,8 @@ const groupListSelect = {
   isPublic: true,
   joinPolicy: true,
   lockedInterior: true,
+  logoUrl: true,
+  primaryColor: true,
   _count: { select: { members: true } },
 } as const;
 
@@ -63,6 +67,8 @@ function toListItem(row: {
   isPublic: boolean;
   joinPolicy: string;
   lockedInterior: boolean;
+  logoUrl: string | null;
+  primaryColor: string | null;
   _count: { members: number };
 }): GroupListItem {
   return {
@@ -76,6 +82,8 @@ function toListItem(row: {
     memberCount: row._count.members,
     maxMembers: row.maxMembers,
     isPublic: row.isPublic,
+    logoUrl: row.logoUrl,
+    primaryColor: row.primaryColor,
     joinPolicy: row.joinPolicy,
     lockedInterior: row.lockedInterior,
   };
@@ -810,6 +818,8 @@ export async function seedNrgGroup(): Promise<void> {
         maxMembers: 200,
         primaryColor: '#F5821F', // NRG orange
         logoUrl: 'https://referralnova.com/nrg-logo.png',
+        welcomeMessage:
+          "Welcome to NRG on Referral Nova! You're now part of the Network Referral Group community. Watch the announcements for upcoming Zoom events, RSVP to join live, and use AI matching to find warm introductions inside the group.",
       },
       select: { id: true },
     });

@@ -167,6 +167,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ FEATURED PARTNERSHIP: NRG ═══ */}
+      <section className="border-y border-gray-100 bg-white py-10">
+        <div className="mx-auto max-w-5xl px-6">
+          <Link
+            href="/nrg"
+            className="group flex flex-col items-center gap-5 rounded-3xl border border-gray-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-6 text-center shadow-sm transition hover:border-orange-300 hover:shadow-md sm:flex-row sm:text-left"
+          >
+            <span className="flex h-16 shrink-0 items-center justify-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/nrg-logo.png"
+                alt="NRG - Network Referral Group"
+                className="h-12 w-auto object-contain"
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-orange-500">
+                Featured partnership
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-gray-900">
+                Referral Nova &times; Network Referral Group
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                NRG members get a private, AI-powered referral community with lifetime Premium access.
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition group-hover:bg-gray-800">
+              Explore the partnership <ArrowRight size={15} />
+            </span>
+          </Link>
+        </div>
+      </section>
+
       {/* ═══ THE DIFFERENCE ═══ */}
       <section className="bg-gray-50 py-20">
         <div className="mx-auto max-w-6xl px-6">

@@ -68,6 +68,8 @@ interface MyGroup {
   state: string;
   memberCount: number;
   role: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
 }
 interface PublicGroup {
   id: string;
@@ -82,6 +84,8 @@ interface PublicGroup {
   isPublic: boolean;
   joinPolicy?: 'open' | 'request' | 'invite';
   lockedInterior?: boolean;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
 }
 interface ChatMessage {
   id: string;
@@ -241,7 +245,17 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
                       className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-gray-900">{g.name}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          {g.logoUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={g.logoUrl}
+                              alt={g.name}
+                              className="h-8 w-8 shrink-0 rounded-lg object-contain ring-1 ring-gray-200"
+                            />
+                          )}
+                          <p className="truncate font-semibold text-gray-900">{g.name}</p>
+                        </div>
                         {isOpen ? (
                           <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                             Open
@@ -405,32 +419,54 @@ function GroupDetailView({
   // Closed group, viewer is not a member: show the visible shell + a way in.
   if (locked && !isMember) {
     const pending = group.pendingRequest || requestSent;
+    const brand = group.primaryColor || '#2563eb';
     return (
       <div className="p-4 sm:p-6 md:p-8">
         <Link href="/dashboard/groups" className="text-sm text-primary">← My groups</Link>
-        <div className="mx-auto mt-4 max-w-lg rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          {group.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={group.logoUrl} alt={group.name} className="mx-auto mb-4 h-16 w-16 rounded-2xl object-cover" />
-          ) : (
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light text-primary">
-              <Lock size={26} />
-            </div>
-          )}
-          <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
-          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-500">
-            <MapPin size={13} /> {group.city}, {group.state} · {memberCount} members
-          </p>
-          {group.description && <p className="mt-3 text-sm text-gray-700">{group.description}</p>}
-
-          <div className="mt-6 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
-            <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-gray-600">
-              <Lock size={14} /> This is a private group
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              The member list, events and chat are visible once you are approved to join.
+        <div className="mx-auto mt-4 max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          {/* Branded banner */}
+          <div
+            className="flex flex-col items-center px-8 pb-6 pt-8 text-center"
+            style={{ background: `linear-gradient(160deg, ${brand}22 0%, #ffffff 90%)` }}
+          >
+            {group.logoUrl ? (
+              <span className="mb-4 flex h-20 items-center justify-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={group.logoUrl} alt={group.name} className="h-14 w-auto object-contain" />
+              </span>
+            ) : (
+              <div
+                className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white"
+                style={{ backgroundColor: brand }}
+              >
+                <Lock size={26} />
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
+            <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-500">
+              <MapPin size={13} /> {group.city}, {group.state} · {memberCount} members
             </p>
           </div>
+
+          <div className="px-8 pb-8">
+            {group.description && (
+              <p className="text-center text-sm leading-relaxed text-gray-700">{group.description}</p>
+            )}
+
+            {/* What's inside - clear, not chaotic */}
+            <div className="mt-6 space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-4 text-left">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
+                <Lock size={14} style={{ color: brand }} /> A private group
+              </p>
+              <ul className="space-y-1.5 text-xs text-gray-600">
+                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> Live Zoom events you can RSVP to</li>
+                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> AI-matched introductions inside the group</li>
+                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> Announcements and a members-only chat</li>
+              </ul>
+              <p className="pt-1 text-xs text-gray-500">
+                The member list, events and chat unlock once a group leader approves you.
+              </p>
+            </div>
 
           {pending ? (
             <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
@@ -460,6 +496,7 @@ function GroupDetailView({
               {error && <p className="mt-2 text-sm text-danger">{error}</p>}
             </div>
           )}
+          </div>
         </div>
       </div>
     );
