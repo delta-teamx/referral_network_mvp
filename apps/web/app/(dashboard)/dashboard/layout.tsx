@@ -66,12 +66,12 @@ const NAV: NavEntry[] = [
     ],
   },
   {
-    label: 'Growth',
-    icon: Trophy,
+    label: 'Rewards',
+    icon: Gift,
     children: [
       { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
       { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-      { href: '/dashboard/rewards', label: 'Rewards', icon: Gift },
+      { href: '/dashboard/rewards', label: 'Rewards store', icon: Gift },
     ],
   },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },

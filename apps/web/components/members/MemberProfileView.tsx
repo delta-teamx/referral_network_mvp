@@ -156,7 +156,7 @@ function ReferClientForm({
 
   return (
     <form method="post" onSubmit={onSubmit} className="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
-      <p className="text-sm font-semibold text-gray-900">Refer a client to {targetName}</p>
+      <p className="text-sm font-semibold text-gray-900">Send a referral to {targetName}</p>
       <input
         name="clientName"
         placeholder="Client name"
@@ -387,7 +387,7 @@ export function MemberProfileView({ id }: { id: string }) {
               onClick={() => setReferOpen((v) => !v)}
               className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
             >
-              <Send size={14} /> Refer a client
+              <Send size={14} /> Send Referral
             </button>
           </div>
         )}

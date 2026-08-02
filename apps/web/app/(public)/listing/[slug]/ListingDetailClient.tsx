@@ -631,7 +631,7 @@ function ReferralModal({
   }
 
   return (
-    <ModalShell title="Refer a client to this business" onClose={onClose}>
+    <ModalShell title="Send a referral to this business" onClose={onClose}>
       {sent ? (
         <p className="inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
           <Check size={14} /> Referral sent. We&rsquo;ve notified the business.
