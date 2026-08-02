@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Eye, MessageSquare, Search, Send, Trash2, X } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, MessageSquare, Search, Send, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
@@ -34,13 +34,36 @@ interface UserActivity {
   messagesSent: number;
   conversations: number;
   replyRate: number;
+  connections: number;
+  introsSent: number;
+  introsAccepted: number;
   referralsSent: number;
   referralsReceived: number;
   invitesOnboarded: number;
   bookings: number;
+  bookingsHosted: number;
+  bookingsAsGuest: number;
+  bookingsConfirmed: number;
+  eventsRsvped: number;
+  pipeline: Record<string, number>;
+  pipelineTotal: number;
   contributionPoints: number;
   recentMessages: { text: string; at: string }[];
 }
+
+const PAGE_SIZE = 20;
+// Human labels for pipeline stages, shown in the per-user analytics.
+const STAGE_LABELS: Record<string, string> = {
+  new: 'New',
+  in_process: 'In process',
+  zoom_booked: 'Zoom booked',
+  follow_up: 'Follow up',
+  signing_contract: 'Signing',
+  contract_signed: 'Signed',
+  won: 'Won',
+  lost: 'Lost',
+  dead: 'Dead',
+};
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -48,6 +71,7 @@ export default function AdminUsersPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +118,7 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const data = await api.get<{ users: AdminUser[]; total: number }>('/api/v1/admin/users', {
-        query: { q: q || undefined, limit: 50 },
+        query: { q: q || undefined, page, limit: PAGE_SIZE },
         accessToken: accessToken ?? undefined,
       });
       setUsers(data.users);
@@ -106,9 +130,17 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Reset to page 1 whenever the search changes.
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
+
   useEffect(() => {
     void load();
-  }, [accessToken, q]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, q, page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   async function setRole(id: string, role: string) {
     if (!accessToken) return;
@@ -304,7 +336,7 @@ export default function AdminUsersPage() {
       {/* View User Modal */}
       {viewingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-gray-900 p-6 shadow-2xl">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-gray-900 p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-bold text-white">{viewingUser.firstName} {viewingUser.lastName}</h2>
@@ -340,23 +372,21 @@ export default function AdminUsersPage() {
                 <span className="text-gray-200">{new Date(viewingUser.createdAt).toLocaleDateString()}</span>
               </div>
 
-              {/* Activity snapshot */}
-              <h3 className="mt-4 font-semibold text-amber-400">Activity</h3>
+              {/* In-depth activity & analytics */}
+              <h3 className="mt-4 font-semibold text-amber-400">Analytics</h3>
               {!activity ? (
-                <p className="text-xs text-gray-500">Loading activity…</p>
+                <p className="text-xs text-gray-500">Loading analytics…</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
+                  <p className="mb-1 mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Engagement</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {[
-                      ['Last login', activity.lastLoginAt ? new Date(activity.lastLoginAt).toLocaleDateString() : 'Never'],
-                      ['Profile complete', `${activity.profileComplete}%`],
                       ['Messages sent', activity.messagesSent],
-                      ['Reply rate', `${activity.replyRate}%`],
                       ['Conversations', activity.conversations],
-                      ['Bookings', activity.bookings],
-                      ['Referrals sent / recv', `${activity.referralsSent} / ${activity.referralsReceived}`],
-                      ['Invites onboarded', activity.invitesOnboarded],
-                      ['Contribution points', activity.contributionPoints],
+                      ['Reply rate', `${activity.replyRate}%`],
+                      ['Connections', activity.connections],
+                      ['Intros sent', activity.introsSent],
+                      ['Intros accepted', activity.introsAccepted],
                     ].map(([label, value]) => (
                       <div key={String(label)} className="rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2">
                         <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
@@ -364,6 +394,56 @@ export default function AdminUsersPage() {
                       </div>
                     ))}
                   </div>
+
+                  <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Zoom & meetings</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      ['Calls total', activity.bookings],
+                      ['Confirmed', activity.bookingsConfirmed],
+                      ['As host', activity.bookingsHosted],
+                      ['Events RSVP', activity.eventsRsvped],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
+                        <p className="text-sm font-semibold text-gray-100">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                    Pipeline ({activity.pipelineTotal} cards)
+                  </p>
+                  {activity.pipelineTotal === 0 ? (
+                    <p className="text-xs text-gray-600">No pipeline cards yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(activity.pipeline).map(([stage, count]) => (
+                        <span
+                          key={stage}
+                          className="rounded-full border border-gray-800 bg-gray-950/60 px-2.5 py-1 text-xs text-gray-300"
+                        >
+                          {STAGE_LABELS[stage] ?? stage}: <span className="font-semibold text-gray-100">{count}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Growth & account</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {[
+                      ['Referrals sent / recv', `${activity.referralsSent} / ${activity.referralsReceived}`],
+                      ['Invites onboarded', activity.invitesOnboarded],
+                      ['Contribution points', activity.contributionPoints],
+                      ['Profile complete', `${activity.profileComplete}%`],
+                      ['Last login', activity.lastLoginAt ? new Date(activity.lastLoginAt).toLocaleDateString() : 'Never'],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wide text-gray-500">{label}</p>
+                        <p className="text-sm font-semibold text-gray-100">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
                   {activity.recentMessages.length > 0 && (
                     <div className="mt-2">
                       <p className="mb-1 text-xs text-gray-500">Recent messages sent</p>
@@ -460,11 +540,17 @@ export default function AdminUsersPage() {
                 return (
                 <tr key={u.id} className="border-t border-gray-800 hover:bg-gray-800/40">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-white">
-                      {u.firstName} {u.lastName}
-                      {isSelf && <span className="ml-2 text-xs text-amber-400">(you)</span>}
-                    </p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
+                    <button
+                      onClick={() => void viewUser(u)}
+                      title="Click to see this member's full activity & analytics"
+                      className="group text-left"
+                    >
+                      <p className="font-medium text-white group-hover:text-amber-300 group-hover:underline">
+                        {u.firstName} {u.lastName}
+                        {isSelf && <span className="ml-2 text-xs text-amber-400">(you)</span>}
+                      </p>
+                      <p className="text-xs text-gray-400">{u.email}</p>
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -508,14 +594,6 @@ export default function AdminUsersPage() {
                     <div className="flex items-center justify-end gap-2">
                       {!isSelf && (
                         <button
-                          onClick={() => void viewUser(u)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
-                        >
-                          <Eye size={12} /> View
-                        </button>
-                      )}
-                      {!isSelf && (
-                        <button
                           onClick={() => openMessage(u)}
                           title="Send a direct ROUL message to this member's inbox"
                           className="inline-flex items-center gap-1 rounded-md border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-xs text-blue-300 hover:bg-blue-500/10"
@@ -549,6 +627,58 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination - 20 per page, page through all accounts */}
+      {!loading && total > PAGE_SIZE && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of{' '}
+            {total.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-200 hover:bg-gray-700 disabled:opacity-40"
+            >
+              <ChevronLeft size={13} /> Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 2)
+              .reduce<number[]>((acc, n) => {
+                if (acc.length && n - acc[acc.length - 1]! > 1) acc.push(-1); // gap marker
+                acc.push(n);
+                return acc;
+              }, [])
+              .map((n, i) =>
+                n === -1 ? (
+                  <span key={`gap-${i}`} className="px-1 text-xs text-gray-600">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    className={`min-w-[28px] rounded-md px-2 py-1.5 text-xs font-semibold ${
+                      n === page
+                        ? 'bg-amber-500 text-gray-950'
+                        : 'border border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ),
+              )}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-200 hover:bg-gray-700 disabled:opacity-40"
+            >
+              Next <ChevronRight size={13} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
