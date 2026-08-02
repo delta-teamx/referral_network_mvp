@@ -94,6 +94,12 @@ interface ChatMessage {
   sender: { id: string; firstName: string; lastName: string; avatarUrl: string | null };
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  MEMBER: 'member',
+  LEADER: 'leader',
+  CO_LEADER: 'co-leader',
+};
+
 function GroupsInner() {
   const params = useSearchParams();
   const slug = params.get('slug') ?? '';
@@ -192,12 +198,30 @@ function MyGroupsList({ accessToken }: { accessToken: string | null }) {
                       href={`/dashboard/groups?slug=${g.slug}`}
                       className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-primary hover:shadow-md"
                     >
-                      <p className="font-semibold text-gray-900">{g.name}</p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-3">
+                        {g.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={g.logoUrl}
+                            alt={g.name}
+                            className="h-10 w-10 shrink-0 rounded-lg object-contain ring-1 ring-gray-200"
+                          />
+                        ) : (
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+                            style={{ backgroundColor: g.primaryColor || '#2563eb' }}
+                          >
+                            {g.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        <p className="min-w-0 truncate font-semibold text-gray-900">{g.name}</p>
+                      </div>
+                      <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                         <MapPin size={11} /> {g.city}, {g.state}
                       </p>
                       <p className="mt-3 text-xs text-gray-500">
-                        {g.memberCount} member{g.memberCount === 1 ? '' : 's'} · you are {g.role.toLowerCase()}
+                        {g.memberCount} member{g.memberCount === 1 ? '' : 's'} · you are{' '}
+                        {ROLE_LABELS[g.role] ?? g.role.toLowerCase()}
                       </p>
                       <span className="mt-4 inline-block text-sm font-semibold text-primary">Open group →</span>
                     </Link>

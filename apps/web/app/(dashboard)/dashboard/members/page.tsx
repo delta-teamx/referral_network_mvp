@@ -35,6 +35,8 @@ export default function MembersDirectoryPage() {
   const [q, setQ] = useState('');
   const [industry, setIndustry] = useState('');
   const [city, setCity] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   async function load(filters?: { q?: string; industry?: string; city?: string }) {
     setLoading(true);
@@ -50,6 +52,7 @@ export default function MembersDirectoryPage() {
         accessToken: accessToken ?? undefined,
       });
       setMembers(data.filter((m) => m.user.id !== me?.id));
+      setPage(1);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load members');
     } finally {
@@ -136,7 +139,7 @@ export default function MembersDirectoryPage() {
           animate="visible"
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {members.map((m) => {
+          {members.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((m) => {
             const photo = m.photoUrl ?? m.user.avatarUrl;
             const name = `${m.user.firstName} ${m.user.lastName}`.trim();
             return (
@@ -197,6 +200,54 @@ export default function MembersDirectoryPage() {
             );
           })}
         </motion.ul>
+      )}
+
+      {/* Pagination - 20 per page, page through everyone */}
+      {!loading && members.length > PAGE_SIZE && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, members.length)} of{' '}
+            {members.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+            >
+              Prev
+            </button>
+            {Array.from({ length: Math.ceil(members.length / PAGE_SIZE) }, (_, i) => i + 1)
+              .filter((n) => n === 1 || n === Math.ceil(members.length / PAGE_SIZE) || Math.abs(n - page) <= 1)
+              .reduce<number[]>((acc, n) => {
+                if (acc.length && n - acc[acc.length - 1]! > 1) acc.push(-1);
+                acc.push(n);
+                return acc;
+              }, [])
+              .map((n, i) =>
+                n === -1 ? (
+                  <span key={`gap-${i}`} className="px-1 text-xs text-gray-400">…</span>
+                ) : (
+                  <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    className={`min-w-[30px] rounded-md px-2 py-1.5 text-xs font-semibold ${
+                      n === page ? 'bg-primary text-white' : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ),
+              )}
+            <button
+              onClick={() => setPage((p) => Math.min(Math.ceil(members.length / PAGE_SIZE), p + 1))}
+              disabled={page >= Math.ceil(members.length / PAGE_SIZE)}
+              className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
