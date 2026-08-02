@@ -809,7 +809,7 @@ export async function seedNrgGroup(): Promise<void> {
         slug: NRG_SLUG,
         name: 'NRG',
         description:
-          'The Network Referral Group community on Referral Nova - a private, invite-based network built around live Zoom events and warm introductions.',
+          'Turn your network into real referrals. NRG is a private community of business owners who send each other warm, AI-matched introductions - plus live Zoom events and lifetime Premium access. Request to join and start growing by referral.',
         city: 'National',
         state: 'US',
         isPublic: true,
@@ -819,7 +819,7 @@ export async function seedNrgGroup(): Promise<void> {
         primaryColor: '#F5821F', // NRG orange
         logoUrl: 'https://referralnova.com/nrg-logo.png',
         welcomeMessage:
-          "Welcome to NRG on Referral Nova! You're now part of the Network Referral Group community. Watch the announcements for upcoming Zoom events, RSVP to join live, and use AI matching to find warm introductions inside the group.",
+          "Welcome to NRG - you're in the room where referrals happen! RSVP to live Zoom events with one tap, let AI match you with partners who can actually refer you, and introduce yourself in the group chat. Your lifetime Premium access is active.",
       },
       select: { id: true },
     });

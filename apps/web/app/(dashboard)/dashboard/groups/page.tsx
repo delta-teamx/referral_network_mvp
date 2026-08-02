@@ -477,18 +477,29 @@ function GroupDetailView({
               <p className="text-center text-sm leading-relaxed text-gray-700">{group.description}</p>
             )}
 
-            {/* What's inside - clear, not chaotic */}
-            <div className="mt-6 space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-4 text-left">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
-                <Lock size={14} style={{ color: brand }} /> A private group
-              </p>
-              <ul className="space-y-1.5 text-xs text-gray-600">
-                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> Live Zoom events you can RSVP to</li>
-                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> AI-matched introductions inside the group</li>
-                <li className="flex items-start gap-2"><Check size={13} className="mt-0.5 shrink-0" style={{ color: brand }} /> Announcements and a members-only chat</li>
+            {/* Why join - benefit-driven, catchy */}
+            <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50 p-4 text-left">
+              <p className="mb-2 text-sm font-bold text-gray-900">Why members join</p>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <Crown size={15} className="mt-0.5 shrink-0 text-amber-500" />
+                  <span><span className="font-semibold">Lifetime Premium access</span> - every paid feature, free for members</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 shrink-0" style={{ color: brand }} />
+                  <span>Warm, <span className="font-semibold">AI-matched introductions</span> to partners who can actually refer you</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 shrink-0" style={{ color: brand }} />
+                  <span>Live <span className="font-semibold">Zoom events</span> you join with one tap</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 shrink-0" style={{ color: brand }} />
+                  <span>A private, high-trust community - <span className="font-semibold">quality over noise</span></span>
+                </li>
               </ul>
-              <p className="pt-1 text-xs text-gray-500">
-                The member list, events and chat unlock once a group leader approves you.
+              <p className="mt-3 flex items-center gap-1.5 border-t border-gray-200 pt-3 text-xs text-gray-500">
+                <Lock size={12} style={{ color: brand }} /> Members-only chat, events and roster unlock the moment a leader approves you.
               </p>
             </div>
 
@@ -499,6 +510,9 @@ function GroupDetailView({
             </div>
           ) : (
             <div className="mt-6 text-left">
+              <p className="mb-2 text-center text-sm font-semibold text-gray-900">
+                Ready to grow by referral? Request your spot.
+              </p>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Request to join
               </label>
