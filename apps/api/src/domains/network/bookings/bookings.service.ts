@@ -82,6 +82,30 @@ export interface AvailabilityWindow {
   endMin: number;
 }
 
+// Default availability applied to any member who hasn't set their own, so
+// every member is bookable out of the box. Monday-Friday, 9:00am-5:00pm
+// Eastern. Members can override it any time from the availability editor.
+export const DEFAULT_AVAILABILITY: AvailabilityWindow[] = [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+  dayOfWeek,
+  startMin: 9 * 60,
+  endMin: 17 * 60,
+}));
+
+/** A member's declared windows, or the M-F 9-5 default when they have none. */
+async function getEffectiveWindows(
+  userId: string,
+): Promise<Array<{ dayOfWeek: number; startMin: number; endMin: number }>> {
+  const rows = await prisma.availability.findMany({ where: { userId } });
+  if (rows.length > 0) {
+    return rows.map((r) => ({ dayOfWeek: r.dayOfWeek, startMin: r.startMin, endMin: r.endMin }));
+  }
+  return DEFAULT_AVAILABILITY.map((w) => ({
+    dayOfWeek: w.dayOfWeek,
+    startMin: w.startMin,
+    endMin: w.endMin,
+  }));
+}
+
 export async function setAvailability(
   userId: string,
   windows: AvailabilityWindow[],
@@ -113,6 +137,11 @@ export async function listAvailability(userId: string): Promise<AvailabilityWind
     where: { userId },
     orderBy: [{ dayOfWeek: 'asc' }, { startMin: 'asc' }],
   });
+  // Show the M-F 9-5 default to members who haven't set their own, so the
+  // editor is pre-filled and they can adjust it rather than start from blank.
+  if (rows.length === 0) {
+    return DEFAULT_AVAILABILITY.map((w) => ({ ...w }));
+  }
   return rows.map((r) => ({
     id: r.id,
     dayOfWeek: r.dayOfWeek,
@@ -135,10 +164,9 @@ export async function getAvailableSlots(
   const from = new Date(opts.from ?? new Date());
   from.setMinutes(Math.ceil(from.getMinutes() / SLOT_MINUTES) * SLOT_MINUTES, 0, 0);
 
-  const windows = await prisma.availability.findMany({
-    where: { userId: hostUserId },
-  });
-  if (windows.length === 0) return [];
+  // Falls back to the M-F 9-5 default when the host hasn't set availability,
+  // so every member is bookable out of the box.
+  const windows = await getEffectiveWindows(hostUserId);
 
   const existing = await prisma.bookingCall.findMany({
     where: {
@@ -179,8 +207,8 @@ export async function getAvailableSlots(
  * Eastern availability windows. Used to reject bookings for arbitrary times.
  */
 async function isWithinAvailability(hostUserId: string, startsAt: Date, endsAt: Date): Promise<boolean> {
-  const windows = await prisma.availability.findMany({ where: { userId: hostUserId } });
-  if (windows.length === 0) return false;
+  // Same default as slot generation: no declared windows => M-F 9-5.
+  const windows = await getEffectiveWindows(hostUserId);
   const s = zonedParts(startsAt, BOOKING_TZ);
   const e = zonedParts(endsAt, BOOKING_TZ);
   // Reject slots that cross a day boundary in Eastern time.
