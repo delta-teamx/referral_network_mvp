@@ -29,6 +29,7 @@ export type EmailTemplate =
   | 'complete_profile'
   | 'roul_message'
   | 'message_received'
+  | 'digest'
   | 'intro_request'
   | 'booking_request'
   | 'booking_canceled'
@@ -263,6 +264,56 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             P(`${escapeHtml(fromName)} just messaged you on Referral Nova. A quick reply is often where a referral starts.`) +
             quoted +
             button('Read and reply', messagesUrl),
+        ),
+      };
+    }
+    case 'digest': {
+      // Batched, offline-only summary of unread messages + intro requests.
+      const firstName = String(d.firstName ?? 'there');
+      const messageCount = Number(d.messageCount ?? 0);
+      const introCount = Number(d.introCount ?? 0);
+      const items = Array.isArray(d.items)
+        ? (d.items as Array<{ type?: string; title?: string; body?: string }>)
+        : [];
+      const messagesUrl = `${BRAND.app}/dashboard/messages`;
+      const leadsUrl = `${BRAND.app}/dashboard/leads`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+
+      const parts: string[] = [];
+      if (messageCount > 0) parts.push(`${messageCount} new message${messageCount > 1 ? 's' : ''}`);
+      if (introCount > 0) parts.push(`${introCount} intro request${introCount > 1 ? 's' : ''}`);
+      const summary = parts.join(' and ') || 'new activity';
+      // Send people to whichever inbox has more waiting.
+      const primaryUrl = introCount > messageCount ? leadsUrl : messagesUrl;
+
+      const list = items
+        .map(
+          (it) =>
+            `<div style="margin:0 0 10px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;">` +
+            `<div style="font-weight:600;color:${BRAND.ink};">${escapeHtml(String(it.title ?? ''))}</div>` +
+            (it.body
+              ? `<div style="margin-top:2px;color:${BRAND.gray};font-size:14px;">${escapeHtml(String(it.body))}</div>`
+              : '') +
+            `</div>`,
+        )
+        .join('');
+
+      return {
+        subject: `You have ${summary} on Referral Nova`,
+        text:
+          `Hi ${firstName},\n\n` +
+          `You have ${summary} waiting on Referral Nova.\n\n` +
+          items.map((it) => `- ${it.title ?? ''}${it.body ? `: ${it.body}` : ''}`).join('\n') +
+          `\n\nOpen Referral Nova to reply: ${primaryUrl}`,
+        html: brandedLayout(
+          `You have ${summary}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Here's what's been waiting for you on Referral Nova:`) +
+            list +
+            button('Open Referral Nova', primaryUrl) +
+            P(
+              `<span style="color:${BRAND.gray};font-size:13px;">You're getting this because you weren't active when these came in. We batch them so you get one summary instead of a flood.</span>`,
+            ),
         ),
       };
     }

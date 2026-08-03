@@ -2,7 +2,6 @@ import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { eventBus } from '../../core/events/index.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
-import { sendEmail } from '../../core/notifications/email.service.js';
 import { getOrCreateConversation, sendMessage } from '../../network/messaging/messaging.service.js';
 import { assertEngagementQuota } from '../../billing/billing.tiers.js';
 
@@ -116,21 +115,10 @@ export async function requestIntro(introId: string, userId: string) {
     data: { introId: updated.id },
   }).catch(() => undefined);
 
-  // Email the target too so they act even when they're not in the app - the
-  // intro funnel is where most drop-off happens.
-  void (async () => {
-    const target = await prisma.user.findUnique({
-      where: { id: updated.target.id },
-      select: { email: true, firstName: true },
-    });
-    if (target?.email) {
-      await sendEmail({
-        to: target.email,
-        template: 'intro_request',
-        data: { firstName: target.firstName, fromName, reason: updated.reason ?? '' },
-      });
-    }
-  })().catch(() => undefined);
+  // No immediate intro-request email: online targets see the bell ring live,
+  // and the 10-minute offline-only digest (digest.service.ts) batches this
+  // intro request into a single summary email for anyone who isn't active -
+  // so intros no longer send their own one-off email on top of the digest.
 
   return updated;
 }

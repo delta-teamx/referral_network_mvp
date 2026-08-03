@@ -6,6 +6,7 @@ import {
   runReengagementSweep,
   runProfileCompletionReminders,
 } from '../notifications/reengagement.service.js';
+import { runNotificationDigests } from '../notifications/digest.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -89,6 +90,20 @@ const JOBS: JobDefinition[] = [
       console.log(
         `[jobs] profile-completion-reminders: scanned ${result.scanned}, sent ${result.sent}`,
       );
+      return result;
+    },
+  },
+  {
+    name: 'notification-digests',
+    intervalMs: 10 * 60 * 1000, // Every 10 minutes - offline-only message/intro digest
+    handler: async () => {
+      const result = await runNotificationDigests();
+      if (result.sent > 0) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[jobs] notification-digests: scanned ${result.scanned}, sent ${result.sent}`,
+        );
+      }
       return result;
     },
   },
