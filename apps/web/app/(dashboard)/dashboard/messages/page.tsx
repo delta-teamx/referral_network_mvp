@@ -124,10 +124,12 @@ function MessagesInner() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // Keep the latest activeId available inside socket handlers without
-  // resubscribing on every conversation switch.
+  // Keep the latest activeId + conversation list available inside socket
+  // handlers without resubscribing on every change.
   const activeIdRef = useRef<string | null>(null);
   activeIdRef.current = activeId;
+  const conversationsRef = useRef<Conversation[]>([]);
+  conversationsRef.current = conversations;
   // Scroll bookkeeping: whether the next render should stick to the bottom, and
   // the height captured before prepending older history (to preserve position).
   const stickBottom = useRef(true);
@@ -139,27 +141,35 @@ function MessagesInner() {
 
   // ---- Load conversations -------------------------------------------------
 
-  const loadConversations = useCallback(async () => {
-    if (!accessToken) return;
-    setLoading(true);
-    setListError(null);
-    try {
-      const data = await api.get<Conversation[]>('/api/v1/messages', {
-        accessToken: accessToken ?? undefined,
-      });
-      setConversations(data);
-    } catch (err) {
-      // A failed list load must be VISIBLE (it used to fail silently into an
-      // empty panel) - show the message + status so it's self-diagnosing.
-      setListError(
-        err instanceof ApiError
-          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
-          : 'Could not load conversations',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken]);
+  const loadConversations = useCallback(
+    async (silent = false) => {
+      if (!accessToken) return;
+      // Silent refresh (e.g. a message arrived for a thread not yet in the
+      // list) must not flash the skeleton loader over the existing list.
+      if (!silent) setLoading(true);
+      setListError(null);
+      try {
+        const data = await api.get<Conversation[]>('/api/v1/messages', {
+          accessToken: accessToken ?? undefined,
+        });
+        setConversations(data);
+      } catch (err) {
+        // A failed list load must be VISIBLE (it used to fail silently into an
+        // empty panel) - show the message + status so it's self-diagnosing.
+        // A silent background refresh stays silent on failure.
+        if (!silent) {
+          setListError(
+            err instanceof ApiError
+              ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
+              : 'Could not load conversations',
+          );
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [accessToken],
+  );
 
   useEffect(() => {
     void loadConversations();
@@ -289,6 +299,12 @@ function MessagesInner() {
 
     const offNew = onSocketEvent<NewMessageEvent>('message:new', (evt) => {
       if (!evt?.message) return;
+      // A message for a conversation not yet in the sidebar (someone just
+      // started a brand-new thread with me) - pull the list so it appears
+      // without a manual reload. Silent so the existing list doesn't flash.
+      if (!conversationsRef.current.some((c) => c.id === evt.conversationId)) {
+        void loadConversations(true);
+      }
       const isActive = evt.conversationId === activeIdRef.current;
       if (isActive) {
         setMessages((prev) => {
@@ -362,7 +378,7 @@ function MessagesInner() {
       offDelivered();
       offTyping();
     };
-  }, [accessToken, user]);
+  }, [accessToken, user, loadConversations]);
 
   // ---- Typing emit --------------------------------------------------------
 
