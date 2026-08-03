@@ -76,8 +76,11 @@ messagingRouter.get(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 50) || 50));
-    const messages = await listMessages(req.params.id ?? '', req.user.id, limit);
-    const body: ApiResponse<typeof messages> = { success: true, data: messages };
+    // `before` (ISO timestamp) drives infinite-scroll: load the page of history
+    // just older than the oldest message currently on screen.
+    const before = typeof req.query.before === 'string' ? req.query.before : undefined;
+    const result = await listMessages(req.params.id ?? '', req.user.id, limit, before);
+    const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
 );

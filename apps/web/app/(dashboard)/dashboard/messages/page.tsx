@@ -1,11 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquare, Paperclip, Send, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, MessageSquare, Paperclip, Send, ShieldCheck, Smile } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { onSocketEvent, emitSocket } from '../../../../lib/socket';
+import { EmojiPicker } from '../../../../components/messages/EmojiPicker';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +34,7 @@ interface Conversation {
   lastMessage: LastMessage | null;
   unread: boolean;
   isOfficial?: boolean;
+  otherLastReadAt?: string | null;
 }
 
 interface Message {
@@ -39,6 +42,26 @@ interface Message {
   senderId: string;
   text: string;
   createdAt: string;
+}
+
+/** Server payloads. */
+interface NewMessageEvent {
+  conversationId: string;
+  message: Message;
+}
+interface ReadEvent {
+  conversationId: string;
+  readerId: string;
+  readAt: string;
+}
+interface DeliveredEvent {
+  conversationId: string;
+  messageId: string;
+}
+interface TypingEvent {
+  conversationId: string;
+  userId: string;
+  isTyping: boolean;
 }
 
 /** Render message text with URLs as clickable links. */
@@ -90,11 +113,33 @@ function MessagesInner() {
   const [error, setError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
 
+  // Realtime state
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
+  const [deliveredIds, setDeliveredIds] = useState<Set<string>>(new Set());
+  const [peerTyping, setPeerTyping] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Keep the latest activeId available inside socket handlers without
+  // resubscribing on every conversation switch.
+  const activeIdRef = useRef<string | null>(null);
+  activeIdRef.current = activeId;
+  // Scroll bookkeeping: whether the next render should stick to the bottom, and
+  // the height captured before prepending older history (to preserve position).
+  const stickBottom = useRef(true);
+  const prevScrollHeight = useRef<number | null>(null);
+  // Typing-emit throttling.
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingEmit = useRef(0);
+  const peerTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Load conversations -------------------------------------------------
 
-  async function loadConversations() {
+  const loadConversations = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     setListError(null);
@@ -114,12 +159,11 @@ function MessagesInner() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [accessToken]);
 
   useEffect(() => {
     void loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
+  }, [loadConversations]);
 
   // ---- Auto-open a conversation -------------------------------------------
   // Prefer the one passed via ?c= (from a profile's Message button);
@@ -143,23 +187,35 @@ function MessagesInner() {
   }, [loading, activeId, conversations, preselectId]);
 
   // ---- Load messages for active conversation ------------------------------
-  // Polls every 15s so replies appear without a manual refresh; marks the
-  // conversation read on open.
+  // Loads the newest page and marks the thread read. Realtime keeps it live
+  // after that; a slow poll stays as a safety net for reconnect gaps.
+
+  const loadNewest = useCallback(async () => {
+    if (!accessToken || !activeId) return;
+    try {
+      const data = await api.get<{ messages: Message[]; hasMore: boolean; otherLastReadAt: string | null }>(
+        `/api/v1/messages/${activeId}/messages`,
+        { accessToken: accessToken ?? undefined },
+      );
+      stickBottom.current = true;
+      setMessages(data.messages);
+      setHasMore(data.hasMore);
+      setOtherLastReadAt(data.otherLastReadAt);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load messages');
+    }
+  }, [accessToken, activeId]);
 
   useEffect(() => {
     if (!accessToken || !activeId) return;
     let cancelled = false;
-    async function load() {
-      try {
-        const data = await api.get<Message[]>(`/api/v1/messages/${activeId}/messages`, {
-          accessToken: accessToken ?? undefined,
-        });
-        if (!cancelled) setMessages(data);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Failed to load messages');
-      }
-    }
-    void load();
+    setDeliveredIds(new Set());
+    setPeerTyping(false);
+    void (async () => {
+      await loadNewest();
+      if (cancelled) return;
+    })();
+    // Mark read on open (server also emits a read receipt to the other side).
     void api
       .post(`/api/v1/messages/${activeId}/read`, {}, { accessToken: accessToken ?? undefined })
       .then(() => {
@@ -170,30 +226,182 @@ function MessagesInner() {
         }
       })
       .catch(() => undefined);
-    const poll = setInterval(() => void load(), 15_000);
+    // Safety-net poll (realtime is the primary path, so this is slow).
+    const poll = setInterval(() => void loadNewest(), 45_000);
     return () => {
       cancelled = true;
       clearInterval(poll);
     };
-  }, [accessToken, activeId]);
+  }, [accessToken, activeId, loadNewest]);
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // ---- Infinite scroll: load older history on scroll-up -------------------
+
+  const loadOlder = useCallback(async () => {
+    if (!accessToken || !activeId || loadingOlder || !hasMore || messages.length === 0) return;
+    setLoadingOlder(true);
+    const oldest = messages[0]!;
+    const el = scrollRef.current;
+    prevScrollHeight.current = el ? el.scrollHeight : null;
+    try {
+      const data = await api.get<{ messages: Message[]; hasMore: boolean; otherLastReadAt: string | null }>(
+        `/api/v1/messages/${activeId}/messages`,
+        { accessToken: accessToken ?? undefined, query: { before: oldest.createdAt } },
+      );
+      stickBottom.current = false;
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        const older = data.messages.filter((m) => !seen.has(m.id));
+        return [...older, ...prev];
+      });
+      setHasMore(data.hasMore);
+    } catch {
+      /* silent - user can scroll again to retry */
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [accessToken, activeId, hasMore, loadingOlder, messages]);
+
+  function onScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (el.scrollTop < 60 && hasMore && !loadingOlder) void loadOlder();
+  }
+
+  // Keep scroll pinned to bottom for new messages; preserve position when
+  // older history is prepended.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (prevScrollHeight.current != null) {
+      el.scrollTop += el.scrollHeight - prevScrollHeight.current;
+      prevScrollHeight.current = null;
+    } else if (stickBottom.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
   }, [messages]);
+
+  // ---- Realtime subscriptions ---------------------------------------------
+  // Subscribed once; handlers read the live activeId via a ref so switching
+  // threads doesn't churn listeners.
+  useEffect(() => {
+    if (!accessToken || !user) return;
+    const me = user.id;
+
+    const offNew = onSocketEvent<NewMessageEvent>('message:new', (evt) => {
+      if (!evt?.message) return;
+      const isActive = evt.conversationId === activeIdRef.current;
+      if (isActive) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === evt.message.id)) return prev;
+          // A message from the other person, or my own echo from another tab.
+          const el = scrollRef.current;
+          const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+          stickBottom.current = evt.message.senderId === me || nearBottom;
+          return [...prev, evt.message];
+        });
+        if (evt.message.senderId !== me) {
+          // Ack delivery + mark the thread read since it's on screen.
+          emitSocket('message:ack', { conversationId: evt.conversationId, messageId: evt.message.id });
+          void api
+            .post(`/api/v1/messages/${evt.conversationId}/read`, {}, { accessToken: accessToken ?? undefined })
+            .catch(() => undefined);
+          setPeerTyping(false);
+        }
+      }
+      // Update the sidebar preview + unread state for every thread.
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === evt.conversationId
+            ? {
+                ...c,
+                lastMessage: {
+                  id: evt.message.id,
+                  senderId: evt.message.senderId,
+                  text: evt.message.text,
+                  createdAt: evt.message.createdAt,
+                },
+                updatedAt: evt.message.createdAt,
+                unread: c.id === activeIdRef.current ? false : evt.message.senderId !== me,
+              }
+            : c,
+        ),
+      );
+    });
+
+    const offRead = onSocketEvent<ReadEvent>('message:read', (evt) => {
+      if (evt.readerId === me) return;
+      if (evt.conversationId === activeIdRef.current) setOtherLastReadAt(evt.readAt);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === evt.conversationId ? { ...c, otherLastReadAt: evt.readAt } : c)),
+      );
+    });
+
+    const offDelivered = onSocketEvent<DeliveredEvent>('message:delivered', (evt) => {
+      if (evt.conversationId !== activeIdRef.current) return;
+      setDeliveredIds((prev) => {
+        if (prev.has(evt.messageId)) return prev;
+        const next = new Set(prev);
+        next.add(evt.messageId);
+        return next;
+      });
+    });
+
+    const offTyping = onSocketEvent<TypingEvent>('typing', (evt) => {
+      if (evt.userId === me || evt.conversationId !== activeIdRef.current) return;
+      setPeerTyping(evt.isTyping);
+      if (peerTypingTimer.current) clearTimeout(peerTypingTimer.current);
+      if (evt.isTyping) {
+        // Auto-clear in case the stop event is dropped.
+        peerTypingTimer.current = setTimeout(() => setPeerTyping(false), 5_000);
+      }
+    });
+
+    return () => {
+      offNew();
+      offRead();
+      offDelivered();
+      offTyping();
+    };
+  }, [accessToken, user]);
+
+  // ---- Typing emit --------------------------------------------------------
+
+  function emitTyping() {
+    if (!activeId) return;
+    const now = Date.now();
+    // Throttle "start" pings to at most one per ~1.5s.
+    if (now - lastTypingEmit.current > 1_500) {
+      lastTypingEmit.current = now;
+      emitSocket('typing', { conversationId: activeId, isTyping: true });
+    }
+    if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    typingStopTimer.current = setTimeout(() => {
+      emitSocket('typing', { conversationId: activeId, isTyping: false });
+      lastTypingEmit.current = 0;
+    }, 2_000);
+  }
+
+  function stopTyping() {
+    if (!activeId) return;
+    if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    lastTypingEmit.current = 0;
+    emitSocket('typing', { conversationId: activeId, isTyping: false });
+  }
 
   // ---- Send message -------------------------------------------------------
 
   async function handleSend() {
     if (!accessToken || !activeId || !draft.trim()) return;
     setSending(true);
+    stopTyping();
     try {
       const msg = await api.post<Message>(
         `/api/v1/messages/${activeId}/messages`,
         { text: draft.trim() },
         { accessToken: accessToken ?? undefined },
       );
-      setMessages((prev) => [...prev, msg]);
+      stickBottom.current = true;
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       setDraft('');
       // Update last message in sidebar
       setConversations((prev) =>
@@ -230,7 +438,8 @@ function MessagesInner() {
         { text },
         { accessToken: accessToken ?? undefined },
       );
-      setMessages((prev) => [...prev, msg]);
+      stickBottom.current = true;
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Send failed');
     } finally {
@@ -267,7 +476,8 @@ function MessagesInner() {
         { text: `📎 ${file.name}: ${fileUrl}` },
         { accessToken: accessToken ?? undefined },
       );
-      setMessages((prev) => [...prev, msg]);
+      stickBottom.current = true;
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not upload the file');
     } finally {
@@ -290,7 +500,8 @@ function MessagesInner() {
         },
         { accessToken: accessToken ?? undefined },
       );
-      setMessages((prev) => [...prev, msg]);
+      stickBottom.current = true;
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not send the invite');
     } finally {
@@ -313,6 +524,37 @@ function MessagesInner() {
     setActiveId(id);
     setMessages([]);
     setError(null);
+    setShowEmoji(false);
+    setPeerTyping(false);
+  }
+
+  function insertEmoji(emoji: string) {
+    const el = textareaRef.current;
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd ?? start;
+      setDraft((d) => d.slice(0, start) + emoji + d.slice(end));
+      // Restore focus + caret after the inserted emoji.
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + emoji.length;
+        el.setSelectionRange(pos, pos);
+      });
+    } else {
+      setDraft((d) => d + emoji);
+    }
+  }
+
+  // The id of the last message I sent - only that bubble carries the receipt
+  // label (Messenger-style), so the thread isn't littered with ticks.
+  const myMessageIds = messages.filter((m) => m.senderId === user?.id).map((m) => m.id);
+  const lastMineId = myMessageIds[myMessageIds.length - 1];
+
+  /** Receipt state for one of my messages. */
+  function receiptFor(m: Message): 'read' | 'delivered' | 'sent' {
+    if (otherLastReadAt && new Date(m.createdAt) <= new Date(otherLastReadAt)) return 'read';
+    if (deliveredIds.has(m.id)) return 'delivered';
+    return 'sent';
   }
 
   // ---- Render -------------------------------------------------------------
@@ -460,18 +702,23 @@ function MessagesInner() {
                     '?'
                   )}
                 </div>
-                <p className="flex items-center gap-1.5 truncate font-semibold text-gray-900">
-                  {activeConversation?.isOfficial
-                    ? 'ROUL Support'
-                    : activeConversation?.otherUser
-                      ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
-                      : 'Conversation'}
-                  {activeConversation?.isOfficial && (
-                    <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
-                      Referral Nova team
-                    </span>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 truncate font-semibold text-gray-900">
+                    {activeConversation?.isOfficial
+                      ? 'ROUL Support'
+                      : activeConversation?.otherUser
+                        ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
+                        : 'Conversation'}
+                    {activeConversation?.isOfficial && (
+                      <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
+                        Referral Nova team
+                      </span>
+                    )}
+                  </p>
+                  {peerTyping && (
+                    <p className="text-[11px] font-medium text-primary">typing…</p>
                   )}
-                </p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Member-only actions are hidden on the official ROUL thread. */}
@@ -496,11 +743,22 @@ function MessagesInner() {
             </header>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-6 py-4">
               {error && (
                 <p className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
                   {error}
                 </p>
+              )}
+              {hasMore && (
+                <div className="mb-3 flex justify-center">
+                  <button
+                    onClick={() => void loadOlder()}
+                    disabled={loadingOlder}
+                    className="rounded-full border border-gray-200 bg-white px-4 py-1 text-xs font-medium text-gray-500 hover:border-primary hover:text-primary disabled:opacity-60"
+                  >
+                    {loadingOlder ? 'Loading…' : 'Load earlier messages'}
+                  </button>
+                </div>
               )}
               {messages.length === 0 ? (
                 <p className="py-12 text-center text-sm text-gray-400">
@@ -510,6 +768,7 @@ function MessagesInner() {
                 <div className="space-y-3">
                   {messages.map((m) => {
                     const isMe = m.senderId === user?.id;
+                    const receipt = isMe && m.id === lastMineId ? receiptFor(m) : null;
                     return (
                       <div
                         key={m.id}
@@ -526,7 +785,7 @@ function MessagesInner() {
                             <Linkified text={m.text} light={isMe} />
                           </p>
                           <p
-                            className={`mt-1 text-[10px] ${
+                            className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
                               isMe ? 'text-white/60' : 'text-gray-400'
                             }`}
                           >
@@ -534,11 +793,37 @@ function MessagesInner() {
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
+                            {receipt === 'read' && (
+                              <span className="flex items-center gap-0.5 font-medium text-white">
+                                <CheckCheck size={12} /> Read
+                              </span>
+                            )}
+                            {receipt === 'delivered' && (
+                              <span className="flex items-center gap-0.5 text-white/70">
+                                <CheckCheck size={12} /> Delivered
+                              </span>
+                            )}
+                            {receipt === 'sent' && (
+                              <span className="flex items-center gap-0.5 text-white/70">
+                                <Check size={12} /> Sent
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
                     );
                   })}
+                  {peerTyping && (
+                    <div className="flex justify-start">
+                      <div className="rounded-2xl rounded-bl-md border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                        <span className="flex gap-1">
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={bottomRef} />
                 </div>
               )}
@@ -550,8 +835,20 @@ function MessagesInner() {
                 e.preventDefault();
                 void handleSend();
               }}
-              className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
+              className="relative flex items-center gap-2 border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
             >
+              {showEmoji && (
+                <EmojiPicker onPick={insertEmoji} onClose={() => setShowEmoji(false)} />
+              )}
+              {/* Emoji picker toggle */}
+              <button
+                type="button"
+                onClick={() => setShowEmoji((v) => !v)}
+                title="Insert emoji"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 transition hover:border-primary hover:text-primary ${showEmoji ? 'text-primary' : 'text-gray-500'}`}
+              >
+                <Smile size={16} />
+              </button>
               {/* Attach document / contract */}
               <label
                 className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-primary hover:text-primary ${uploading ? 'animate-pulse' : ''}`}
@@ -581,9 +878,14 @@ function MessagesInner() {
                 👍
               </button>
               <textarea
+                ref={textareaRef}
                 rows={1}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  emitTyping();
+                }}
+                onBlur={stopTyping}
                 onKeyDown={(e) => {
                   // Enter sends; Shift+Enter inserts a newline (WhatsApp/Messenger style).
                   if (e.key === 'Enter' && !e.shiftKey) {

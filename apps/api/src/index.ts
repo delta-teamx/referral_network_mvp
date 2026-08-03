@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { initRealtime } from './realtime/io.js';
+import { registerMessagingRealtime } from './domains/network/messaging/messaging.realtime.js';
 import { requireVerified } from './middleware/requireVerified.js';
 import { optionalAuthenticate } from './middleware/authenticate.js';
 import { disconnectPrisma, prisma } from './config/prisma.js';
@@ -612,6 +613,8 @@ async function start(): Promise<void> {
   // rings and messages arrive instantly instead of on the old 15-30s poll.
   const server = createServer(app);
   initRealtime(server);
+  // Attach messenger typing + delivery-ack relays to every socket.
+  registerMessagingRealtime();
 
   server.listen(env.PORT, () => {
     // eslint-disable-next-line no-console

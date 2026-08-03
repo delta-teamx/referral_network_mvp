@@ -37,6 +37,21 @@ interface SocketAuth {
   role: string;
 }
 
+/** Per-socket setup a domain can register (e.g. messaging typing/receipt
+ *  handlers). Called once for every authenticated connection. */
+export type ConnectionHandler = (socket: Socket, userId: string) => void;
+const connectionHandlers: ConnectionHandler[] = [];
+
+/**
+ * Register extra behavior to run on every authenticated socket. Domains use
+ * this to attach their own event listeners (typing relays, delivery acks)
+ * without the leaf realtime module needing to import them. Safe to call before
+ * or after init - handlers are applied to all future connections.
+ */
+export function onConnection(handler: ConnectionHandler): void {
+  connectionHandlers.push(handler);
+}
+
 /** Pull the JWT from the handshake (auth payload first, Authorization header fallback). */
 function tokenFromHandshake(socket: Socket): string | null {
   const authToken = socket.handshake.auth?.token;
@@ -111,6 +126,15 @@ export function initRealtime(server: HttpServer): SocketIOServer {
     const { userId } = auth;
     void socket.join(roomForUser(userId));
     incrementPresence(userId);
+
+    // Let domains attach their own per-socket listeners (typing, receipts).
+    for (const handler of connectionHandlers) {
+      try {
+        handler(socket, userId);
+      } catch {
+        /* one bad handler must not drop the connection */
+      }
+    }
 
     socket.on('disconnect', () => {
       decrementPresence(userId);

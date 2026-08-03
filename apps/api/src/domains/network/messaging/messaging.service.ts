@@ -5,6 +5,7 @@ import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
 import { assertEngagementQuota } from '../../billing/billing.tiers.js';
+import { emitNewMessage, emitRead } from './messaging.realtime.js';
 
 /**
  * In-app messaging between two users.
@@ -262,6 +263,19 @@ export async function sendMessage(
     data: { updatedAt: new Date() },
   });
 
+  // Push the message to every participant's room in real time (sender's other
+  // tabs included - the client dedupes by id). This is what makes the thread
+  // update instantly instead of on the old 15s poll.
+  void prisma.conversationParticipant
+    .findMany({ where: { conversationId }, select: { userId: true } })
+    .then((parts) => {
+      emitNewMessage(
+        parts.map((p) => p.userId),
+        { conversationId, message },
+      );
+    })
+    .catch(() => undefined);
+
   // Alert the recipient in the notification bell (best-effort).
   void (async () => {
     const [other, sender, convo, roulId] = await Promise.all([
@@ -408,6 +422,9 @@ export async function listConversations(userId: string) {
           ? !myParticipant.lastReadAt ||
             lastMessage.createdAt > myParticipant.lastReadAt
           : false,
+      // When the OTHER person last read this thread - lets the UI show a
+      // "Read" receipt on messages I sent before that time.
+      otherLastReadAt: otherParticipant?.lastReadAt ?? null,
     };
   });
   // Official ROUL Support threads pinned above everything, then by recency.
@@ -766,11 +783,25 @@ export async function getChatAttachmentStream(key: string): Promise<{
 
 /** Mark a conversation read for the given user (sets lastReadAt = now). */
 export async function markConversationRead(conversationId: string, userId: string) {
+  const readAt = new Date();
   await prisma.conversationParticipant.updateMany({
     where: { conversationId, userId },
-    data: { lastReadAt: new Date() },
+    data: { lastReadAt: readAt },
   });
-  return { ok: true };
+  // Tell the other participant their messages have been read, so their sent
+  // bubbles can flip to the "Read" tick live.
+  void prisma.conversationParticipant
+    .findFirst({
+      where: { conversationId, userId: { not: userId } },
+      select: { userId: true },
+    })
+    .then((other) => {
+      if (other) {
+        emitRead(other.userId, { conversationId, readerId: userId, readAt: readAt.toISOString() });
+      }
+    })
+    .catch(() => undefined);
+  return { ok: true, readAt: readAt.toISOString() };
 }
 
 // ---------------------------------------------------------------------------
@@ -781,38 +812,51 @@ export async function listMessages(
   conversationId: string,
   userId: string,
   limit = 50,
+  before?: string,
 ) {
-  // Ensure user is a participant.
-  const participant = await prisma.conversationParticipant.findFirst({
-    where: { conversationId, userId },
-    select: { id: true },
+  // Ensure user is a participant (and grab both read timestamps in one query).
+  const participants = await prisma.conversationParticipant.findMany({
+    where: { conversationId },
+    select: { userId: true, lastReadAt: true },
   });
-  if (!participant) {
+  const mine = participants.find((p) => p.userId === userId);
+  if (!mine) {
     throw AppError.forbidden('You are not a participant of this conversation.');
   }
+  const other = participants.find((p) => p.userId !== userId);
 
-  // Take the NEWEST `limit` messages (desc), then flip to chronological order
-  // for display. Ordering asc + take would pin the view to the OLDEST messages,
-  // so once a thread passed the limit new messages would never appear.
-  const messages = (
-    await prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        senderId: true,
-        text: true,
-        createdAt: true,
-      },
-    })
-  ).reverse();
-
-  // Mark conversation as read for this user.
-  await prisma.conversationParticipant.updateMany({
-    where: { conversationId, userId },
-    data: { lastReadAt: new Date() },
+  // Cursor pagination for infinite scroll: `before` is the ISO createdAt of the
+  // oldest message currently shown; we return the page just older than it.
+  // Without it we return the newest page. We fetch limit+1 to know if there's
+  // more history to load.
+  const cursorFilter = before ? { createdAt: { lt: new Date(before) } } : {};
+  const rows = await prisma.message.findMany({
+    where: { conversationId, ...cursorFilter },
+    orderBy: { createdAt: 'desc' },
+    take: limit + 1,
+    select: {
+      id: true,
+      senderId: true,
+      text: true,
+      createdAt: true,
+    },
   });
+  const hasMore = rows.length > limit;
+  // Drop the probe row, then flip to chronological order for display.
+  const messages = rows.slice(0, limit).reverse();
 
-  return messages;
+  // Only the initial (newest) load marks the thread read - loading OLDER
+  // history on scroll-up must not touch read state.
+  if (!before) {
+    await prisma.conversationParticipant.updateMany({
+      where: { conversationId, userId },
+      data: { lastReadAt: new Date() },
+    });
+  }
+
+  return {
+    messages,
+    hasMore,
+    otherLastReadAt: other?.lastReadAt ?? null,
+  };
 }
