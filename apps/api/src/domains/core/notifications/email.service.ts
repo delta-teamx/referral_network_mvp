@@ -30,6 +30,7 @@ export type EmailTemplate =
   | 'roul_message'
   | 'message_received'
   | 'digest'
+  | 'weekly_digest'
   | 'intro_request'
   | 'booking_request'
   | 'booking_canceled'
@@ -315,6 +316,157 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
               `<span style="color:${BRAND.gray};font-size:13px;">You're getting this because you weren't active when these came in. We batch them so you get one summary instead of a flood.</span>`,
             ),
         ),
+      };
+    }
+    case 'weekly_digest': {
+      // "Your week with Nova" - a proactive Monday briefing voiced by Nova, the
+      // Referral Nova growth-partner persona. Same skeleton every week (network,
+      // momentum, needs-attention, standing) and it always ships: a quiet week
+      // becomes an encouraging nudge instead of silence.
+      const firstName = String(d.firstName ?? 'there');
+      const quiet = Boolean(d.quiet);
+      const network = (d.network ?? {}) as {
+        pendingIntros?: number;
+        pendingNames?: string[];
+        newMatches?: number;
+        matchNames?: string[];
+      };
+      const momentum = (d.momentum ?? {}) as { newLeads?: number; advanced?: number };
+      const attention = (d.attention ?? {}) as {
+        staleCards?: number;
+        staleNames?: string[];
+        agingIntros?: number;
+      };
+      const standing = (d.standing ?? {}) as { weeklyPoints?: number };
+
+      const app = BRAND.app;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const nameList = (names: string[]) =>
+        names.filter(Boolean).slice(0, 3).map(escapeHtml).join(', ');
+      // HTML -> plaintext for the text/plain part: drop tags and decode the few
+      // entities the copy uses, so the plaintext never shows "&mdash;".
+      const plain = (s: string) =>
+        s
+          .replace(/<[^>]+>/g, '')
+          .replace(/&mdash;/g, '—')
+          .replace(/&rarr;/g, '→')
+          .replace(/&amp;/g, '&');
+
+      // One reusable "card" block: heading, body, and a single next-step link.
+      const card = (emoji: string, title: string, bodyHtml: string, ctaLabel: string, ctaUrl: string) =>
+        `<div style="margin:0 0 16px;padding:16px 18px;background:${BRAND.bg};border-radius:10px;">` +
+        `<div style="font-weight:700;color:${BRAND.ink};font-size:15px;margin-bottom:6px;">${emoji} ${escapeHtml(title)}</div>` +
+        `<div style="color:#374151;font-size:14px;line-height:1.55;">${bodyHtml}</div>` +
+        `<div style="margin-top:10px;"><a href="${escapeAttr(ctaUrl)}" style="color:${BRAND.blue};font-weight:600;text-decoration:none;font-size:14px;">${escapeHtml(ctaLabel)} &rarr;</a></div>` +
+        `</div>`;
+
+      const sections: string[] = [];
+      const textLines: string[] = [];
+
+      if (!quiet) {
+        // --- Your network -----------------------------------------------------
+        const pi = network.pendingIntros ?? 0;
+        const nm = network.newMatches ?? 0;
+        if (pi > 0 || nm > 0) {
+          const bits: string[] = [];
+          if (pi > 0) {
+            const who = nameList(network.pendingNames ?? []);
+            bits.push(
+              `<strong>${pi}</strong> ${pi === 1 ? 'person is' : 'people are'} waiting on your reply to connect${who ? ` &mdash; including ${who}` : ''}.`,
+            );
+          }
+          if (nm > 0) {
+            const who = nameList(network.matchNames ?? []);
+            bits.push(
+              `I lined up <strong>${nm}</strong> fresh ${nm === 1 ? 'match' : 'matches'} for you this week${who ? ` (${who}${nm > 3 ? ' and more' : ''})` : ''}.`,
+            );
+          }
+          sections.push(
+            card('🤝', 'Your network is warming up', bits.join(' '), 'Review your matches & requests', `${app}/dashboard`),
+          );
+          textLines.push(`Your network: ${plain(bits.join(' '))}`);
+        }
+
+        // --- Momentum ---------------------------------------------------------
+        const nl = momentum.newLeads ?? 0;
+        const adv = momentum.advanced ?? 0;
+        if (nl > 0 || adv > 0) {
+          const bits: string[] = [];
+          if (nl > 0) bits.push(`<strong>${nl}</strong> new ${nl === 1 ? 'lead' : 'leads'} landed in your pipeline`);
+          if (adv > 0) bits.push(`<strong>${adv}</strong> ${adv === 1 ? 'deal' : 'deals'} moved forward`);
+          sections.push(
+            card('📈', 'Momentum this week', `${bits.join(' and ')}. Nice work — keep them moving.`, 'Open your pipeline', `${app}/dashboard/leads`),
+          );
+          textLines.push(`Momentum: ${plain(bits.join(' and '))}.`);
+        }
+
+        // --- Needs attention --------------------------------------------------
+        const sc = attention.staleCards ?? 0;
+        const ai = attention.agingIntros ?? 0;
+        if (sc > 0 || ai > 0) {
+          const bits: string[] = [];
+          if (sc > 0) {
+            const who = nameList(attention.staleNames ?? []);
+            bits.push(
+              `<strong>${sc}</strong> open ${sc === 1 ? 'deal has' : 'deals have'} gone quiet for two weeks${who ? ` (${who})` : ''}`,
+            );
+          }
+          if (ai > 0) bits.push(`<strong>${ai}</strong> intro ${ai === 1 ? 'request has' : 'requests have'} been waiting a few days`);
+          sections.push(
+            card('⏰', 'A little attention needed', `${bits.join(', and ')}. A quick nudge often restarts a stalled conversation.`, 'Follow up now', `${app}/dashboard/leads`),
+          );
+          textLines.push(`Needs attention: ${plain(bits.join(', and '))}.`);
+        }
+
+        // --- Standing ---------------------------------------------------------
+        const pts = standing.weeklyPoints ?? 0;
+        if (pts > 0) {
+          sections.push(
+            card('🏆', 'Your standing', `You earned <strong>${pts}</strong> contribution ${pts === 1 ? 'point' : 'points'} this week. Every referral you give lifts your rank.`, 'See the leaderboard', `${app}/dashboard/leaderboard`),
+          );
+          textLines.push(`Standing: earned ${pts} contribution points this week.`);
+        }
+      }
+
+      // Quiet-week fallback: never send an empty email - turn it into a nudge.
+      if (quiet || sections.length === 0) {
+        sections.length = 0;
+        sections.push(
+          card(
+            '✨',
+            'A fresh week, a clean slate',
+            `It was quiet on your end this week — which is the perfect moment to get ahead. Invite a connection, complete your profile, or check the matches I've found for you. Small moves now become referrals later.`,
+            'Explore your matches',
+            `${app}/dashboard`,
+          ),
+        );
+        textLines.push('A quiet week - a great moment to invite a connection or review your matches.');
+      }
+
+      const intro = quiet
+        ? `It was a calm week — here's a simple way to build momentum:`
+        : `Here's what I noticed for you this week:`;
+
+      const bodyHtml =
+        P(`Hi ${escapeHtml(firstName)}, happy Monday! 👋`) +
+        P(`I'm Nova — I keep an eye on your network so you can focus on the conversations that matter. ${intro}`) +
+        sections.join('') +
+        P(
+          `<span style="color:${BRAND.gray};font-size:13px;">I'm always learning what's most useful to you — just reply and tell me what you'd like to see here.</span>`,
+        ) +
+        P(`Cheering you on,<br><strong>Nova</strong> · your growth partner at Referral Nova`);
+
+      return {
+        subject: quiet
+          ? `Your week ahead on Referral Nova, ${firstName}`
+          : `Your Referral Nova week: what needs your attention`,
+        text:
+          `Hi ${firstName}, happy Monday!\n\n` +
+          `I'm Nova, your growth partner at Referral Nova. ${plain(intro)}\n\n` +
+          textLines.map((l) => `- ${l}`).join('\n') +
+          `\n\nJump back in: ${app}/dashboard\n\n` +
+          `Reply anytime to tell me what you'd like to see.\n\nCheering you on,\nNova`,
+        html: brandedLayout(quiet ? 'Your week ahead' : 'Your week with Nova', bodyHtml),
       };
     }
     case 'intro_request': {

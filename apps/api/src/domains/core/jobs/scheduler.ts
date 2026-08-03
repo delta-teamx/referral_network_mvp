@@ -7,6 +7,7 @@ import {
   runProfileCompletionReminders,
 } from '../notifications/reengagement.service.js';
 import { runNotificationDigests } from '../notifications/digest.service.js';
+import { runWeeklyDigests } from '../notifications/weekly-digest.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -103,6 +104,18 @@ const JOBS: JobDefinition[] = [
         console.log(
           `[jobs] notification-digests: scanned ${result.scanned}, sent ${result.sent}`,
         );
+      }
+      return result;
+    },
+  },
+  {
+    name: 'weekly-digest',
+    intervalMs: 60 * 60 * 1000, // Hourly; self-gates to the Mon 08:00-11:59 ET window
+    handler: async () => {
+      const result = await runWeeklyDigests();
+      if (result.sent > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`[jobs] weekly-digest: scanned ${result.scanned}, sent ${result.sent}`);
       }
       return result;
     },
