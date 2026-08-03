@@ -23,7 +23,7 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { api, ApiError } from '../../../../lib/api';
+import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
 
 interface GroupMemberRow {
@@ -750,6 +750,38 @@ function GroupManagePanel({
   const [editingProfile, setEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function uploadLogo(file: File) {
+    if (!accessToken) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErr('Logo must be a JPEG, PNG, or WebP image.');
+      return;
+    }
+    setLogoUploading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`${apiBaseUrl()}/api/v1/groups/${groupId}/logo/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type, Authorization: `Bearer ${accessToken}` },
+        body: file,
+        credentials: 'include',
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success?: boolean; data?: { logoUrl?: string }; error?: string }
+        | null;
+      if (!res.ok || !json?.success || !json.data?.logoUrl) {
+        throw new Error(json?.error ?? `Upload failed (${res.status}).`);
+      }
+      setField('logoUrl', json.data.logoUrl);
+      onSaved?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Logo upload failed.');
+    } finally {
+      setLogoUploading(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -928,13 +960,41 @@ function GroupManagePanel({
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600">Logo URL</label>
-                <input
-                  value={profile.logoUrl ?? ''}
-                  onChange={(e) => setField('logoUrl', e.target.value)}
-                  placeholder="https://…/logo.png"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                />
+                <label className="mb-1 block text-xs font-semibold text-gray-600">Logo</label>
+                <div className="flex items-center gap-3">
+                  {profile.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.logoUrl}
+                      alt="Group logo"
+                      className="h-11 w-11 shrink-0 rounded-lg object-contain ring-1 ring-gray-200"
+                    />
+                  ) : (
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                      <Users size={18} />
+                    </span>
+                  )}
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void uploadLogo(f);
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={logoUploading}
+                    className="rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {logoUploading ? 'Uploading…' : profile.logoUrl ? 'Replace logo' : 'Upload logo'}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">PNG, JPEG or WebP, up to 8MB.</p>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-600">Brand color</label>

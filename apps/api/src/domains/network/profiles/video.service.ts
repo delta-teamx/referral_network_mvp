@@ -268,6 +268,45 @@ export async function uploadProfilePhoto(
   return { photoUrl };
 }
 
+/**
+ * Group logo upload - a leader/co-leader sends the image bytes to our API and
+ * we store them (same S3 pipeline as headshots) and set the group's logoUrl.
+ */
+export async function uploadGroupLogo(
+  groupId: string,
+  userId: string,
+  contentType: string,
+  data: Buffer,
+): Promise<{ logoUrl: string }> {
+  if (!ALLOWED_PHOTO_TYPES.has(contentType)) {
+    throw AppError.badRequest('Unsupported image format. Use JPEG, PNG, or WebP.');
+  }
+  if (data.length === 0) throw AppError.badRequest('The file arrived empty. Please try again.');
+  if (data.length > MAX_PHOTO_BYTES) {
+    throw AppError.badRequest(`Image too large. Max ${MAX_PHOTO_BYTES / (1024 * 1024)}MB.`);
+  }
+  const member = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId } },
+    select: { role: true },
+  });
+  if (!member || (member.role !== 'LEADER' && member.role !== 'CO_LEADER')) {
+    throw AppError.forbidden('Only group leaders can change the logo.');
+  }
+
+  let logoUrl: string;
+  if (!isS3Configured()) {
+    logoUrl = `https://i.pravatar.cc/600?u=${encodeURIComponent(`group:${groupId}`)}`;
+  } else {
+    const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1] ?? 'jpg';
+    const key = `group-logos/${groupId}/${crypto.randomUUID()}.${ext}`;
+    await putMediaObject(key, contentType, data);
+    logoUrl = mediaProxyUrl(key);
+  }
+
+  await prisma.group.update({ where: { id: groupId }, data: { logoUrl } });
+  return { logoUrl };
+}
+
 export async function uploadProfileVideo(
   userId: string,
   contentType: string,

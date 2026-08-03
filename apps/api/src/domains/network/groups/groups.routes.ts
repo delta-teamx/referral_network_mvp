@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import express from 'express';
 import { z } from 'zod';
 import type { ApiResponse } from '@refnet/shared';
+import { uploadGroupLogo } from '../profiles/video.service.js';
 import { authenticate, optionalAuthenticate } from '../../../middleware/authenticate.js';
 import { validate } from '../../../middleware/validate.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
@@ -178,6 +180,22 @@ groupsRouter.patch(
     if (payload.logoUrl === '') payload.logoUrl = null;
     const group = await updateGroupSettings(req.params.id ?? '', req.user.id, payload);
     const body: ApiResponse<typeof group> = { success: true, data: group };
+    res.json(body);
+  }),
+);
+
+// Group logo upload - leader sends the image bytes; we store + set logoUrl.
+groupsRouter.post(
+  '/:id/logo/upload',
+  express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '9mb' }),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    if (!Buffer.isBuffer(req.body)) {
+      throw AppError.badRequest('Send the image file as the request body with its content type.');
+    }
+    const contentType = (req.headers['content-type'] ?? '').split(';')[0]?.trim() ?? '';
+    const data = await uploadGroupLogo(req.params.id ?? '', req.user.id, contentType, req.body);
+    const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),
 );
