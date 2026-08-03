@@ -15,17 +15,9 @@ import { fadeInUp, staggerContainer } from '../../../lib/animations';
 import { APP_BASE_URL } from '../../../lib/domains';
 
 /*
- * Co-branded NRG x Referral Nova partner landing page.
- *
- * This is the PERMANENT tracking link the NRG team announces
- * (referralnova.com/nrg). The time-boxed 48-hour join link is minted
- * separately by a group leader from the group manager and shared by NRG.
- *
- * BRANDING IS PLACEHOLDER. Swap NRG_BRAND below for the real assets from
- * Lori/Brian at launch:
- *   - logoUrl: NRG logo (transparent PNG/SVG). Leave null to show the text mark.
- *   - color:   NRG primary hex.
- *   - name / tagline / blurb: final approved copy.
+ * Co-branded NRG x Referral Nova partner landing page (referralnova.com/nrg) -
+ * the permanent link the NRG team announces. The 48-hour join link is minted
+ * separately by a group leader and shared by NRG.
  */
 const NRG_BRAND = {
   name: 'NRG',
@@ -34,10 +26,49 @@ const NRG_BRAND = {
   logoUrl: '/nrg-logo.png' as string | null,
   color: '#F5821F', // NRG orange
   colorAccent: '#FDB515', // NRG amber/gold
-  tagline: 'Network Referral Group, powered by Referral Nova',
+  tagline: 'A strategic partnership to transform business growth through AI and referral innovation',
   blurb:
-    'NRG is partnering with Referral Nova to give members a private, AI-powered referral network built around live Zoom events - with lifetime Premium access included.',
+    'Network Referral Group and Virtual Pros have partnered to give NRG members access to Referral Nova - an AI-powered referral platform built to strengthen the trusted relationships NRG members have spent years building, and create new opportunities for collaboration and growth.',
 };
+
+// Press-release "what members can expect" points.
+const expectations = [
+  'Access to innovative AI-powered business growth technologies from Virtual Pros.',
+  'Exclusive opportunities to participate in the Referral Nova ecosystem.',
+  'Enhanced referral connections through intelligent business matching.',
+  'Educational resources, presentations, and training on practical AI strategies for business growth.',
+  'Continued collaboration between NRG and Virtual Pros to bring new value-added services to the membership.',
+];
+
+const quotes = [
+  {
+    quote:
+      "We're excited to partner with NRG because both organizations share the same mission: helping businesses succeed through meaningful relationships. Our goal is to equip NRG members with innovative AI technology that strengthens the value of their existing network while creating new opportunities for collaboration and growth.",
+    name: 'Brian Parnell',
+    title: 'Founder, Virtual Pros',
+  },
+  {
+    quote:
+      "This partnership reflects NRG's ongoing commitment to providing members with innovative resources that help them build stronger businesses and create more referral opportunities.",
+    name: 'Mike Weiner',
+    title: 'CEO, Network Referral Group',
+  },
+];
+
+const abouts = [
+  {
+    name: 'Virtual Pros',
+    body: 'Virtual Pros is an AI-powered business growth company that helps organizations increase revenue through intelligent automation, AI-powered business solutions, marketing systems, and strategic growth technologies. By combining cutting-edge artificial intelligence with practical business expertise, Virtual Pros empowers companies to save time, improve customer engagement, and scale more effectively.',
+  },
+  {
+    name: 'Referral Nova',
+    body: 'Referral Nova is an AI-powered referral platform and strategic partner of Virtual Pros. Designed specifically for business professionals, Referral Nova helps members create meaningful business connections through intelligent referral matching, relationship building, and collaborative networking.',
+  },
+  {
+    name: 'Network Referral Group (NRG)',
+    body: 'Network Referral Group (NRG) is a professional business networking organization dedicated to helping its members grow through trusted relationships, referrals, education, and collaboration. NRG provides entrepreneurs and professionals with opportunities to connect, learn, and build long-term business success.',
+  },
+];
 
 // Permanent tracking params so signups from this page are attributable.
 const TRACK = 'utm_source=nrg&utm_medium=partner&utm_campaign=nrg-launch';
@@ -175,8 +206,81 @@ export default function NrgLandingPage() {
         </motion.div>
       </section>
 
+      {/* Announcement / press release */}
+      <section className="border-t border-gray-100 bg-white px-6 py-20">
+        <div className="mx-auto max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            For immediate release
+          </p>
+          <h2 className="mt-2 text-3xl font-bold leading-tight text-gray-900">
+            NRG and Virtual Pros announce strategic partnership to transform business growth through
+            AI and referral innovation
+          </h2>
+          <p className="mt-4 text-sm font-medium text-gray-500">Gettysburg, PA — August 2, 2026</p>
+
+          <div className="mt-6 space-y-4 text-gray-700">
+            <p>
+              Virtual Pros, a leader in AI-powered business growth and automation solutions, is proud
+              to announce a new strategic partnership with Network Referral Group (NRG), creating
+              exciting new opportunities for NRG members to accelerate business growth through
+              artificial intelligence, strategic networking, and referral innovation.
+            </p>
+            <p>
+              As part of this partnership, NRG members will gain access to exclusive technologies and
+              resources developed by Virtual Pros, including <strong>Referral Nova</strong>, Virtual
+              Pros&rsquo; AI-powered referral platform designed to help professionals build stronger
+              business relationships and generate more qualified referral opportunities.
+            </p>
+            <p>
+              Unlike traditional social networking platforms, Referral Nova focuses on connecting the
+              right people at the right time through intelligent matching and proactive referral
+              opportunities. The platform is designed to complement&mdash;not replace&mdash;the
+              trusted relationships and networking that NRG members have built over the years.
+            </p>
+          </div>
+
+          {/* Quotes */}
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {quotes.map((q) => (
+              <blockquote
+                key={q.name}
+                className="rounded-2xl border border-gray-200 bg-gray-50 p-6"
+                style={{ borderLeft: `3px solid ${NRG_BRAND.color}` }}
+              >
+                <p className="text-sm italic text-gray-700">&ldquo;{q.quote}&rdquo;</p>
+                <footer className="mt-3 text-sm">
+                  <span className="font-semibold text-gray-900">{q.name}</span>
+                  <span className="text-gray-500"> — {q.title}</span>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+
+          {/* What members can expect */}
+          <h3 className="mt-10 text-xl font-bold text-gray-900">
+            Through this partnership, NRG members can expect
+          </h3>
+          <ul className="mt-4 space-y-3">
+            {expectations.map((e) => (
+              <li key={e} className="flex items-start gap-3 text-gray-700">
+                <Check size={18} className="mt-0.5 shrink-0" style={{ color: NRG_BRAND.color }} />
+                <span>{e}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-6 text-gray-700">
+            The organizations will work together on educational initiatives, member engagement,
+            strategic events, and the continued evolution of AI-driven networking solutions designed
+            specifically for business professionals &mdash; the beginning of a long-term
+            collaboration focused on helping entrepreneurs, business owners, and professionals thrive
+            in an increasingly connected, technology-driven marketplace.
+          </p>
+        </div>
+      </section>
+
       {/* Benefits */}
-      <section className="px-6 py-20">
+      <section className="border-t border-gray-100 px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mx-auto mb-12 max-w-2xl text-center">
             <h2 className="text-3xl font-bold text-gray-900">What NRG members get</h2>
@@ -229,6 +333,21 @@ export default function NrgLandingPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* About the organizations */}
+      <section className="border-t border-gray-100 bg-white px-6 py-20">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="mb-10 text-center text-3xl font-bold text-gray-900">About the partners</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {abouts.map((a) => (
+              <div key={a.name} className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="font-bold text-gray-900">{a.name}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-600">{a.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
