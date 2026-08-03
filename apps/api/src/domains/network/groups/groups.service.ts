@@ -409,9 +409,14 @@ export async function postGroupMessage(groupId: string, userId: string, text: st
 }
 
 export interface WhitelabelSettings {
+  // Group profile fields (leaders edit these).
+  name?: string;
+  description?: string | null;
+  meetingSchedule?: string | null;
   logoUrl?: string | null;
   primaryColor?: string | null;
   welcomeMessage?: string | null;
+  // Billing (advanced).
   billingModel?: 'platform' | 'per_seat' | 'per_group';
   seatPriceCents?: number | null;
   groupPriceCents?: number | null;
@@ -429,17 +434,50 @@ export async function updateGroupSettings(
   if (!member || (member.role !== 'LEADER' && member.role !== 'CO_LEADER')) {
     throw AppError.forbidden('Only group leaders can update settings.');
   }
+  const cleanName = settings.name !== undefined ? sanitizeText(settings.name).slice(0, 100).trim() : undefined;
+  if (cleanName !== undefined && cleanName.length < 3) {
+    throw AppError.badRequest('Group name must be at least 3 characters.');
+  }
   return prisma.group.update({
     where: { id: groupId },
     data: {
+      ...(cleanName !== undefined ? { name: cleanName } : {}),
+      ...(settings.description !== undefined
+        ? { description: settings.description ? sanitizeText(settings.description).slice(0, 1000) : null }
+        : {}),
+      ...(settings.meetingSchedule !== undefined
+        ? { meetingSchedule: settings.meetingSchedule ? sanitizeText(settings.meetingSchedule).slice(0, 120) : null }
+        : {}),
       ...(settings.logoUrl !== undefined ? { logoUrl: settings.logoUrl } : {}),
       ...(settings.primaryColor !== undefined ? { primaryColor: settings.primaryColor } : {}),
-      ...(settings.welcomeMessage !== undefined ? { welcomeMessage: settings.welcomeMessage } : {}),
+      ...(settings.welcomeMessage !== undefined
+        ? { welcomeMessage: settings.welcomeMessage ? sanitizeText(settings.welcomeMessage).slice(0, 1000) : null }
+        : {}),
       ...(settings.billingModel !== undefined ? { billingModel: settings.billingModel } : {}),
       ...(settings.seatPriceCents !== undefined ? { seatPriceCents: settings.seatPriceCents } : {}),
       ...(settings.groupPriceCents !== undefined ? { groupPriceCents: settings.groupPriceCents } : {}),
     },
     select: groupListSelect,
+  });
+}
+
+/** Full group profile for the leader's editor (includes description/welcome). */
+export async function getGroupProfileForEdit(groupId: string, userId: string) {
+  await assertGroupAdmin(groupId, userId);
+  return prisma.group.findUnique({
+    where: { id: groupId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      meetingSchedule: true,
+      logoUrl: true,
+      primaryColor: true,
+      welcomeMessage: true,
+      city: true,
+      state: true,
+    },
   });
 }
 

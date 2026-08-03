@@ -606,7 +606,7 @@ function GroupDetailView({
       </header>
 
       {isAdmin && showManage && (
-        <GroupManagePanel groupId={group.id} accessToken={accessToken} />
+        <GroupManagePanel groupId={group.id} accessToken={accessToken} onSaved={() => void loadGroup()} />
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -723,32 +723,81 @@ function timeLeft(iso: string): string {
   return `${m}m left`;
 }
 
+interface GroupProfile {
+  name: string;
+  description: string | null;
+  meetingSchedule: string | null;
+  logoUrl: string | null;
+  primaryColor: string | null;
+  welcomeMessage: string | null;
+}
+
 function GroupManagePanel({
   groupId,
   accessToken,
+  onSaved,
 }: {
   groupId: string;
   accessToken: string | null;
+  onSaved?: () => void;
 }) {
   const [link, setLink] = useState<InviteLink | null>(null);
   const [requests, setRequests] = useState<JoinRequestRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [profile, setProfile] = useState<GroupProfile | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const [l, r] = await Promise.all([
+      const [l, r, p] = await Promise.all([
         api.get<InviteLink | null>(`/api/v1/groups/${groupId}/invite-link`, { accessToken }),
         api.get<JoinRequestRow[]>(`/api/v1/groups/${groupId}/requests`, { accessToken }),
+        api.get<GroupProfile>(`/api/v1/groups/${groupId}/profile`, { accessToken }),
       ]);
       setLink(l);
       setRequests(r);
+      setProfile(p);
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Could not load');
     }
   }, [groupId, accessToken]);
+
+  async function saveProfile() {
+    if (!accessToken || !profile) return;
+    setSavingProfile(true);
+    setErr(null);
+    try {
+      await api.patch(
+        `/api/v1/groups/${groupId}/settings`,
+        {
+          name: profile.name.trim(),
+          description: profile.description,
+          meetingSchedule: profile.meetingSchedule,
+          logoUrl: profile.logoUrl || '',
+          primaryColor: profile.primaryColor || undefined,
+          welcomeMessage: profile.welcomeMessage,
+        },
+        { accessToken },
+      );
+      setProfileSaved(true);
+      setEditingProfile(false);
+      setTimeout(() => setProfileSaved(false), 2500);
+      onSaved?.();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not save the group profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  function setField<K extends keyof GroupProfile>(key: K, value: GroupProfile[K]) {
+    setProfile((p) => (p ? { ...p, [key]: value } : p));
+  }
 
   useEffect(() => {
     void load();
@@ -813,9 +862,139 @@ function GroupManagePanel({
         <Settings size={15} className="text-primary" /> Group manager
       </h2>
       <p className="mb-4 text-xs text-gray-500">
-        Leaders and co-leaders only. Share the launch invite link and approve requests to join.
+        Leaders and co-leaders only. Edit your group profile, share the launch invite link, and
+        approve requests to join.
       </p>
       {err && <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{err}</p>}
+
+      {/* Group profile */}
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+            <Settings size={14} className="text-primary" /> Group profile
+          </p>
+          {profile && !editingProfile && (
+            <button
+              onClick={() => setEditingProfile(true)}
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        {!profile ? (
+          <p className="mt-2 text-xs text-gray-500">Loading…</p>
+        ) : !editingProfile ? (
+          <div className="mt-3 flex items-start gap-3">
+            {profile.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.logoUrl} alt={profile.name} className="h-12 w-12 shrink-0 rounded-lg object-contain ring-1 ring-gray-200" />
+            ) : (
+              <span
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+                style={{ backgroundColor: profile.primaryColor || '#2563eb' }}
+              >
+                {profile.name.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900">{profile.name}</p>
+              {profile.description && <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">{profile.description}</p>}
+              {profile.meetingSchedule && <p className="mt-1 text-xs text-gray-500">{profile.meetingSchedule}</p>}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600">Group name</label>
+              <input
+                value={profile.name}
+                onChange={(e) => setField('name', e.target.value)}
+                maxLength={100}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600">Description</label>
+              <textarea
+                value={profile.description ?? ''}
+                onChange={(e) => setField('description', e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="What is this group about? This shows on the group's join screen."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600">Logo URL</label>
+                <input
+                  value={profile.logoUrl ?? ''}
+                  onChange={(e) => setField('logoUrl', e.target.value)}
+                  placeholder="https://…/logo.png"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600">Brand color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={profile.primaryColor || '#2563eb'}
+                    onChange={(e) => setField('primaryColor', e.target.value)}
+                    className="h-9 w-12 shrink-0 rounded border border-gray-300"
+                  />
+                  <input
+                    value={profile.primaryColor || ''}
+                    onChange={(e) => setField('primaryColor', e.target.value)}
+                    placeholder="#2563EB"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600">Meeting schedule</label>
+              <input
+                value={profile.meetingSchedule ?? ''}
+                onChange={(e) => setField('meetingSchedule', e.target.value)}
+                maxLength={120}
+                placeholder="e.g. Every Tuesday 9am ET on Zoom"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600">Welcome message</label>
+              <textarea
+                value={profile.welcomeMessage ?? ''}
+                onChange={(e) => setField('welcomeMessage', e.target.value)}
+                rows={2}
+                maxLength={1000}
+                placeholder="Shown to new members right after they join."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setEditingProfile(false); void load(); }}
+                disabled={savingProfile}
+                className="rounded-full border border-gray-200 px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void saveProfile()}
+                disabled={savingProfile || profile.name.trim().length < 3}
+                className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+              >
+                {savingProfile ? 'Saving…' : 'Save profile'}
+              </button>
+            </div>
+          </div>
+        )}
+        {profileSaved && <p className="mt-2 text-xs font-semibold text-emerald-600">Group profile saved.</p>}
+      </div>
 
       {/* Invite link */}
       <div className="rounded-xl border border-gray-200 bg-white p-4">

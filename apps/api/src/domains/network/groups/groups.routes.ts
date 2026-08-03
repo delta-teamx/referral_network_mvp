@@ -143,15 +143,30 @@ groupsRouter.post(
   }),
 );
 
-// White-label settings - leader-only
+// Group profile + white-label settings - leader-only
 const whitelabelSchema = z.object({
-  logoUrl: z.string().url().optional().nullable(),
+  name: z.string().trim().min(3).max(100).optional(),
+  description: z.string().trim().max(1000).optional().nullable(),
+  meetingSchedule: z.string().trim().max(120).optional().nullable(),
+  logoUrl: z.string().url().optional().nullable().or(z.literal('')),
   primaryColor: z.string().regex(/^#[a-fA-F0-9]{6}$/).optional().nullable(),
-  welcomeMessage: z.string().trim().max(500).optional().nullable(),
+  welcomeMessage: z.string().trim().max(1000).optional().nullable(),
   billingModel: z.enum(['platform', 'per_seat', 'per_group']).optional(),
   seatPriceCents: z.number().int().min(0).optional().nullable(),
   groupPriceCents: z.number().int().min(0).optional().nullable(),
 });
+
+// Full profile for the leader's editor.
+groupsRouter.get(
+  '/:id/profile',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const { getGroupProfileForEdit } = await import('./groups.service.js');
+    const data = await getGroupProfileForEdit(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
 
 groupsRouter.patch(
   '/:id/settings',
@@ -159,7 +174,9 @@ groupsRouter.patch(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const { updateGroupSettings } = await import('./groups.service.js');
-    const group = await updateGroupSettings(req.params.id ?? '', req.user.id, req.body);
+    const payload = { ...req.body };
+    if (payload.logoUrl === '') payload.logoUrl = null;
+    const group = await updateGroupSettings(req.params.id ?? '', req.user.id, payload);
     const body: ApiResponse<typeof group> = { success: true, data: group };
     res.json(body);
   }),
