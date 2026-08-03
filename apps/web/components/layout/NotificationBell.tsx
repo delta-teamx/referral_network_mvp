@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, ShieldCheck, X } from 'lucide-react';
+import { Bell, Check, ShieldCheck, Volume2, VolumeX, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
+import { connectSocket, disconnectSocket, onSocketEvent } from '../../lib/socket';
+import { isChimeEnabled, playChime, setChimeEnabled } from '../../lib/chime';
 
 interface Notification {
   id: string;
@@ -14,7 +16,13 @@ interface Notification {
   body: string;
   isRead: boolean;
   createdAt: string;
-  data?: { ticketId?: string } | null;
+  data?: { ticketId?: string; conversationId?: string } | null;
+}
+
+/** Real-time payload pushed by the API when a notification is created. */
+interface NotificationEvent {
+  notification: Notification;
+  unreadCount: number;
 }
 
 /** Where each notification type takes you when clicked. */
@@ -47,8 +55,75 @@ export function NotificationBell() {
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
+  const [soundOn, setSoundOn] = useState(true);
+  const [flash, setFlash] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Reflect the persisted mute preference once mounted (localStorage is
+  // client-only, so we can't read it during the initial render).
+  useEffect(() => {
+    setSoundOn(isChimeEnabled());
+  }, []);
+
+  // ---- Realtime connection: the bell owns the shared socket -----------------
+  // It's always mounted in the authenticated shell (member + admin), so this is
+  // the natural place to connect. Reconnects on token rotation, drops on logout.
+  useEffect(() => {
+    if (!accessToken || !user) {
+      disconnectSocket();
+      return;
+    }
+    connectSocket(accessToken);
+  }, [accessToken, user]);
+
+  // Fire a desktop/browser notification when the app isn't focused. Silent
+  // no-op unless the user granted permission (requested from the bell click).
+  function showDesktopNotification(n: Notification) {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    // Don't double-notify when the person is already looking at the tab.
+    if (document.visibilityState === 'visible' && document.hasFocus()) return;
+    try {
+      const notif = new Notification(n.title, {
+        body: n.body,
+        tag: n.id,
+        icon: '/nrg-logo.png',
+      });
+      notif.onclick = () => {
+        window.focus();
+        const href = TYPE_HREF[n.type];
+        if (href) router.push(href as Parameters<typeof router.push>[0]);
+        notif.close();
+      };
+    } catch {
+      /* some browsers throw if constructed without a service worker - ignore */
+    }
+  }
+
+  // ---- Live notifications over the socket -----------------------------------
+  useEffect(() => {
+    if (!accessToken || !user) return;
+    const off = onSocketEvent<NotificationEvent>('notification', (evt) => {
+      if (!evt?.notification) return;
+      setCount((c) => (typeof evt.unreadCount === 'number' ? evt.unreadCount : c + 1));
+      // Prepend to the open panel so it appears without a reload.
+      setItems((prev) =>
+        prev.some((n) => n.id === evt.notification.id)
+          ? prev
+          : [evt.notification, ...prev].slice(0, 30),
+      );
+      playChime();
+      showDesktopNotification(evt.notification);
+      // Brief visual pulse on the bell.
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 1_200);
+      // Keep the sidebar red-dots in sync.
+      window.dispatchEvent(new Event('rn:notifications-changed'));
+    });
+    return off;
+  }, [accessToken, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Polling fallback (covers reconnect gaps + realtime-disabled builds) --
   useEffect(() => {
     if (!accessToken || !user) return;
     let cancelled = false;
@@ -63,7 +138,8 @@ export function NotificationBell() {
       }
     }
     void poll();
-    const timer = setInterval(() => void poll(), 30_000);
+    // Socket delivers instantly; this is just a safety net, so a slower cadence.
+    const timer = setInterval(() => void poll(), 60_000);
     // Instant refresh when the app marks notifications read (tab opened).
     const onChanged = () => void poll();
     window.addEventListener('rn:notifications-changed', onChanged);
@@ -101,7 +177,26 @@ export function NotificationBell() {
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (next) void loadItems();
+    if (next) {
+      void loadItems();
+      // Opening the panel is a user gesture - a good moment to ask for desktop
+      // notification permission (once) so app-open alerts can pop even when the
+      // tab is in the background.
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        Notification.permission === 'default'
+      ) {
+        void Notification.requestPermission().catch(() => undefined);
+      }
+    }
+  }
+
+  function toggleSound() {
+    const next = !soundOn;
+    setSoundOn(next);
+    setChimeEnabled(next);
+    if (next) playChime(); // preview the sound when turning it on
   }
 
   // Open the support widget on a specific ticket. The widget lives in the app
@@ -134,7 +229,9 @@ export function NotificationBell() {
     <div className="relative" ref={rootRef}>
       <button
         onClick={toggle}
-        className="relative rounded-full p-2 text-gray-600 transition hover:bg-gray-100 hover:text-primary"
+        className={`relative rounded-full p-2 text-gray-600 transition hover:bg-gray-100 hover:text-primary ${
+          flash ? 'animate-bounce text-primary' : ''
+        }`}
         aria-label="Notifications"
       >
         <Bell size={18} />
@@ -150,6 +247,14 @@ export function NotificationBell() {
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <span className="text-sm font-semibold text-gray-900">Notifications</span>
             <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSound}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                aria-label={soundOn ? 'Mute notification sound' : 'Unmute notification sound'}
+                title={soundOn ? 'Sound on' : 'Sound off'}
+              >
+                {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              </button>
               {count > 0 && (
                 <button
                   onClick={() => void markAllRead()}

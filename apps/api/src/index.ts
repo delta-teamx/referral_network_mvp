@@ -1,8 +1,10 @@
+import { createServer } from 'http';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
+import { initRealtime } from './realtime/io.js';
 import { requireVerified } from './middleware/requireVerified.js';
 import { optionalAuthenticate } from './middleware/authenticate.js';
 import { disconnectPrisma, prisma } from './config/prisma.js';
@@ -606,11 +608,18 @@ async function start(): Promise<void> {
   void startScheduler();
   startMatchmakingScheduler();
 
-  app.listen(env.PORT, () => {
+  // Real-time transport (Socket.IO) shares the Express HTTP server so the bell
+  // rings and messages arrive instantly instead of on the old 15-30s poll.
+  const server = createServer(app);
+  initRealtime(server);
+
+  server.listen(env.PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`[api] ${env.APP_NAME} listening on http://localhost:${env.PORT}`);
     // eslint-disable-next-line no-console
     console.log(`[api] env=${env.NODE_ENV} frontend=${env.FRONTEND_URL}`);
+    // eslint-disable-next-line no-console
+    console.log('[api] realtime: Socket.IO attached');
   });
 }
 

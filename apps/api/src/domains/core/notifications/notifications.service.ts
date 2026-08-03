@@ -1,4 +1,5 @@
 import { prisma } from '../../../config/prisma.js';
+import { emitToUser } from '../../../realtime/io.js';
 
 /**
  * In-app notification service. Writes to the existing Notification model
@@ -12,7 +13,7 @@ export async function createNotification(input: {
   body: string;
   data?: Record<string, unknown>;
 }) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       userId: input.userId,
       type: input.type,
@@ -20,7 +21,28 @@ export async function createNotification(input: {
       body: input.body,
       data: input.data ? JSON.parse(JSON.stringify(input.data)) : undefined,
     },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      body: true,
+      data: true,
+      isRead: true,
+      createdAt: true,
+    },
   });
+
+  // Ring the bell in real time: push the new notification + fresh unread count
+  // to every device this user has open. Best-effort - a realtime failure must
+  // never fail the write, and offline users simply pick it up via the DB on
+  // their next poll / page load.
+  void unreadCount(input.userId)
+    .then((count) => {
+      emitToUser(input.userId, 'notification', { notification, unreadCount: count });
+    })
+    .catch(() => undefined);
+
+  return notification;
 }
 
 export async function listNotifications(userId: string, limit = 20) {

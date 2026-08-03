@@ -1,0 +1,15 @@
+User-Agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /onboarding
+Disallow: /oauth
+Disallow: /verify-otp
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Host: https://referralnova.com
+Sitemap: https://referralnova.com/sitemap.xml
