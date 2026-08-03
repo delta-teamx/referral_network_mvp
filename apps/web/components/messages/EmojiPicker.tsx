@@ -38,11 +38,14 @@ export function EmojiPicker({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Listen on 'click' (not 'mousedown'): the toggle button stops propagation
+    // on its own click, so tapping the button closes the picker cleanly instead
+    // of this handler closing it a beat before the button's onClick reopens it.
     function onDoc(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    document.addEventListener('click', onDoc);
+    return () => document.removeEventListener('click', onDoc);
   }, [onClose]);
 
   return (

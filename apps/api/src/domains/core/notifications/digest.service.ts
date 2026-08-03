@@ -1,5 +1,5 @@
 import { prisma } from '../../../config/prisma.js';
-import { sendEmail } from './email.service.js';
+import { sendEmailStrict } from './email.service.js';
 import { isUserOnline } from '../../../realtime/io.js';
 
 /**
@@ -94,11 +94,24 @@ export async function runNotificationDigests(): Promise<{ scanned: number; sent:
       continue;
     }
 
-    const messageCount = notes.filter((n) => n.type === 'message').length;
-    const introCount = notes.filter((n) => n.type === 'intro_request').length;
+    // Count the FULL unread set since the cursor (not just the ≤25 fetched for
+    // the preview list), so "you have N new messages" is accurate even when
+    // more than 25 are waiting.
+    const [messageCount, introCount] = await Promise.all([
+      prisma.notification.count({
+        where: { userId, isRead: false, type: 'message', createdAt: { gt: cursor } },
+      }),
+      prisma.notification.count({
+        where: { userId, isRead: false, type: 'intro_request', createdAt: { gt: cursor } },
+      }),
+    ]);
 
     try {
-      await sendEmail({
+      // sendEmailStrict PROPAGATES provider failures (plain sendEmail swallows
+      // them), so the cursor below only advances when the email really went
+      // out - a transient outage retries the same items next cycle instead of
+      // silently dropping them.
+      await sendEmailStrict({
         to: user.email,
         template: 'digest',
         data: {
@@ -109,8 +122,6 @@ export async function runNotificationDigests(): Promise<{ scanned: number; sent:
         },
       });
       sent++;
-      // Only advance the cursor on a successful send, so a transient email
-      // failure retries the same items next cycle instead of dropping them.
       await setDigestCursor(userId, newestAt);
     } catch (err) {
       // eslint-disable-next-line no-console

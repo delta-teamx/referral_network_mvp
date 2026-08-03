@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Check, CheckCheck, MessageSquare, Paperclip, Send, ShieldCheck, Smile } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
-import { onSocketEvent, emitSocket } from '../../../../lib/socket';
+import { onSocketEvent, emitSocket, isSocketConnected } from '../../../../lib/socket';
 import { EmojiPicker } from '../../../../components/messages/EmojiPicker';
 
 // ---------------------------------------------------------------------------
@@ -62,6 +62,16 @@ interface TypingEvent {
   conversationId: string;
   userId: string;
   isTyping: boolean;
+}
+
+/** Sort conversations the way the server does: official ROUL threads pinned to
+ *  the top, then most-recent activity first. Used to re-order the sidebar when a
+ *  message arrives so the freshest thread hoists to the top. */
+function sortConversations(list: Conversation[]): Conversation[] {
+  return [...list].sort((a, b) => {
+    if (Boolean(a.isOfficial) !== Boolean(b.isOfficial)) return a.isOfficial ? -1 : 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
 }
 
 /** Render message text with URLs as clickable links. */
@@ -236,8 +246,13 @@ function MessagesInner() {
         }
       })
       .catch(() => undefined);
-    // Safety-net poll (realtime is the primary path, so this is slow).
-    const poll = setInterval(() => void loadNewest(), 45_000);
+    // Safety-net poll for reconnect gaps ONLY. While the socket is connected,
+    // realtime delivers every message, so re-fetching would needlessly replace
+    // the list - yanking a scrolled-up reader to the bottom and discarding any
+    // older history they loaded. So only reload when the socket is down.
+    const poll = setInterval(() => {
+      if (!isSocketConnected()) void loadNewest();
+    }, 45_000);
     return () => {
       cancelled = true;
       clearInterval(poll);
@@ -255,7 +270,7 @@ function MessagesInner() {
     try {
       const data = await api.get<{ messages: Message[]; hasMore: boolean; otherLastReadAt: string | null }>(
         `/api/v1/messages/${activeId}/messages`,
-        { accessToken: accessToken ?? undefined, query: { before: oldest.createdAt } },
+        { accessToken: accessToken ?? undefined, query: { before: oldest.createdAt, beforeId: oldest.id } },
       );
       stickBottom.current = false;
       setMessages((prev) => {
@@ -324,22 +339,25 @@ function MessagesInner() {
           setPeerTyping(false);
         }
       }
-      // Update the sidebar preview + unread state for every thread.
+      // Update the sidebar preview + unread state, then re-sort so the thread
+      // with the newest message hoists to the top (Messenger-style).
       setConversations((prev) =>
-        prev.map((c) =>
-          c.id === evt.conversationId
-            ? {
-                ...c,
-                lastMessage: {
-                  id: evt.message.id,
-                  senderId: evt.message.senderId,
-                  text: evt.message.text,
-                  createdAt: evt.message.createdAt,
-                },
-                updatedAt: evt.message.createdAt,
-                unread: c.id === activeIdRef.current ? false : evt.message.senderId !== me,
-              }
-            : c,
+        sortConversations(
+          prev.map((c) =>
+            c.id === evt.conversationId
+              ? {
+                  ...c,
+                  lastMessage: {
+                    id: evt.message.id,
+                    senderId: evt.message.senderId,
+                    text: evt.message.text,
+                    createdAt: evt.message.createdAt,
+                  },
+                  updatedAt: evt.message.createdAt,
+                  unread: c.id === activeIdRef.current ? false : evt.message.senderId !== me,
+                }
+              : c,
+          ),
         ),
       );
     });
@@ -380,6 +398,14 @@ function MessagesInner() {
     };
   }, [accessToken, user, loadConversations]);
 
+  // Clear pending typing timers on unmount so they can't fire on a gone view.
+  useEffect(() => {
+    return () => {
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+      if (peerTypingTimer.current) clearTimeout(peerTypingTimer.current);
+    };
+  }, []);
+
   // ---- Typing emit --------------------------------------------------------
 
   function emitTyping() {
@@ -419,21 +445,23 @@ function MessagesInner() {
       stickBottom.current = true;
       setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       setDraft('');
-      // Update last message in sidebar
+      // Update last message in sidebar + hoist this thread to the top.
       setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeId
-            ? {
-                ...c,
-                lastMessage: {
-                  id: msg.id,
-                  senderId: msg.senderId,
-                  text: msg.text,
-                  createdAt: msg.createdAt,
-                },
-                updatedAt: msg.createdAt,
-              }
-            : c,
+        sortConversations(
+          prev.map((c) =>
+            c.id === activeId
+              ? {
+                  ...c,
+                  lastMessage: {
+                    id: msg.id,
+                    senderId: msg.senderId,
+                    text: msg.text,
+                    createdAt: msg.createdAt,
+                  },
+                  updatedAt: msg.createdAt,
+                }
+              : c,
+          ),
         ),
       );
     } catch (err) {
@@ -537,8 +565,13 @@ function MessagesInner() {
   const visibleConversations = isPaid ? conversations : conversations.filter((c) => c.isOfficial);
 
   function selectConversation(id: string) {
+    if (id === activeId) return;
+    // Stop broadcasting typing on the thread we're leaving, and clear the
+    // draft so half-written text can never be sent to the wrong person.
+    stopTyping();
     setActiveId(id);
     setMessages([]);
+    setDraft('');
     setError(null);
     setShowEmoji(false);
     setPeerTyping(false);
@@ -696,7 +729,11 @@ function MessagesInner() {
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 md:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <button
-                  onClick={() => setActiveId(null)}
+                  onClick={() => {
+                    stopTyping();
+                    setActiveId(null);
+                    setDraft('');
+                  }}
                   className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 md:hidden"
                   aria-label="Back to conversations"
                 >
@@ -859,7 +896,12 @@ function MessagesInner() {
               {/* Emoji picker toggle */}
               <button
                 type="button"
-                onClick={() => setShowEmoji((v) => !v)}
+                onClick={(e) => {
+                  // Stop the document 'click' listener in EmojiPicker from also
+                  // firing, so this toggle reliably opens AND closes it.
+                  e.stopPropagation();
+                  setShowEmoji((v) => !v);
+                }}
                 title="Insert emoji"
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 transition hover:border-primary hover:text-primary ${showEmoji ? 'text-primary' : 'text-gray-500'}`}
               >

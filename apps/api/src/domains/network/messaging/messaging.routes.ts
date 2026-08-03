@@ -79,7 +79,8 @@ messagingRouter.get(
     // `before` (ISO timestamp) drives infinite-scroll: load the page of history
     // just older than the oldest message currently on screen.
     const before = typeof req.query.before === 'string' ? req.query.before : undefined;
-    const result = await listMessages(req.params.id ?? '', req.user.id, limit, before);
+    const beforeId = typeof req.query.beforeId === 'string' ? req.query.beforeId : undefined;
+    const result = await listMessages(req.params.id ?? '', req.user.id, limit, before, beforeId);
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),

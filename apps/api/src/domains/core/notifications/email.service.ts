@@ -810,11 +810,22 @@ function getProvider(): Promise<EmailProvider> {
   return providerPromise;
 }
 
-/** Queue an email for delivery. Never throws - failures are logged. */
+/**
+ * Send an email, PROPAGATING any provider failure to the caller. Use this when
+ * the caller needs to know whether delivery actually succeeded (e.g. the digest
+ * job, which must not advance its cursor past an email it never sent).
+ */
+export async function sendEmailStrict(req: EmailRequest): Promise<void> {
+  const p = await getProvider();
+  await p.send(req);
+}
+
+/** Queue an email for delivery. Never throws - failures are logged. Use this
+ *  for fire-and-forget transactional mail where a failure shouldn't break the
+ *  request path. */
 export async function sendEmail(req: EmailRequest): Promise<void> {
   try {
-    const p = await getProvider();
-    await p.send(req);
+    await sendEmailStrict(req);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[email] send failed', err);

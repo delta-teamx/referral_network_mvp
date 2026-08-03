@@ -143,6 +143,19 @@ export async function respondToIntro(
     select: introSelect,
   });
 
+  // Responding to the request handles it - clear the bell notification so the
+  // offline digest never emails "X wants to connect" for an intro already
+  // accepted or declined.
+  await prisma.notification.updateMany({
+    where: {
+      userId,
+      type: 'intro_request',
+      isRead: false,
+      data: { path: ['introId'], equals: introId },
+    },
+    data: { isRead: true },
+  });
+
   // The matcher creates a suggestion in each direction - resolve the mirror
   // row too, so the same pair can't keep resurfacing as a fresh request.
   await prisma.introduction.updateMany({

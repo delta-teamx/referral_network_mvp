@@ -761,6 +761,17 @@ export async function markConversationRead(conversationId: string, userId: strin
     where: { conversationId, userId },
     data: { lastReadAt: readAt },
   });
+  // Clear the bell notifications for THIS conversation so the offline digest
+  // never emails about messages the user has already opened in-app.
+  await prisma.notification.updateMany({
+    where: {
+      userId,
+      type: 'message',
+      isRead: false,
+      data: { path: ['conversationId'], equals: conversationId },
+    },
+    data: { isRead: true },
+  });
   // Tell the other participant their messages have been read, so their sent
   // bubbles can flip to the "Read" tick live.
   void prisma.conversationParticipant
@@ -786,6 +797,7 @@ export async function listMessages(
   userId: string,
   limit = 50,
   before?: string,
+  beforeId?: string,
 ) {
   // Ensure user is a participant (and grab both read timestamps in one query).
   const participants = await prisma.conversationParticipant.findMany({
@@ -798,14 +810,27 @@ export async function listMessages(
   }
   const other = participants.find((p) => p.userId !== userId);
 
-  // Cursor pagination for infinite scroll: `before` is the ISO createdAt of the
-  // oldest message currently shown; we return the page just older than it.
-  // Without it we return the newest page. We fetch limit+1 to know if there's
-  // more history to load.
-  const cursorFilter = before ? { createdAt: { lt: new Date(before) } } : {};
+  // Cursor pagination for infinite scroll: `before`/`beforeId` identify the
+  // OLDEST message currently shown; we return the page just older than it.
+  // Two messages can share a millisecond `createdAt`, so a bare `createdAt < t`
+  // cursor would silently skip whichever equal-timestamp rows straddle the page
+  // boundary. We therefore order by (createdAt, id) and page on the full tuple:
+  // createdAt < t, OR (createdAt == t AND id < beforeId). Without it we return
+  // the newest page. limit+1 probes whether more history exists.
+  const cursorFilter =
+    before && beforeId
+      ? {
+          OR: [
+            { createdAt: { lt: new Date(before) } },
+            { createdAt: new Date(before), id: { lt: beforeId } },
+          ],
+        }
+      : before
+        ? { createdAt: { lt: new Date(before) } }
+        : {};
   const rows = await prisma.message.findMany({
     where: { conversationId, ...cursorFilter },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: limit + 1,
     select: {
       id: true,
