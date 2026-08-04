@@ -12,7 +12,7 @@
  * short, warm replies.
  */
 
-export const KNOWLEDGE_VERSION = '2026-08-04';
+export const KNOWLEDGE_VERSION = '2026-08-04b';
 
 export function getKnowledge(): string {
   return KB.trim();
@@ -73,7 +73,10 @@ Book a call from a member's profile. The host accepts the request, and a Zoom li
 Availability and meeting times are shown in US Eastern time. Set your available windows so others can book you.
 
 ## Calendar
-Your Calendar shows upcoming and past Zoom calls in one place. A Google Calendar sync is on the roadmap.
+Your Calendar shows upcoming and past Zoom calls in one place. You can connect your Google Calendar from the Bookings page ("Connect Google Calendar").
+
+## Google Calendar sync
+Connect your Google Calendar from the Bookings page. Once connected, two things happen automatically: (1) your real Google Calendar busy times block out your Referral Nova availability, so nobody can book you over a meeting you already have; and (2) every confirmed call is added to your Google Calendar as an event with the join link, and removed if the call is canceled. It uses read-only free/busy plus event create - Referral Nova never reads the details of your other events. Disconnect anytime from the same button; a member on Google's free plan can still connect. If the connect screen does not return you to Bookings, make sure you allow calendar access when Google asks.
 
 ## Referral agreements and contracts
 Members can create, send, and sign referral agreements electronically on-platform. Signing is a legal electronic signature. Referral Nova is not a party to member-to-member agreements. Signed agreements are viewable and exportable from your dashboard. You can share a contract inside a conversation and sign one you receive.

@@ -50,6 +50,7 @@ import { registerGroupSubscribers } from './domains/network/groups/groups.subscr
 import { pipelineRouter } from './domains/network/pipeline/pipeline.routes.js';
 import { supportRouter } from './domains/core/support/support.routes.js';
 import { roulAdminRouter } from './domains/core/support/roul.admin.routes.js';
+import { calendarRouter } from './domains/integrations/calendar.routes.js';
 import { tutorialsRouter, adminTutorialsRouter } from './domains/core/tutorials/tutorials.routes.js';
 import { seedTutorials } from './domains/core/tutorials/tutorials.service.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -189,6 +190,7 @@ app.use('/api/v1/support', rateLimit({ windowMs: 60_000, max: 30, key: 'support'
 app.use('/api/v1/tutorials', tutorialsRouter);
 app.use('/api/v1/admin/tutorials', adminTutorialsRouter);
 app.use('/api/v1/admin/roul', roulAdminRouter);
+app.use('/api/v1/integrations/calendar', calendarRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -637,6 +639,28 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'open';`,
       `CREATE INDEX IF NOT EXISTS "SupportEscalation_route_status_idx" ON "SupportEscalation" ("route", "status");`,
       `CREATE INDEX IF NOT EXISTS "SupportEscalation_category_createdAt_idx" ON "SupportEscalation" ("category", "createdAt" DESC);`,
+      // Google Calendar sync: per-member OAuth grant (offline). One row per user.
+      // Tokens live here; free/busy reads block slots and confirmed bookings are
+      // pushed as calendar events (see google-calendar.service.ts).
+      `CREATE TABLE IF NOT EXISTS "CalendarConnection" (
+         "id" TEXT NOT NULL,
+         "userId" TEXT NOT NULL,
+         "provider" TEXT NOT NULL DEFAULT 'google',
+         "accessToken" TEXT NOT NULL,
+         "refreshToken" TEXT NOT NULL,
+         "expiresAt" TIMESTAMP(3) NOT NULL,
+         "calendarId" TEXT NOT NULL DEFAULT 'primary',
+         "syncBusy" BOOLEAN NOT NULL DEFAULT true,
+         "pushEvents" BOOLEAN NOT NULL DEFAULT true,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "CalendarConnection_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "CalendarConnection_userId_key" ON "CalendarConnection" ("userId");`,
+      `DO $$ BEGIN ALTER TABLE "CalendarConnection" ADD CONSTRAINT "CalendarConnection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
+      // Track the pushed Google event ids so a cancel/decline can delete them.
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "hostGcalEventId" TEXT;`,
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestGcalEventId" TEXT;`,
     ]) {
       // Per-statement guard: one failing heal (e.g. an extension the DB role
       // can't create, or an index on a not-yet-present column) must not abort

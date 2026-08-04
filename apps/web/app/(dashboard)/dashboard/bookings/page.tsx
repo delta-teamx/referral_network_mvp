@@ -210,16 +210,7 @@ export default function BookingsPage() {
           >
             <Video size={14} /> Book a call
           </Link>
-          <button
-            disabled
-            title="Google Calendar sync is coming soon"
-            className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-400"
-          >
-            <CalendarPlus size={14} /> Integrate Google Calendar
-            <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">
-              Coming soon
-            </span>
-          </button>
+          <GoogleCalendarButton accessToken={accessToken} />
         </div>
       </header>
 
@@ -615,6 +606,102 @@ function BookingRow({
         )}
       </div>
     </li>
+  );
+}
+
+/**
+ * Connect / disconnect Google Calendar. When connected, the member's real
+ * calendar busy-times block bookable slots, and confirmed calls are pushed to
+ * their Google Calendar automatically (see google-calendar.service.ts).
+ */
+function GoogleCalendarButton({ accessToken }: { accessToken: string | null }) {
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function refreshStatus() {
+    if (!accessToken) return;
+    try {
+      const data = await api.get<{ connected: boolean; configured: boolean }>(
+        '/api/v1/integrations/calendar/status',
+        { accessToken },
+      );
+      setConnected(data.connected);
+    } catch {
+      setConnected(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshStatus();
+    // Surface the ?calendar=connected|error result of the OAuth round-trip.
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const flag = params.get('calendar');
+      if (flag === 'connected') setNotice('Google Calendar connected.');
+      else if (flag === 'error') setNotice('Could not connect Google Calendar. Please try again.');
+      if (flag) {
+        params.delete('calendar');
+        const qs = params.toString();
+        window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+        setTimeout(() => setNotice(null), 5000);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  async function connect() {
+    if (!accessToken) return;
+    setBusy(true);
+    try {
+      const data = await api.get<{ url: string }>('/api/v1/integrations/calendar/connect-url', {
+        accessToken,
+      });
+      window.location.href = data.url;
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : 'Could not start Google Calendar connect.');
+      setBusy(false);
+    }
+  }
+
+  async function disconnect() {
+    if (!accessToken) return;
+    if (!window.confirm('Disconnect Google Calendar? Your calls will no longer sync.')) return;
+    setBusy(true);
+    try {
+      await api.post('/api/v1/integrations/calendar/disconnect', {}, { accessToken });
+      setConnected(false);
+      setNotice('Google Calendar disconnected.');
+      setTimeout(() => setNotice(null), 4000);
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : 'Could not disconnect.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      {connected ? (
+        <button
+          onClick={() => void disconnect()}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-full border border-success/40 bg-success/10 px-4 py-2 text-sm font-semibold text-success hover:bg-success/20 disabled:opacity-60"
+          title="Your Google Calendar is connected. Click to disconnect."
+        >
+          <Check size={14} /> Google Calendar connected
+        </button>
+      ) : (
+        <button
+          onClick={() => void connect()}
+          disabled={busy || connected === null}
+          className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary disabled:opacity-60"
+        >
+          <CalendarPlus size={14} /> Connect Google Calendar
+        </button>
+      )}
+      {notice && <span className="text-[11px] font-medium text-gray-500">{notice}</span>}
+    </div>
   );
 }
 

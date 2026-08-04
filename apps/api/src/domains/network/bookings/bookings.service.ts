@@ -4,6 +4,11 @@ import { eventBus } from '../../core/events/index.js';
 import { createZoomMeeting } from '../../integrations/zoom.service.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
+import {
+  getBusyIntervals,
+  pushEvent,
+  deleteEvent,
+} from '../../integrations/google-calendar.service.js';
 
 /**
  * Booking & availability service.
@@ -168,15 +173,22 @@ export async function getAvailableSlots(
   // so every member is bookable out of the box.
   const windows = await getEffectiveWindows(hostUserId);
 
+  const windowEnd = new Date(from.getTime() + days * 86400_000);
   const existing = await prisma.bookingCall.findMany({
     where: {
       hostId: hostUserId,
       status: { in: ['pending', 'confirmed'] },
-      startsAt: { gte: from, lte: new Date(from.getTime() + days * 86400_000) },
+      startsAt: { gte: from, lte: windowEnd },
     },
     select: { startsAt: true, endsAt: true },
   });
   const busy = existing.map((b) => [b.startsAt.getTime(), b.endsAt.getTime()] as [number, number]);
+
+  // If the host connected their Google Calendar, subtract their real busy
+  // times too - so a member can never book over a meeting the host already
+  // has. Best-effort: returns [] when not connected or on any Google error.
+  const gcalBusy = await getBusyIntervals(hostUserId, from, windowEnd);
+  for (const b of gcalBusy) busy.push([b.start, b.end]);
 
   const slots: TimeSlot[] = [];
   for (let d = 0; d < days; d++) {
@@ -282,6 +294,17 @@ export async function createBooking(input: CreateBookingInput) {
     select: { id: true },
   });
   if (conflict) throw AppError.conflict('That time slot is no longer available.');
+
+  // Also reject if the host's connected Google Calendar shows them busy then -
+  // the slot generator already hides these, but a stale/direct request could
+  // still land on one. Best-effort: no-op when the host isn't connected.
+  const hostBusy = await getBusyIntervals(input.hostUserId, input.startsAt, input.endsAt);
+  const clashes = hostBusy.some(
+    (b) => input.startsAt.getTime() < b.end && input.endsAt.getTime() > b.start,
+  );
+  if (clashes) {
+    throw AppError.conflict("That time is blocked on the host's calendar. Please pick another slot.");
+  }
 
   // A booking is a REQUEST: the host must accept before it's confirmed and a
   // meeting link is provisioned - nobody gets a call on their calendar without
@@ -399,6 +422,38 @@ export async function respondToBooking(
     select: bookingSelect,
   });
 
+  // Push the confirmed call onto each party's Google Calendar (whoever has
+  // connected). Best-effort - a Google failure must not undo the confirmation.
+  // We store the returned event ids so a later cancel can delete them.
+  const summary = `Referral Nova call: ${booking.guest.firstName} ${booking.guest.lastName} ↔ ${booking.host.firstName} ${booking.host.lastName}`;
+  const description = `${booking.reason.replace(/_/g, ' ')} call booked via Referral Nova.${zoom.joinUrl ? `\nJoin: ${zoom.joinUrl}` : ''}`;
+  void Promise.all([
+    pushEvent({
+      userId: hostUserId,
+      summary,
+      description,
+      location: zoom.joinUrl,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+    }),
+    pushEvent({
+      userId: booking.guestId,
+      summary,
+      description,
+      location: zoom.joinUrl,
+      startsAt: booking.startsAt,
+      endsAt: booking.endsAt,
+    }),
+  ])
+    .then(async ([hostEventId, guestEventId]) => {
+      if (!hostEventId && !guestEventId) return;
+      await prisma.bookingCall.update({
+        where: { id: booking.id },
+        data: { hostGcalEventId: hostEventId, guestGcalEventId: guestEventId },
+      });
+    })
+    .catch(() => undefined);
+
   // Confirmation emails (with .ics) to both parties via the existing subscriber.
   await eventBus.publish('booking.created', {
     bookingId: booking.id,
@@ -429,6 +484,8 @@ export async function cancelBooking(bookingId: string, userId: string) {
       hostId: true,
       guestId: true,
       startsAt: true,
+      hostGcalEventId: true,
+      guestGcalEventId: true,
       host: { select: { firstName: true, lastName: true, email: true } },
       guest: { select: { firstName: true, lastName: true, email: true } },
     },
@@ -440,6 +497,14 @@ export async function cancelBooking(bookingId: string, userId: string) {
     select: bookingSelect,
   });
   await eventBus.publish('booking.canceled', { bookingId: updated.id });
+
+  // Remove the events we pushed to each party's Google Calendar (best-effort).
+  if (booking.hostGcalEventId) {
+    void deleteEvent(booking.hostId, booking.hostGcalEventId).catch(() => undefined);
+  }
+  if (booking.guestGcalEventId) {
+    void deleteEvent(booking.guestId, booking.guestGcalEventId).catch(() => undefined);
+  }
 
   // Notify the OTHER party (not whoever cancelled) in-app + by email.
   const canceledByHost = userId === booking.hostId;

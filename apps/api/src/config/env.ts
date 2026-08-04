@@ -42,6 +42,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().url().optional(),
+  // Google Calendar sync (uses the same GOOGLE_CLIENT_ID/SECRET, but a
+  // dedicated redirect URI + calendar scopes). Optional: when unset we fall
+  // back to `${API_URL}/api/v1/integrations/calendar/callback`.
+  GOOGLE_CALENDAR_CALLBACK_URL: z.string().url().optional(),
   // Facebook OAuth removed - using Google only
 
   // Stripe - Branch 5
