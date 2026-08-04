@@ -491,6 +491,21 @@ export async function listMyBookings(
   });
 }
 
+/**
+ * ADMIN: every booking on the platform, newest first. This is what the admin
+ * console's "Platform bookings" page needs - previously that page mistakenly
+ * used listMyBookings, so it only ever showed the logged-in admin's OWN
+ * bookings (a member-to-member booking was invisible unless that admin was a
+ * participant).
+ */
+export async function listAllBookings(limit = 300) {
+  return prisma.bookingCall.findMany({
+    orderBy: { startsAt: 'desc' },
+    take: limit,
+    select: bookingSelect,
+  });
+}
+
 const bookingSelect = {
   id: true,
   reason: true,

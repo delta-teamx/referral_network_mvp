@@ -7,7 +7,7 @@ import { useAuthStore } from '../../../../stores/auth';
 
 interface Booking {
   id: string;
-  reason: string;
+  reason: string | null;
   startsAt: string;
   endsAt: string;
   status: string;
@@ -17,10 +17,8 @@ interface Booking {
 }
 
 /**
- * Admin bookings view. Uses the existing /bookings/mine route scoped by
- * admin flag on the server-side. For now, admins see their own bookings
- * plus a manual pagination link; a dedicated admin-wide endpoint can be
- * added later if the platform grows past what this handles.
+ * Admin bookings view: EVERY booking on the platform (not just the logged-in
+ * admin's own). Uses the ADMIN-only /bookings/admin/all endpoint.
  */
 export default function AdminBookingsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -33,7 +31,7 @@ export default function AdminBookingsPage() {
     let cancelled = false;
     async function load() {
       try {
-        const data = await api.get<Booking[]>('/api/v1/bookings/mine', {
+        const data = await api.get<Booking[]>('/api/v1/bookings/admin/all', {
           accessToken: accessToken ?? undefined,
         });
         if (!cancelled) setBookings(data);
@@ -99,7 +97,7 @@ export default function AdminBookingsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary">
-                      {b.reason.replace(/_/g, ' ')}
+                      {(b.reason ?? 'meeting').replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td className="px-4 py-3">

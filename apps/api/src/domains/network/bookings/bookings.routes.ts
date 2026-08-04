@@ -10,6 +10,7 @@ import {
   cancelBooking,
   createBooking,
   getAvailableSlots,
+  listAllBookings,
   listAvailability,
   listMyBookings,
   rateBooking,
@@ -97,6 +98,17 @@ bookingsRouter.get(
     if (!req.user) throw AppError.unauthorized();
     const upcoming = req.query.upcoming === 'true';
     const bookings = await listMyBookings(req.user.id, { upcoming });
+    const body: ApiResponse<typeof bookings> = { success: true, data: bookings };
+    res.json(body);
+  }),
+);
+
+// ADMIN: every booking on the platform (for the admin console). Gated to ADMIN.
+bookingsRouter.get(
+  '/admin/all',
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const bookings = await listAllBookings();
     const body: ApiResponse<typeof bookings> = { success: true, data: bookings };
     res.json(body);
   }),
