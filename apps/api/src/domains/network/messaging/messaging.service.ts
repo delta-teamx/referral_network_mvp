@@ -27,27 +27,50 @@ import {
 export const ROUL_EMAIL = ROUL_SUPPORT_EMAIL;
 let roulUserIdCache: string | null = null;
 
+/**
+ * Get (or lazily create) a system user (ROUL, announcer) by email, race-safe.
+ *
+ * These accounts are created on first use. When many requests hit that first
+ * use at once - e.g. a broadcast fanning out a batch of 25 deliveries - a naive
+ * findFirst-then-create races: one create wins and the rest throw
+ * "duplicate key value violates unique constraint User_email_key", dropping
+ * that work. We catch the unique violation and re-fetch the row the winner
+ * created, so every caller resolves to the same id.
+ */
+async function getOrCreateSystemUserId(
+  email: string,
+  firstName: string,
+  lastName: string,
+): Promise<string> {
+  const existing = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+  if (existing) return existing.id;
+  try {
+    const created = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: null,
+        firstName,
+        lastName,
+        role: 'ADMIN', // keeps system accounts out of the directory, leaderboard, matches
+        emailVerified: true,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (err) {
+    // Lost the create race - the row now exists; fetch the winner's id.
+    const row = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+    if (row) return row.id;
+    throw err;
+  }
+}
+
 /** Get (or lazily create) the ROUL Support system user. Cached per process. */
 export async function getRoulUserId(): Promise<string> {
   if (roulUserIdCache) return roulUserIdCache;
-  const existing = await prisma.user.findFirst({ where: { email: ROUL_EMAIL }, select: { id: true } });
-  if (existing) {
-    roulUserIdCache = existing.id;
-    return existing.id;
-  }
-  const created = await prisma.user.create({
-    data: {
-      email: ROUL_EMAIL,
-      passwordHash: null,
-      firstName: 'ROUL',
-      lastName: 'Support',
-      role: 'ADMIN', // keeps ROUL out of the member directory, leaderboard and matches
-      emailVerified: true,
-    },
-    select: { id: true },
-  });
-  roulUserIdCache = created.id;
-  return created.id;
+  const id = await getOrCreateSystemUserId(ROUL_EMAIL, 'ROUL', 'Support');
+  roulUserIdCache = id;
+  return id;
 }
 
 /**
@@ -78,30 +101,14 @@ export async function startOfficialConversationFromRoul(
 export const ANNOUNCER_EMAIL = ANNOUNCER_EMAIL_SYS;
 let announcerUserIdCache: string | null = null;
 
-/** Get (or lazily create) the "Referral Nova" announcements system user. */
+/** Get (or lazily create) the "Referral Nova" announcements system user.
+ *  Race-safe (see getOrCreateSystemUserId) so a broadcast's concurrent first
+ *  batch can't collide creating this account. */
 export async function getAnnouncerUserId(): Promise<string> {
   if (announcerUserIdCache) return announcerUserIdCache;
-  const existing = await prisma.user.findFirst({
-    where: { email: ANNOUNCER_EMAIL },
-    select: { id: true },
-  });
-  if (existing) {
-    announcerUserIdCache = existing.id;
-    return existing.id;
-  }
-  const created = await prisma.user.create({
-    data: {
-      email: ANNOUNCER_EMAIL,
-      passwordHash: null,
-      firstName: 'Referral',
-      lastName: 'Nova',
-      role: 'ADMIN', // keeps it out of the directory, leaderboard and matches
-      emailVerified: true,
-    },
-    select: { id: true },
-  });
-  announcerUserIdCache = created.id;
-  return created.id;
+  const id = await getOrCreateSystemUserId(ANNOUNCER_EMAIL, 'Referral', 'Nova');
+  announcerUserIdCache = id;
+  return id;
 }
 
 /**

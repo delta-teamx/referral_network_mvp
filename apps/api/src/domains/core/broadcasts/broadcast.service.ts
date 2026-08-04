@@ -1,7 +1,10 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { sendEmail } from '../notifications/email.service.js';
-import { deliverBroadcastToMember } from '../../network/messaging/messaging.service.js';
+import {
+  deliverBroadcastToMember,
+  getAnnouncerUserId,
+} from '../../network/messaging/messaging.service.js';
 import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 
 /**
@@ -62,6 +65,11 @@ export async function sendBroadcast(
     },
     select: { id: true, email: true, firstName: true },
   });
+
+  // Create + cache the announcer account ONCE up front, so the concurrent
+  // delivery batch below never races to create it (that race dropped ~24 of the
+  // first batch and spammed duplicate-key errors).
+  await getAnnouncerUserId();
 
   const threadText = composeThreadText({ ...input, senderName, senderTitle, subject, body });
   let recipientCount = 0;
