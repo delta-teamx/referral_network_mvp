@@ -618,6 +618,16 @@ async function ensureRuntimeSchema(): Promise<void> {
          CONSTRAINT "SupportEscalation_pkey" PRIMARY KEY ("id")
        );`,
       `CREATE INDEX IF NOT EXISTS "SupportEscalation_createdAt_idx" ON "SupportEscalation" ("createdAt" DESC);`,
+      // ROUL triage ladder: classify each unresolved query into a route and
+      // carry the dev-facing fix + severity + scope for the ROUL console.
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "route" TEXT NOT NULL DEFAULT 'human';`,
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "scope" TEXT;`,
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "severity" TEXT NOT NULL DEFAULT 'medium';`,
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "category" TEXT;`,
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "suggestedFix" TEXT;`,
+      `ALTER TABLE "SupportEscalation" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'open';`,
+      `CREATE INDEX IF NOT EXISTS "SupportEscalation_route_status_idx" ON "SupportEscalation" ("route", "status");`,
+      `CREATE INDEX IF NOT EXISTS "SupportEscalation_category_createdAt_idx" ON "SupportEscalation" ("category", "createdAt" DESC);`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

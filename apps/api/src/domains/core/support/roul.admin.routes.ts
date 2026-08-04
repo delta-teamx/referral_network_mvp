@@ -12,6 +12,7 @@ import {
   listKnowledgeChunks,
   resolveEscalation,
   resyncCuratedKnowledge,
+  setEscalationStatus,
   updatePrompt,
   upsertKnowledgeChunk,
 } from './roul.admin.service.js';
@@ -41,6 +42,17 @@ roulAdminRouter.post(
   '/escalations/:id/resolve',
   asyncHandler(async (req, res) => {
     const data = await resolveEscalation(req.params.id ?? '');
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const statusSchema = z.object({ status: z.enum(['open', 'fixed', 'dismissed']) });
+roulAdminRouter.patch(
+  '/escalations/:id',
+  validate(statusSchema),
+  asyncHandler(async (req, res) => {
+    const data = await setEscalationStatus(req.params.id ?? '', req.body.status);
     const body: ApiResponse<typeof data> = { success: true, data };
     res.json(body);
   }),

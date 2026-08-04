@@ -4,6 +4,7 @@ import { sendEmail } from '../notifications/email.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { getKnowledge } from './roul.knowledge.js';
 import { retrieveKnowledge } from './roul.rag.js';
+import { routeEscalation } from './roul.triage.js';
 
 /**
  * ROUL — the Referral Nova AI Support Manager.
@@ -117,13 +118,16 @@ export async function askRoul(
   const q = question.trim().slice(0, 2000);
 
   if (!env.OPENAI_API_KEY) {
-    // No key configured yet - fail safe, escalate onboarding issues.
+    // No key configured yet - fail safe, triage onboarding issues (routes to a
+    // human since the classifier is also offline).
     if (ctx?.isOnboarding && user) {
-      await escalateToTechnicalAdmin(user, [...history, { role: 'user', content: q }], 'unknown (ROUL offline)', ctx.ticketId);
-      return {
-        answer: "I've forwarded your query to our technical team. They'll review and I'll follow up with next steps.",
-        escalated: true,
-      };
+      const { userMessage } = await routeEscalation(
+        user,
+        [...history, { role: 'user', content: q }],
+        q,
+        ctx.ticketId,
+      );
+      return { answer: userMessage, escalated: true };
     }
     return {
       answer: 'Thanks for reaching out. A team member will get back to you shortly.',
@@ -169,11 +173,13 @@ export async function askRoul(
     // eslint-disable-next-line no-console
     console.error('[roul] completion failed', err);
     if (ctx?.isOnboarding && user) {
-      await escalateToTechnicalAdmin(user, [...history, { role: 'user', content: q }], 'unknown (ROUL error)', ctx.ticketId);
-      return {
-        answer: "I've forwarded your query to our technical team. They'll review and I'll follow up with next steps.",
-        escalated: true,
-      };
+      const { userMessage } = await routeEscalation(
+        user,
+        [...history, { role: 'user', content: q }],
+        q,
+        ctx.ticketId,
+      );
+      return { answer: userMessage, escalated: true };
     }
     return { answer: 'Sorry, I hit a snag. Please try again in a moment.', escalated: false };
   }
@@ -182,12 +188,18 @@ export async function askRoul(
   const answer = sanitizeOutput(content.replace(/\[escalate\]/gi, '').trim()) ||
     "I've forwarded your query to our technical team and will follow up shortly.";
 
-  if (wantsEscalation && user) {
-    await escalateToTechnicalAdmin(user, [...history, { role: 'user', content: q }], q, ctx?.ticketId);
-    return {
-      answer: "I've forwarded your query to our technical team. They'll review and update me, and I'll get back to you with the next steps.",
-      escalated: true,
-    };
+  // ROUL couldn't resolve it - run the triage ladder. It classifies the issue
+  // and routes it to a dev-facing System Update Request (individual or
+  // product-wide) or, as the final fallback, a human email. The user gets the
+  // triage's tailored message.
+  if (wantsEscalation) {
+    const { userMessage } = await routeEscalation(
+      user,
+      [...history, { role: 'user', content: q }],
+      q,
+      ctx?.ticketId,
+    );
+    return { answer: userMessage, escalated: true };
   }
 
   return { answer, escalated: false };

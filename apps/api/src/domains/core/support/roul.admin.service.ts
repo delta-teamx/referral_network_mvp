@@ -25,21 +25,41 @@ export async function listEscalations() {
       email: string | null;
       stuckStep: string | null;
       transcript: string | null;
+      route: string;
+      scope: string | null;
+      severity: string;
+      category: string | null;
+      suggestedFix: string | null;
+      status: string;
       resolvedAt: Date | null;
       createdAt: Date;
     }[]
   >(
-    `SELECT "id","ticketId","name","email","stuckStep","transcript","resolvedAt","createdAt"
-       FROM "SupportEscalation" ORDER BY "createdAt" DESC LIMIT 100;`,
+    `SELECT "id","ticketId","name","email","stuckStep","transcript",
+            "route","scope","severity","category","suggestedFix","status",
+            "resolvedAt","createdAt"
+       FROM "SupportEscalation" ORDER BY "createdAt" DESC LIMIT 200;`,
   );
 }
 
-export async function resolveEscalation(id: string): Promise<{ ok: boolean }> {
+/** Update a triage record's status (open | fixed | dismissed). */
+export async function setEscalationStatus(
+  id: string,
+  status: 'open' | 'fixed' | 'dismissed',
+): Promise<{ ok: boolean }> {
+  const resolved = status === 'open' ? null : new Date();
   await prisma.$executeRawUnsafe(
-    `UPDATE "SupportEscalation" SET "resolvedAt" = CURRENT_TIMESTAMP WHERE "id" = $1;`,
+    `UPDATE "SupportEscalation" SET "status" = $2, "resolvedAt" = $3 WHERE "id" = $1;`,
     id,
+    status,
+    resolved,
   );
   return { ok: true };
+}
+
+/** Back-compat: mark resolved == status 'fixed'. */
+export async function resolveEscalation(id: string): Promise<{ ok: boolean }> {
+  return setEscalationStatus(id, 'fixed');
 }
 
 // ── Knowledge editing (no deploy) ────────────────────────────────────────────

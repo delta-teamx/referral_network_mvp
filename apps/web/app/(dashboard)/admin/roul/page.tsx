@@ -12,8 +12,26 @@ interface Escalation {
   email: string | null;
   stuckStep: string | null;
   transcript: string | null;
+  route: string;
+  scope: string | null;
+  severity: string;
+  category: string | null;
+  suggestedFix: string | null;
+  status: string;
   resolvedAt: string | null;
   createdAt: string;
+}
+
+const SEVERITY_TONE: Record<string, string> = {
+  low: 'bg-gray-700 text-gray-300',
+  medium: 'bg-blue-500/20 text-blue-300',
+  high: 'bg-amber-500/20 text-amber-300',
+  critical: 'bg-red-500/20 text-red-300',
+};
+function routeLabel(e: Escalation): string {
+  if (e.route === 'system_update_product') return 'System · product-wide';
+  if (e.route === 'system_update_individual') return 'System · individual';
+  return 'Human';
 }
 interface KnowledgeChunk {
   id: string;
@@ -31,9 +49,10 @@ export default function RoulConsolePage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // ── Escalations ──
+  // ── Escalations / triage ──
   const [escalations, setEscalations] = useState<Escalation[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [escFilter, setEscFilter] = useState<'open' | 'system' | 'human' | 'all'>('open');
 
   // ── Knowledge ──
   const [chunks, setChunks] = useState<KnowledgeChunk[]>([]);
@@ -74,10 +93,16 @@ export default function RoulConsolePage() {
     void load();
   }, [load]);
 
-  async function resolveEsc(id: string) {
+  async function setEscStatus(id: string, status: 'open' | 'fixed' | 'dismissed') {
     if (!accessToken) return;
-    setEscalations((prev) => prev.map((e) => (e.id === id ? { ...e, resolvedAt: new Date().toISOString() } : e)));
-    await api.post(`/api/v1/admin/roul/escalations/${id}/resolve`, {}, { accessToken }).catch(() => void load());
+    setEscalations((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, status, resolvedAt: status === 'open' ? null : new Date().toISOString() } : e,
+      ),
+    );
+    await api
+      .patch(`/api/v1/admin/roul/escalations/${id}`, { status }, { accessToken })
+      .catch(() => void load());
   }
 
   async function saveKnowledge(e: React.FormEvent) {
@@ -154,10 +179,16 @@ export default function RoulConsolePage() {
     flash('Reset to the default prompt.');
   }
 
-  const openEscalations = escalations.filter((e) => !e.resolvedAt).length;
+  const openEscalations = escalations.filter((e) => e.status === 'open').length;
+  const visibleEsc = escalations.filter((e) => {
+    if (escFilter === 'open') return e.status === 'open';
+    if (escFilter === 'system') return e.route.startsWith('system_update');
+    if (escFilter === 'human') return e.route === 'human';
+    return true;
+  });
 
   const TABS: { key: Tab; label: string; icon: typeof Bot }[] = [
-    { key: 'escalations', label: `Escalations${openEscalations ? ` (${openEscalations})` : ''}`, icon: AlertTriangle },
+    { key: 'escalations', label: `Issues${openEscalations ? ` (${openEscalations})` : ''}`, icon: AlertTriangle },
     { key: 'knowledge', label: 'Knowledge', icon: BookOpen },
     { key: 'prompt', label: 'System prompt', icon: Bot },
   ];
@@ -207,46 +238,82 @@ export default function RoulConsolePage() {
         })}
       </div>
 
-      {/* ── Escalations ── */}
+      {/* ── Issues (triage: system requests + human escalations) ── */}
       {tab === 'escalations' && (
-        <div className="space-y-2">
-          {escalations.length === 0 ? (
-            <p className="text-sm text-gray-500">No escalations yet.</p>
-          ) : (
-            escalations.map((e) => (
-              <div key={e.id} className={`rounded-xl border p-3 ${e.resolvedAt ? 'border-gray-800 bg-gray-900/50' : 'border-amber-500/40 bg-gray-900'}`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {e.name || 'Unknown'} <span className="text-gray-500">· {e.email || 'no email'}</span>
-                    </p>
-                    <p className="truncate text-xs text-gray-400">{e.stuckStep || '—'}</p>
-                    <p className="text-[10px] text-gray-600">{new Date(e.createdAt).toLocaleString()}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setExpanded(expanded === e.id ? null : e.id)} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-gray-300 hover:border-blue-500">
-                      {expanded === e.id ? 'Hide' : 'Transcript'}
-                    </button>
-                    {e.ticketId && (
-                      <a href={`/admin/support?ticket=${e.ticketId}`} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-blue-400 hover:border-blue-500">
-                        Open ticket
-                      </a>
+        <div>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {(['open', 'system', 'human', 'all'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setEscFilter(f)}
+                className={`rounded-full px-3 py-1 text-[11px] font-medium capitalize transition ${
+                  escFilter === f ? 'bg-blue-600 text-white' : 'border border-gray-700 text-gray-300 hover:border-blue-500'
+                }`}
+              >
+                {f === 'system' ? 'System requests' : f === 'human' ? 'Human' : f}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {visibleEsc.length === 0 ? (
+              <p className="text-sm text-gray-500">Nothing here — ROUL is handling things.</p>
+            ) : (
+              visibleEsc.map((e) => {
+                const isSystem = e.route.startsWith('system_update');
+                const done = e.status !== 'open';
+                return (
+                  <div key={e.id} className={`rounded-xl border p-3 ${done ? 'border-gray-800 bg-gray-900/50 opacity-70' : isSystem ? 'border-blue-500/40 bg-gray-900' : 'border-amber-500/40 bg-gray-900'}`}>
+                    <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${isSystem ? 'bg-blue-500/20 text-blue-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                        {routeLabel(e)}
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${SEVERITY_TONE[e.severity] ?? SEVERITY_TONE.medium}`}>
+                        {e.severity}
+                      </span>
+                      {e.category && <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[9px] text-gray-400">{e.category}</span>}
+                      {done && <span className="text-[9px] font-semibold uppercase text-emerald-400">{e.status}</span>}
+                      <span className="ml-auto text-[10px] text-gray-600">{new Date(e.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm font-medium text-white">{e.stuckStep || '—'}</p>
+                    <p className="text-[11px] text-gray-500">{e.name || 'Unknown'} · {e.email || 'no email'}</p>
+                    {isSystem && e.suggestedFix && e.suggestedFix !== 'n/a' && (
+                      <div className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-blue-300">Suggested fix</p>
+                        <p className="mt-0.5 text-xs text-gray-300">{e.suggestedFix}</p>
+                      </div>
                     )}
-                    {e.resolvedAt ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400"><Check size={11} /> Resolved</span>
-                    ) : (
-                      <button onClick={() => void resolveEsc(e.id)} className="rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold text-white hover:bg-emerald-500">
-                        Mark resolved
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button onClick={() => setExpanded(expanded === e.id ? null : e.id)} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-gray-300 hover:border-blue-500">
+                        {expanded === e.id ? 'Hide' : 'Transcript'}
                       </button>
+                      {e.ticketId && (
+                        <a href={`/admin/support?ticket=${e.ticketId}`} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-blue-400 hover:border-blue-500">
+                          Open ticket
+                        </a>
+                      )}
+                      {done ? (
+                        <button onClick={() => void setEscStatus(e.id, 'open')} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-gray-300 hover:border-gray-500">
+                          Reopen
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={() => void setEscStatus(e.id, 'fixed')} className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold text-white hover:bg-emerald-500">
+                            <Check size={11} /> Mark fixed
+                          </button>
+                          <button onClick={() => void setEscStatus(e.id, 'dismissed')} className="rounded-full border border-gray-700 px-3 py-1 text-[10px] text-gray-400 hover:border-gray-500">
+                            Dismiss
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {expanded === e.id && e.transcript && (
+                      <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-950 p-3 text-[11px] text-gray-300">{e.transcript}</pre>
                     )}
                   </div>
-                </div>
-                {expanded === e.id && e.transcript && (
-                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-950 p-3 text-[11px] text-gray-300">{e.transcript}</pre>
-                )}
-              </div>
-            ))
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 
