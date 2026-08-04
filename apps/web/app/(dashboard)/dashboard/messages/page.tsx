@@ -34,6 +34,7 @@ interface Conversation {
   lastMessage: LastMessage | null;
   unread: boolean;
   isOfficial?: boolean;
+  isBroadcast?: boolean;
   otherLastReadAt?: string | null;
 }
 
@@ -695,10 +696,18 @@ function MessagesInner() {
                           c.unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'
                         }`}
                       >
-                        {c.isOfficial ? 'ROUL Support' : other ? `${other.firstName} ${other.lastName}` : 'Unknown'}
+                        {c.isOfficial
+                          ? other
+                            ? `${other.firstName} ${other.lastName}`
+                            : c.isBroadcast
+                              ? 'Referral Nova'
+                              : 'ROUL Support'
+                          : other
+                            ? `${other.firstName} ${other.lastName}`
+                            : 'Unknown'}
                         {c.isOfficial && (
                           <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
-                            Admin
+                            {c.isBroadcast ? 'Announcement' : 'Admin'}
                           </span>
                         )}
                       </p>
@@ -757,14 +766,16 @@ function MessagesInner() {
                 </div>
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 truncate font-semibold text-gray-900">
-                    {activeConversation?.isOfficial
-                      ? 'ROUL Support'
-                      : activeConversation?.otherUser
-                        ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
-                        : 'Conversation'}
+                    {activeConversation?.otherUser
+                      ? `${activeConversation.otherUser.firstName} ${activeConversation.otherUser.lastName}`
+                      : activeConversation?.isBroadcast
+                        ? 'Referral Nova'
+                        : activeConversation?.isOfficial
+                          ? 'ROUL Support'
+                          : 'Conversation'}
                     {activeConversation?.isOfficial && (
                       <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
-                        Referral Nova team
+                        {activeConversation?.isBroadcast ? 'Announcement' : 'Referral Nova team'}
                       </span>
                     )}
                   </p>
@@ -882,7 +893,13 @@ function MessagesInner() {
               )}
             </div>
 
-            {/* Input */}
+            {/* Input — broadcast (announcement) threads are read-only. */}
+            {activeConversation?.isBroadcast ? (
+              <div className="flex items-center justify-center gap-2 border-t border-gray-200 bg-white px-4 py-4 text-center text-xs text-gray-500 sm:px-6">
+                <ShieldCheck size={14} className="text-blue-500" />
+                This is an announcement from the Referral Nova team. You can&apos;t reply here.
+              </div>
+            ) : (
             <form
               method="post" onSubmit={(e) => {
                 e.preventDefault();
@@ -962,6 +979,7 @@ function MessagesInner() {
                 Send <Send size={14} />
               </button>
             </form>
+            )}
           </>
         )}
       </section>

@@ -63,6 +63,63 @@ export async function startOfficialConversationFromRoul(
   return { conversationId: convo.id };
 }
 
+// ---------------------------------------------------------------------------
+// Founder / team announcements (broadcast)
+// ---------------------------------------------------------------------------
+
+/** The system account Founder/admin announcements are delivered from. Distinct
+ *  from ROUL Support so members get a separate, clearly-labeled announcements
+ *  thread. */
+export const ANNOUNCER_EMAIL = 'announcements@referralnova.com';
+let announcerUserIdCache: string | null = null;
+
+/** Get (or lazily create) the "Referral Nova" announcements system user. */
+export async function getAnnouncerUserId(): Promise<string> {
+  if (announcerUserIdCache) return announcerUserIdCache;
+  const existing = await prisma.user.findFirst({
+    where: { email: ANNOUNCER_EMAIL },
+    select: { id: true },
+  });
+  if (existing) {
+    announcerUserIdCache = existing.id;
+    return existing.id;
+  }
+  const created = await prisma.user.create({
+    data: {
+      email: ANNOUNCER_EMAIL,
+      passwordHash: null,
+      firstName: 'Referral',
+      lastName: 'Nova',
+      role: 'ADMIN', // keeps it out of the directory, leaderboard and matches
+      emailVerified: true,
+    },
+    select: { id: true },
+  });
+  announcerUserIdCache = created.id;
+  return created.id;
+}
+
+/**
+ * Deliver one broadcast message into a member's inbox as a ONE-WAY official
+ * announcement thread (reused across broadcasts, so members keep a single
+ * "Referral Nova" announcements thread). Members cannot reply into it - the
+ * send guard in sendMessage() rejects non-announcer posts on broadcast threads.
+ */
+export async function deliverBroadcastToMember(
+  memberUserId: string,
+  text: string,
+): Promise<{ conversationId: string }> {
+  const announcerId = await getAnnouncerUserId();
+  if (announcerId === memberUserId) throw AppError.badRequest('Cannot broadcast to the system account.');
+  const convo = await getOrCreateConversation(announcerId, memberUserId, { skipQuota: true });
+  await prisma.conversation.update({
+    where: { id: convo.id },
+    data: { isOfficial: true, isBroadcast: true },
+  });
+  await sendMessage(convo.id, announcerId, text);
+  return { conversationId: convo.id };
+}
+
 /** Admin console: every official ROUL Support thread, newest activity first. */
 export async function listOfficialConversations() {
   const roulId = await getRoulUserId();
@@ -241,6 +298,20 @@ export async function sendMessage(
     throw AppError.forbidden('You are not a participant of this conversation.');
   }
 
+  // Broadcast (announcement) threads are one-way: only the announcer system
+  // account may post. A member trying to reply is rejected so the founder's
+  // announcement never becomes an inbound flood.
+  const convoKind = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { isBroadcast: true },
+  });
+  if (convoKind?.isBroadcast) {
+    const announcerId = await getAnnouncerUserId();
+    if (senderId !== announcerId) {
+      throw AppError.forbidden('This is an announcement - you cannot reply to it.');
+    }
+  }
+
   const message = await prisma.message.create({
     data: {
       conversationId,
@@ -286,10 +357,14 @@ export async function sendMessage(
         where: { id: senderId },
         select: { firstName: true, lastName: true },
       }),
-      prisma.conversation.findUnique({ where: { id: conversationId }, select: { isOfficial: true } }),
+      prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { isOfficial: true, isBroadcast: true },
+      }),
       getRoulUserId(),
     ]);
     const isOfficial = Boolean(convo?.isOfficial);
+    const isBroadcast = Boolean(convo?.isBroadcast);
     const fromRoul = senderId === roulId;
     const senderName = sender ? `${sender.firstName} ${sender.lastName}`.trim() : 'a member';
     if (other) {
@@ -310,8 +385,10 @@ export async function sendMessage(
       // through the support flow.
     }
     // A member reply on an official ROUL thread pings the human team so the
-    // loop closes - "they reply, we get back to them".
-    if (isOfficial && !fromRoul) {
+    // loop closes - "they reply, we get back to them". Broadcasts are one-way
+    // and excluded here: an announcement fan-out must never notify all admins
+    // once per recipient.
+    if (isOfficial && !fromRoul && !isBroadcast) {
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN', deletedAt: null, NOT: { email: ROUL_EMAIL } },
         select: { id: true },
@@ -348,6 +425,7 @@ export async function listConversations(userId: string) {
       id: true,
       updatedAt: true,
       isOfficial: true,
+      isBroadcast: true,
       participants: {
         select: {
           userId: true,
@@ -381,6 +459,8 @@ export async function listConversations(userId: string) {
       // Official = a ROUL Support (admin) thread. The member always sees these
       // (any plan), badged and pinned to the top of the inbox.
       isOfficial: c.isOfficial,
+      // Broadcast = a one-way Founder/team announcement thread (no replies).
+      isBroadcast: c.isBroadcast,
       otherUser: otherParticipant
         ? {
             id: otherParticipant.user.id,

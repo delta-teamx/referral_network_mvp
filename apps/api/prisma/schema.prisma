@@ -248,10 +248,32 @@ model Conversation {
   // Official = an admin/ROUL Support thread (Priority Support). Shown to the
   // member in their Messages tab regardless of plan and pinned to the top.
   isOfficial Boolean @default(false)
+  // Broadcast = a one-way Founder/team announcement thread. Also official (so
+  // it's pinned + pipeline-excluded), but members cannot reply into it.
+  isBroadcast Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   messages  Message[]
   participants ConversationParticipant[]
+}
+
+/// A Founder/admin broadcast sent to every member. Delivered into each
+/// member's Messages inbox (as a one-way official thread) plus email + bell.
+/// Deliberately isolated from the pipeline and analytics - it is an
+/// announcement, not a lead. This row is the admin-facing log/history.
+model Broadcast {
+  id             String   @id @default(uuid())
+  senderAdminId  String   // the admin who sent it
+  senderName     String   // display name shown to members, e.g. "Brian Parnel"
+  senderTitle    String?  // e.g. "Founder"
+  subject        String
+  body           String
+  audience       String   @default("all") // reserved for future segments
+  recipientCount Int      @default(0)
+  emailCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model ConversationParticipant {

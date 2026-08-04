@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BarChart3, Bot, Calendar, Coins, FileSignature, GraduationCap, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
+import { BarChart3, Bot, Calendar, Coins, FileSignature, GraduationCap, Headset, LayoutDashboard, Megaphone, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 type IconType = typeof LayoutDashboard;
@@ -21,6 +21,7 @@ const NAV: NavEntry[] = [
     icon: Users,
     children: [
       { href: '/admin/users', label: 'Users', icon: Users },
+      { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
       { href: '/admin/messages', label: 'Member messages', icon: MessageSquare },
       { href: '/admin/support', label: 'Support tickets', icon: Headset },
       { href: '/admin/roul', label: 'ROUL console', icon: Bot },

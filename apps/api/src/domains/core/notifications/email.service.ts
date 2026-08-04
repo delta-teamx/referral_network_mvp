@@ -28,6 +28,7 @@ export type EmailTemplate =
   | 'reengagement'
   | 'complete_profile'
   | 'roul_message'
+  | 'broadcast'
   | 'message_received'
   | 'digest'
   | 'weekly_digest'
@@ -617,6 +618,33 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             quoted +
             P(`Open your Messages to read it and reply. We will get right back to you.`) +
             button('Open my messages', messagesUrl),
+        ),
+      };
+    }
+    case 'broadcast': {
+      const firstName = String(d.firstName ?? 'there');
+      const senderName = String(d.senderName ?? 'The Referral Nova team');
+      const senderTitle = String(d.senderTitle ?? '');
+      const subject = String(d.subject ?? 'A message from Referral Nova');
+      const messageText = String(d.message ?? '');
+      const messagesUrl = `${BRAND.app}/dashboard/messages`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const fromLine = senderTitle ? `${senderName}, ${senderTitle}` : senderName;
+      const quoted = `<div style="margin:0 0 16px;padding:12px 16px;background:${BRAND.bg};border-left:3px solid ${BRAND.blue};border-radius:6px;color:${BRAND.ink};">${escapeHtml(messageText).replace(/\n/g, '<br/>')}</div>`;
+      return {
+        subject,
+        text:
+          `Hi ${firstName},\n\n` +
+          `${fromLine} sent an announcement to the Referral Nova community:\n\n` +
+          `${subject}\n\n${messageText}\n\n— ${fromLine}\n\n` +
+          `You can also read it in your Messages: ${messagesUrl}`,
+        html: brandedLayout(
+          escapeHtml(subject),
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`${escapeHtml(fromLine)} sent an announcement to the Referral Nova community:`) +
+            quoted +
+            P(`— ${escapeHtml(fromLine)}`) +
+            button('Open Referral Nova', messagesUrl),
         ),
       };
     }

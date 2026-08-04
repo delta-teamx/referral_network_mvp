@@ -12,7 +12,7 @@
  * short, warm replies.
  */
 
-export const KNOWLEDGE_VERSION = '2026-08-04b';
+export const KNOWLEDGE_VERSION = '2026-08-04c';
 
 export function getKnowledge(): string {
   return KB.trim();
@@ -119,6 +119,9 @@ Billing is handled by Stripe. You can cancel anytime; cancellation takes effect 
 
 ## Founding offer
 The first 200 qualifying business accounts get lifetime Premium free. Consumer accounts do not use a founding spot. Terms: referralnova.com/terms#founding-offer.
+
+## Announcements from the team
+The Referral Nova team (for example the Founder) can send announcements to all members. An announcement arrives in your Messages inbox as a pinned "Referral Nova" thread marked "Announcement", and is also emailed to you. Announcements are one-way - you cannot reply to them, and they are not support tickets. They are visible on every plan.
 
 ## Notifications and the bell
 The notification bell updates in real time - it rings with a sound and shows a badge when something happens (a new message, an intro request, a booking, or a message from the team). You can mute the sound from the bell. Zoom call reminders also appear here.

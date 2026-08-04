@@ -51,6 +51,7 @@ import { pipelineRouter } from './domains/network/pipeline/pipeline.routes.js';
 import { supportRouter } from './domains/core/support/support.routes.js';
 import { roulAdminRouter } from './domains/core/support/roul.admin.routes.js';
 import { calendarRouter } from './domains/integrations/calendar.routes.js';
+import { broadcastRouter } from './domains/core/broadcasts/broadcast.routes.js';
 import { tutorialsRouter, adminTutorialsRouter } from './domains/core/tutorials/tutorials.routes.js';
 import { seedTutorials } from './domains/core/tutorials/tutorials.service.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -191,6 +192,7 @@ app.use('/api/v1/tutorials', tutorialsRouter);
 app.use('/api/v1/admin/tutorials', adminTutorialsRouter);
 app.use('/api/v1/admin/roul', roulAdminRouter);
 app.use('/api/v1/integrations/calendar', calendarRouter);
+app.use('/api/v1/admin/broadcasts', broadcastRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -661,6 +663,23 @@ async function ensureRuntimeSchema(): Promise<void> {
       // Track the pushed Google event ids so a cancel/decline can delete them.
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "hostGcalEventId" TEXT;`,
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestGcalEventId" TEXT;`,
+      // Founder/admin broadcasts: one-way announcement threads (also official,
+      // so pinned + pipeline-excluded) + the broadcast history log.
+      `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "isBroadcast" BOOLEAN NOT NULL DEFAULT false;`,
+      `CREATE TABLE IF NOT EXISTS "Broadcast" (
+         "id" TEXT NOT NULL,
+         "senderAdminId" TEXT NOT NULL,
+         "senderName" TEXT NOT NULL,
+         "senderTitle" TEXT,
+         "subject" TEXT NOT NULL,
+         "body" TEXT NOT NULL,
+         "audience" TEXT NOT NULL DEFAULT 'all',
+         "recipientCount" INTEGER NOT NULL DEFAULT 0,
+         "emailCount" INTEGER NOT NULL DEFAULT 0,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "Broadcast_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "Broadcast_createdAt_idx" ON "Broadcast" ("createdAt" DESC);`,
     ]) {
       // Per-statement guard: one failing heal (e.g. an extension the DB role
       // can't create, or an index on a not-yet-present column) must not abort
