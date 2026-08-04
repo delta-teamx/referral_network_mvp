@@ -13,7 +13,7 @@ import { useAuthStore } from '../../../../stores/auth';
 
 interface TicketMessage {
   id: string;
-  senderType: 'user' | 'agent' | 'system';
+  senderType: 'user' | 'agent' | 'system' | 'roul';
   body: string;
   createdAt: string;
 }
@@ -25,6 +25,7 @@ interface TicketSummary {
   topic: string;
   status: string;
   priority?: boolean;
+  humanTakeover?: boolean;
   createdAt: string;
   updatedAt: string;
   userId: string | null;
@@ -195,6 +196,22 @@ export default function AdminSupportPage() {
     }
   }
 
+  // C1: take a ticket over from ROUL (pauses AI auto-replies) or hand it back.
+  async function toggleTakeover(take: boolean) {
+    if (!accessToken || !activeId) return;
+    try {
+      await api.post(
+        `/api/v1/support/admin/tickets/${activeId}/${take ? 'takeover' : 'release'}`,
+        {},
+        { accessToken },
+      );
+      void loadThread(activeId);
+      void loadList();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Update failed');
+    }
+  }
+
   return (
     <div className="p-6 md:p-8">
       <header className="mb-6">
@@ -308,6 +325,23 @@ export default function AdminSupportPage() {
                   <p className="text-xs text-gray-400">{active.topic}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  {active.humanTakeover ? (
+                    <button
+                      onClick={() => void toggleTakeover(false)}
+                      title="Hand this conversation back to ROUL (AI)"
+                      className="rounded-full bg-blue-600 px-3 py-1 text-[10px] font-semibold text-white transition hover:bg-blue-500"
+                    >
+                      ● You’ve taken over · Release to ROUL
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void toggleTakeover(true)}
+                      title="Take over from ROUL — the AI stops auto-replying and you answer in this thread"
+                      className="rounded-full border border-blue-500/50 px-3 py-1 text-[10px] font-semibold text-blue-300 transition hover:bg-blue-600 hover:text-white"
+                    >
+                      Take over from ROUL
+                    </button>
+                  )}
                   {(['open', 'pending', 'closed'] as const).map((s) => (
                     <button
                       key={s}
@@ -340,9 +374,16 @@ export default function AdminSupportPage() {
                         ? 'ml-auto rounded-br-sm bg-amber-500 text-gray-950'
                         : m.senderType === 'system'
                           ? 'rounded-bl-sm bg-gray-800 italic text-gray-400'
-                          : 'rounded-bl-sm bg-gray-800 text-gray-100'
+                          : m.senderType === 'roul'
+                            ? 'rounded-bl-sm border border-blue-500/40 bg-gray-800 text-gray-100'
+                            : 'rounded-bl-sm bg-gray-800 text-gray-100'
                     }`}
                   >
+                    {m.senderType === 'roul' && (
+                      <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-400">
+                        ROUL (AI)
+                      </p>
+                    )}
                     <Linkified text={m.body} />
                     <p
                       className={`mt-1 text-[9px] ${

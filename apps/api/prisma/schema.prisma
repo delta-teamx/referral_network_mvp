@@ -609,6 +609,13 @@ model SupportTicket {
   topic     String
   status    String   @default("open") // open, pending (agent replied), closed
   priority  Boolean  @default(false) // admin-initiated ROUL outreach (Priority Support)
+  // C1: a human admin can take over a ticket - ROUL then stops auto-replying
+  // and the admin answers in the same thread until it's released.
+  humanTakeover  Boolean @default(false)
+  assignedAdminId String?
+  // C2: set when the 30-minute "still waiting" timer escalated this ticket;
+  // cleared when ROUL/an admin next replies, so a new stuck episode can escalate.
+  escalatedAt    DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -13,10 +13,14 @@ import {
   createTicket,
   deleteTicket,
   getMyLatestTicket,
+  getRoulTicketContext,
   getTicket,
   isSupportOnline,
   listTickets,
+  persistRoulReply,
+  releaseTicket,
   setTicketStatus,
+  takeOverTicket,
 } from './support.service.js';
 
 export const supportRouter: Router = Router();
@@ -58,10 +62,34 @@ supportRouter.post(
           name: req.user.email,
         }
       : null;
+    const ticketId: string | undefined = req.body.ticketId;
+
+    // If a human admin has taken this ticket over, ROUL stays silent - the
+    // person owns the conversation. We don't persist anything here; the
+    // member's message is already saved and admins have been pinged.
+    if (ticketId) {
+      const ctx = await getRoulTicketContext(ticketId);
+      if (ctx?.humanTakeover) {
+        const result = {
+          answer: 'A member of our team is personally helping you here and will reply shortly.',
+          escalated: false,
+        };
+        const body: ApiResponse<typeof result> = { success: true, data: result };
+        return res.json(body);
+      }
+    }
+
     const result = await askRoul(req.body.question, req.body.history ?? [], user, {
-      ticketId: req.body.ticketId,
+      ticketId,
       isOnboarding: req.body.isOnboarding,
     });
+
+    // C1: persist ROUL's answer into the ticket thread so it's not ephemeral -
+    // admins now see ROUL's side of every conversation. Best-effort.
+    if (ticketId && result.answer) {
+      await persistRoulReply(ticketId, result.answer).catch(() => undefined);
+    }
+
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.json(body);
   }),
@@ -169,6 +197,29 @@ supportRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
     const ticket = await agentReply(req.params.id ?? '', req.body.text);
+    const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
+    res.json(body);
+  }),
+);
+
+// C1: admin takes over a ticket (ROUL goes silent) / releases it back to ROUL.
+supportRouter.post(
+  '/admin/tickets/:id/takeover',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const ticket = await takeOverTicket(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
+    res.json(body);
+  }),
+);
+
+supportRouter.post(
+  '/admin/tickets/:id/release',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    if (!req.user || req.user.role !== 'ADMIN') throw AppError.forbidden();
+    const ticket = await releaseTicket(req.params.id ?? '');
     const body: ApiResponse<typeof ticket> = { success: true, data: ticket };
     res.json(body);
   }),

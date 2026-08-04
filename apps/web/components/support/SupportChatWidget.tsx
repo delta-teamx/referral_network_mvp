@@ -17,7 +17,7 @@ import { useAuthStore } from '../../stores/auth';
 
 interface TicketMessage {
   id: string;
-  senderType: 'user' | 'agent' | 'system';
+  senderType: 'user' | 'agent' | 'system' | 'roul';
   body: string;
   createdAt: string;
 }
@@ -473,14 +473,14 @@ export function SupportChatWidget() {
                     className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
                       m.senderType === 'user'
                         ? 'ml-auto rounded-br-sm bg-primary text-white'
-                        : m.senderType === 'agent'
+                        : m.senderType === 'agent' || m.senderType === 'roul'
                           ? 'rounded-bl-sm border border-gray-200 bg-white text-gray-800'
                           : 'rounded-bl-sm bg-primary-light/60 text-gray-700'
                     }`}
                   >
-                    {m.senderType === 'agent' && (
+                    {(m.senderType === 'agent' || m.senderType === 'roul') && (
                       <p className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
-                        Support team
+                        {m.senderType === 'roul' ? 'ROUL · Support' : 'Support team'}
                       </p>
                     )}
                     <Linkified text={m.body} light={m.senderType === 'user'} />

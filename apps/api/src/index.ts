@@ -477,6 +477,12 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "Group" ADD COLUMN IF NOT EXISTS "customDomain" TEXT;`,
       // Priority Support: admin-initiated ROUL outreach threads.
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "priority" BOOLEAN NOT NULL DEFAULT false;`,
+      // Support C1/C2: admin takeover + 30-minute escalation-timer bookkeeping.
+      `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "humanTakeover" BOOLEAN NOT NULL DEFAULT false;`,
+      `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "assignedAdminId" TEXT;`,
+      `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "escalatedAt" TIMESTAMP(3);`,
+      // ROUL can now speak inside a ticket thread (senderType 'roul'); no schema
+      // change needed for SupportMessage - senderType is already free-text.
       // ROUL Support conversations surfaced in the member's Messages tab.
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "isOfficial" BOOLEAN NOT NULL DEFAULT false;`,
       // Contribution Score: referral quality verification + the points ledger.

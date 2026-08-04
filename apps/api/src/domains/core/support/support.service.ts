@@ -21,6 +21,8 @@ const ticketSelect = {
   topic: true,
   status: true,
   priority: true,
+  humanTakeover: true,
+  assignedAdminId: true,
   createdAt: true,
   updatedAt: true,
   userId: true,
@@ -188,7 +190,15 @@ export async function addVisitorMessage(
 ) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true, status: true, userId: true, priority: true, name: true, topic: true },
+    select: {
+      id: true,
+      status: true,
+      userId: true,
+      priority: true,
+      humanTakeover: true,
+      name: true,
+      topic: true,
+    },
   });
   if (!ticket) throw AppError.notFound('Ticket not found');
   if (viewer && viewer.role !== 'ADMIN' && ticket.userId && ticket.userId !== viewer.id) {
@@ -205,11 +215,12 @@ export async function addVisitorMessage(
   });
   await prisma.supportTicket.update({
     where: { id: ticket.id },
-    data: { status: isAdminSender ? 'pending' : 'open' },
+    // Admin reply clears the escalation flag; a member reply reopens the ticket.
+    data: isAdminSender ? { status: 'pending', escalatedAt: null } : { status: 'open' },
   });
-  // A member reply on a Priority (admin-initiated) thread pings every admin so
-  // the loop actually closes - "they reply, we get back to them".
-  if (!isAdminSender && ticket.priority) {
+  // A member reply on a Priority OR taken-over thread pings every admin so the
+  // loop actually closes - "they reply, we get back to them".
+  if (!isAdminSender && (ticket.priority || ticket.humanTakeover)) {
     const admins = await prisma.user.findMany({
       where: { role: 'ADMIN', deletedAt: null },
       select: { id: true },
@@ -262,7 +273,9 @@ export async function agentReply(ticketId: string, text: string) {
   });
   await prisma.supportTicket.update({
     where: { id: ticket.id },
-    data: { status: 'pending' },
+    // An admin answered - clear the escalation flag so the 30-min timer can
+    // fire fresh if the member is later left waiting again.
+    data: { status: 'pending', escalatedAt: null },
   });
   // Signed-in ticket owners see the reply in their bell too, so they don't
   // have to keep the widget open.
@@ -302,4 +315,162 @@ export async function setTicketStatus(ticketId: string, status: 'open' | 'pendin
     data: { status },
     select: ticketSelect,
   });
+}
+
+// ── C1: ROUL persistence + admin takeover ────────────────────────────────────
+
+/**
+ * Read a ticket's takeover state + recent thread as ROUL history, so the
+ * support route can decide whether ROUL should answer and give it context.
+ */
+export async function getRoulTicketContext(ticketId: string): Promise<{
+  humanTakeover: boolean;
+  history: { role: 'user' | 'assistant'; content: string }[];
+} | null> {
+  const ticket = await prisma.supportTicket.findUnique({
+    where: { id: ticketId },
+    select: {
+      humanTakeover: true,
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: { senderType: true, body: true },
+      },
+    },
+  });
+  if (!ticket) return null;
+  const history = ticket.messages
+    .reverse()
+    .filter((m) => m.senderType === 'user' || m.senderType === 'roul' || m.senderType === 'agent')
+    .map((m) => ({
+      role: (m.senderType === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: m.body,
+    }));
+  return { humanTakeover: ticket.humanTakeover, history };
+}
+
+/**
+ * Persist a ROUL answer into the ticket thread (senderType 'roul') so admins
+ * see ROUL's side of the conversation, not just the member's. Clears the
+ * escalation flag since the member just got a response.
+ */
+export async function persistRoulReply(ticketId: string, answer: string): Promise<void> {
+  const ticket = await prisma.supportTicket.findUnique({
+    where: { id: ticketId },
+    select: { id: true },
+  });
+  if (!ticket) return;
+  await prisma.supportMessage.create({
+    data: { ticketId: ticket.id, senderType: 'roul', body: sanitizeText(answer).slice(0, 4000) },
+  });
+  await prisma.supportTicket.update({
+    where: { id: ticket.id },
+    data: { status: 'pending', escalatedAt: null },
+  });
+}
+
+/** Admin takes over a ticket: ROUL stops auto-replying; the admin owns it. */
+export async function takeOverTicket(ticketId: string, adminId: string) {
+  const ticket = await prisma.supportTicket.findUnique({
+    where: { id: ticketId },
+    select: { id: true, userId: true },
+  });
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  const updated = await prisma.supportTicket.update({
+    where: { id: ticket.id },
+    data: { humanTakeover: true, assignedAdminId: adminId },
+    select: ticketSelect,
+  });
+  // Let the member know a real person is now on it.
+  if (ticket.userId) {
+    void createNotification({
+      userId: ticket.userId,
+      type: 'support_reply',
+      title: 'A specialist is helping you 👋',
+      body: 'One of our team has personally picked up your support conversation.',
+      data: { ticketId: ticket.id },
+    }).catch(() => undefined);
+  }
+  return updated;
+}
+
+/** Hand a ticket back to ROUL. */
+export async function releaseTicket(ticketId: string) {
+  const ticket = await prisma.supportTicket.findUnique({
+    where: { id: ticketId },
+    select: { id: true },
+  });
+  if (!ticket) throw AppError.notFound('Ticket not found');
+  return prisma.supportTicket.update({
+    where: { id: ticket.id },
+    data: { humanTakeover: false, assignedAdminId: null },
+    select: ticketSelect,
+  });
+}
+
+// ── C2: 30-minute "still waiting" escalation timer ───────────────────────────
+
+/**
+ * Escalate tickets where the member has been left waiting too long. A ticket
+ * qualifies when its newest message is from the member, it's 30+ minutes old,
+ * the ticket isn't closed, and it hasn't already been escalated for THIS wait
+ * (escalatedAt is null or predates the member's last message). This is the
+ * safety net for the "ROUL/admin went quiet" case, distinct from ROUL's
+ * instant "I can't resolve this" escalation.
+ */
+export async function runSupportEscalationSweep(): Promise<{ scanned: number; escalated: number }> {
+  const { escalateToTechnicalAdmin } = await import('./roul.service.js');
+  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
+
+  const candidates = await prisma.supportTicket.findMany({
+    where: { status: { not: 'closed' } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      userId: true,
+      escalatedAt: true,
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { senderType: true, body: true, createdAt: true },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 500,
+  });
+
+  let escalated = 0;
+  for (const t of candidates) {
+    const last = t.messages[0];
+    if (!last || last.senderType !== 'user') continue; // member isn't the one waiting
+    if (last.createdAt > cutoff) continue; // not yet 30 min
+    // Already escalated for this same wait? (escalatedAt at/after the last msg)
+    if (t.escalatedAt && t.escalatedAt >= last.createdAt) continue;
+
+    const transcript = [...t.messages]
+      .reverse()
+      .map((m) => ({
+        role: (m.senderType === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.body,
+      }));
+    try {
+      await escalateToTechnicalAdmin(
+        { id: t.userId ?? undefined, name: t.name, email: t.email },
+        transcript,
+        'No response for 30+ minutes (auto-escalated)',
+        t.id,
+      );
+      await prisma.supportTicket.update({
+        where: { id: t.id },
+        data: { escalatedAt: new Date() },
+      });
+      escalated++;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[support] escalation sweep failed for ${t.id}`, err);
+    }
+  }
+
+  return { scanned: candidates.length, escalated };
 }

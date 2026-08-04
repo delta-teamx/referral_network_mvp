@@ -8,6 +8,7 @@ import {
 } from '../notifications/reengagement.service.js';
 import { runNotificationDigests } from '../notifications/digest.service.js';
 import { runWeeklyDigests } from '../notifications/weekly-digest.service.js';
+import { runSupportEscalationSweep } from '../support/support.service.js';
 
 /**
  * Background scheduler for long-running / periodic work.
@@ -103,6 +104,20 @@ const JOBS: JobDefinition[] = [
         // eslint-disable-next-line no-console
         console.log(
           `[jobs] notification-digests: scanned ${result.scanned}, sent ${result.sent}`,
+        );
+      }
+      return result;
+    },
+  },
+  {
+    name: 'support-escalation-timer',
+    intervalMs: 5 * 60 * 1000, // Every 5 min - escalate tickets left waiting 30+ min
+    handler: async () => {
+      const result = await runSupportEscalationSweep();
+      if (result.escalated > 0) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[jobs] support-escalation-timer: scanned ${result.scanned}, escalated ${result.escalated}`,
         );
       }
       return result;
