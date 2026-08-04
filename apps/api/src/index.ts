@@ -49,6 +49,7 @@ import { registerReferralTrackingSubscribers } from './domains/network/referral-
 import { registerGroupSubscribers } from './domains/network/groups/groups.subscribers.js';
 import { pipelineRouter } from './domains/network/pipeline/pipeline.routes.js';
 import { supportRouter } from './domains/core/support/support.routes.js';
+import { roulAdminRouter } from './domains/core/support/roul.admin.routes.js';
 import { tutorialsRouter, adminTutorialsRouter } from './domains/core/tutorials/tutorials.routes.js';
 import { seedTutorials } from './domains/core/tutorials/tutorials.service.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -187,6 +188,7 @@ app.use('/api/v1/pipeline', pipelineRouter);
 app.use('/api/v1/support', rateLimit({ windowMs: 60_000, max: 30, key: 'support' }), supportRouter);
 app.use('/api/v1/tutorials', tutorialsRouter);
 app.use('/api/v1/admin/tutorials', adminTutorialsRouter);
+app.use('/api/v1/admin/roul', roulAdminRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -603,6 +605,19 @@ async function ensureRuntimeSchema(): Promise<void> {
        );`,
       `CREATE INDEX IF NOT EXISTS "TutorialVideo_showInTutorials_sortOrder_idx" ON "TutorialVideo" ("showInTutorials", "sortOrder");`,
       `CREATE INDEX IF NOT EXISTS "TutorialVideo_showOnHomepage_idx" ON "TutorialVideo" ("showOnHomepage");`,
+      // ROUL admin console: a queryable escalation log (email + bell still fire).
+      `CREATE TABLE IF NOT EXISTS "SupportEscalation" (
+         "id" TEXT NOT NULL,
+         "ticketId" TEXT,
+         "name" TEXT,
+         "email" TEXT,
+         "stuckStep" TEXT,
+         "transcript" TEXT,
+         "resolvedAt" TIMESTAMP(3),
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "SupportEscalation_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "SupportEscalation_createdAt_idx" ON "SupportEscalation" ("createdAt" DESC);`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }

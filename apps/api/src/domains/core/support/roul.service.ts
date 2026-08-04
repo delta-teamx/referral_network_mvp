@@ -29,22 +29,66 @@ export interface RoulResult {
 }
 
 /**
- * Build the system prompt for a turn. `knowledge` is the grounding text - either
- * the top-K chunks retrieved from the pgvector store (RAG) or, as a fallback,
- * the full curated KB. The rest of the contract is identical either way.
+ * The default ROUL instructions (persona + output rules). Admins can override
+ * this from the ROUL console without a deploy; this stays the fallback.
  */
-function buildSystemPrompt(knowledge: string): string {
-  return `You are ROUL, the Support Manager for Referral Nova (an AI-powered business referral network).
+export const DEFAULT_ROUL_INSTRUCTIONS = `You are ROUL, the Support Manager for Referral Nova (an AI-powered business referral network).
 
 STRICT OUTPUT RULES — follow every time:
 - Reply in 2 to 3 short lines maximum. Never a paragraph, never an essay.
 - Plain sentences only. NO markdown: no asterisks, no bullet points, no dashes as bullets, no slashes as separators, no headers, no bold.
 - Be warm, professional and on-brand.
 - Answer ONLY from the KNOWLEDGE below. If the answer is not clearly in it, or the user is stuck on an onboarding problem you cannot resolve, do NOT guess.
-- When you cannot resolve it, reply exactly with a short line telling the user you are forwarding it to the technical team and will follow up, and nothing else. Start that reply with the token [ESCALATE] on its own — the system will remove it before the user sees it.
+- When you cannot resolve it, reply exactly with a short line telling the user you are forwarding it to the technical team and will follow up, and nothing else. Start that reply with the token [ESCALATE] on its own — the system will remove it before the user sees it.`;
 
-KNOWLEDGE:
-${knowledge}`;
+const INSTRUCTIONS_KEY = 'roul_system_prompt';
+let instructionsCache: { text: string; at: number } | null = null;
+const INSTRUCTIONS_TTL_MS = 60_000;
+
+/**
+ * The active instructions - an admin override from AppSetting if present, else
+ * the default. Cached for 60s so edits propagate within a minute (no deploy)
+ * without a DB read on every question.
+ */
+export async function getRoulInstructions(): Promise<string> {
+  const now = Date.now();
+  if (instructionsCache && now - instructionsCache.at < INSTRUCTIONS_TTL_MS) {
+    return instructionsCache.text;
+  }
+  let text = DEFAULT_ROUL_INSTRUCTIONS;
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: INSTRUCTIONS_KEY } });
+    const override =
+      row && typeof row.value === 'object' && row.value
+        ? (row.value as { text?: string }).text
+        : undefined;
+    if (override && override.trim()) text = override.trim();
+  } catch {
+    /* fall back to default */
+  }
+  instructionsCache = { text, at: now };
+  return text;
+}
+
+/** Save admin-edited instructions (or reset to default when text is empty). */
+export async function setRoulInstructions(text: string | null): Promise<void> {
+  const clean = (text ?? '').trim();
+  await prisma.appSetting.upsert({
+    where: { key: INSTRUCTIONS_KEY },
+    create: { key: INSTRUCTIONS_KEY, value: { text: clean } },
+    update: { value: { text: clean } },
+  });
+  instructionsCache = null; // force reload
+}
+
+/**
+ * Build the system prompt for a turn. `knowledge` is the grounding text - either
+ * the top-K chunks retrieved from the pgvector store (RAG) or, as a fallback,
+ * the full curated KB. `instructions` is the (possibly admin-edited) persona +
+ * rules block.
+ */
+function buildSystemPrompt(knowledge: string, instructions: string): string {
+  return `${instructions}\n\nKNOWLEDGE:\n${knowledge}`;
 }
 
 /** Strip markdown / enforce plain text and the 3-line cap. */
@@ -90,13 +134,16 @@ export async function askRoul(
   // RAG: ground the answer in the top-K chunks from the pgvector store. If it's
   // unavailable (no pgvector / no store / error) fall back to the full curated
   // KB, so accuracy is never worse than before.
-  const retrieved = await retrieveKnowledge(q);
+  const [retrieved, instructions] = await Promise.all([
+    retrieveKnowledge(q),
+    getRoulInstructions(),
+  ]);
   const knowledge = retrieved && retrieved.length > 0 ? retrieved.join('\n\n') : getKnowledge();
 
   let content = '';
   try {
     const messages = [
-      { role: 'system' as const, content: buildSystemPrompt(knowledge) },
+      { role: 'system' as const, content: buildSystemPrompt(knowledge, instructions) },
       ...history.slice(-8).map((h) => ({ role: h.role, content: h.content.slice(0, 2000) })),
       { role: 'user' as const, content: q },
     ];
@@ -161,6 +208,22 @@ export async function escalateToTechnicalAdmin(
     .map((t) => `${t.role === 'user' ? 'User' : 'ROUL'}: ${t.content}`)
     .join('\n');
   const when = new Date().toISOString();
+
+  // Persist to the escalation log so the ROUL admin console can show it.
+  try {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "SupportEscalation" ("id","ticketId","name","email","stuckStep","transcript")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5);`,
+      ticketId ?? null,
+      user.name ?? null,
+      user.email ?? null,
+      stuckStep,
+      lines,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[roul] escalation log write failed', err);
+  }
 
   await sendEmail({
     to: env.SUPPORT_ESCALATION_EMAIL,
