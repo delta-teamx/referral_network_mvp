@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Headset, Paperclip, Send, X } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
+import { onSocketEvent } from '../../lib/socket';
 
 /**
  * Floating support chat - lives on the marketing site AND the dashboard
@@ -221,17 +222,27 @@ export function SupportChatWidget() {
     };
   }, [open, storageKey, accessToken, user]);
 
-  // Poll the thread while open so agent replies appear live.
+  // Refetch the thread. Shared by the realtime handler and the poll fallback.
+  const ticketId = ticket?.id;
   useEffect(() => {
-    if (!open || !ticket) return;
-    const timer = setInterval(() => {
+    if (!ticketId) return;
+    const refetch = () =>
       void api
-        .get<Ticket>(`/api/v1/support/tickets/${ticket.id}`, { accessToken: accessToken ?? undefined })
+        .get<Ticket>(`/api/v1/support/tickets/${ticketId}`, { accessToken: accessToken ?? undefined })
         .then((t) => setTicket(t))
         .catch(() => undefined);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [open, ticket?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // C5: instant refresh when the API pushes a support update for this ticket.
+    const off = onSocketEvent<{ ticketId: string }>('support:message', (evt) => {
+      if (evt?.ticketId === ticketId) refetch();
+    });
+    // Slow poll as a safety net for reconnect gaps (realtime is the fast path).
+    const timer = open ? setInterval(refetch, 30_000) : null;
+    return () => {
+      off();
+      if (timer) clearInterval(timer);
+    };
+  }, [ticketId, open, accessToken]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });

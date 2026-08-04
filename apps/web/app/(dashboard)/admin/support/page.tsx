@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Headset, Paperclip, Send, Trash2 } from 'lucide-react';
 import { api, ApiError, apiBaseUrl } from '../../../../lib/api';
 import { useAuthStore } from '../../../../stores/auth';
+import { onSocketEvent } from '../../../../lib/socket';
 
 /**
  * Admin - Support tickets. Every widget conversation lands here. Reply to
@@ -108,8 +109,20 @@ export default function AdminSupportPage() {
   useEffect(() => {
     if (!activeId) return;
     void loadThread(activeId);
-    const timer = setInterval(() => void loadThread(activeId), 5000);
+    // Realtime is the fast path now; keep a slow poll as a reconnect safety net.
+    const timer = setInterval(() => void loadThread(activeId), 30_000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, accessToken]);
+
+  // C5: live support updates - refresh the list on any ticket change, and the
+  // open thread when it's the one that changed.
+  useEffect(() => {
+    const off = onSocketEvent<{ ticketId: string }>('support:message', (evt) => {
+      void loadList();
+      if (evt?.ticketId && evt.ticketId === activeId) void loadThread(activeId);
+    });
+    return off;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, accessToken]);
 

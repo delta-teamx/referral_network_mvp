@@ -3,6 +3,18 @@ import { AppError } from '../../../utils/AppError.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { deleteAttachmentPrefixes } from '../../network/messaging/messaging.service.js';
+import { emitToAdmins, emitToUser } from '../../../realtime/io.js';
+
+/**
+ * C5: push a live support update to the ticket owner (if signed in) and to
+ * every connected admin, so the widget + admin console refresh in real time
+ * instead of on a poll. Payload is just the ticketId - clients refetch the
+ * thread, which keeps this dead simple and dedupe-free.
+ */
+function emitSupportUpdate(ticketId: string, memberUserId?: string | null): void {
+  if (memberUserId) emitToUser(memberUserId, 'support:message', { ticketId });
+  emitToAdmins('support:message', { ticketId });
+}
 
 /**
  * Support chat - the floating widget on the marketing site and dashboard.
@@ -89,6 +101,7 @@ export async function createTicket(input: {
     ),
   );
 
+  emitSupportUpdate(ticket.id, ticket.userId);
   return getTicket(ticket.id);
 }
 
@@ -140,6 +153,7 @@ export async function createPriorityTicketForMember(input: {
     data: { ticketId: ticket.id, from: 'ROUL', admin: true, adminId: input.adminId },
   }).catch(() => undefined);
 
+  emitSupportUpdate(ticket.id, member.id);
   return getTicket(ticket.id);
 }
 
@@ -237,6 +251,7 @@ export async function addVisitorMessage(
       ),
     );
   }
+  emitSupportUpdate(ticket.id, ticket.userId);
   return getTicket(ticketId, viewer);
 }
 
@@ -288,6 +303,7 @@ export async function agentReply(ticketId: string, text: string) {
       data: { ticketId: ticket.id },
     }).catch(() => undefined);
   }
+  emitSupportUpdate(ticket.id, ticket.userId);
   return getTicket(ticketId);
 }
 
@@ -363,10 +379,12 @@ export async function persistRoulReply(ticketId: string, answer: string): Promis
   await prisma.supportMessage.create({
     data: { ticketId: ticket.id, senderType: 'roul', body: sanitizeText(answer).slice(0, 4000) },
   });
-  await prisma.supportTicket.update({
+  const updated = await prisma.supportTicket.update({
     where: { id: ticket.id },
     data: { status: 'pending', escalatedAt: null },
+    select: { userId: true },
   });
+  emitSupportUpdate(ticket.id, updated.userId);
 }
 
 /** Admin takes over a ticket: ROUL stops auto-replying; the admin owns it. */
@@ -391,6 +409,7 @@ export async function takeOverTicket(ticketId: string, adminId: string) {
       data: { ticketId: ticket.id },
     }).catch(() => undefined);
   }
+  emitSupportUpdate(ticket.id, ticket.userId);
   return updated;
 }
 
@@ -398,14 +417,16 @@ export async function takeOverTicket(ticketId: string, adminId: string) {
 export async function releaseTicket(ticketId: string) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
   if (!ticket) throw AppError.notFound('Ticket not found');
-  return prisma.supportTicket.update({
+  const updated = await prisma.supportTicket.update({
     where: { id: ticket.id },
     data: { humanTakeover: false, assignedAdminId: null },
     select: ticketSelect,
   });
+  emitSupportUpdate(ticket.id, ticket.userId);
+  return updated;
 }
 
 // ── C2: 30-minute "still waiting" escalation timer ───────────────────────────

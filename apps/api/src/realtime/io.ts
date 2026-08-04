@@ -125,6 +125,9 @@ export function initRealtime(server: HttpServer): SocketIOServer {
     }
     const { userId } = auth;
     void socket.join(roomForUser(userId));
+    // Admins share a room so support/ops events can fan out to the whole team
+    // (live ticket updates in the admin console) with one emit.
+    if (auth.role === 'ADMIN') void socket.join('admins');
     incrementPresence(userId);
 
     // Let domains attach their own per-socket listeners (typing, receipts).
@@ -170,6 +173,16 @@ export function emitToUser(userId: string, event: string, payload: unknown): voi
     io.to(roomForUser(userId)).emit(event, payload);
   } catch {
     /* best-effort - a realtime failure must never break the request path */
+  }
+}
+
+/** Fan an event out to every connected admin (the shared "admins" room). */
+export function emitToAdmins(event: string, payload: unknown): void {
+  if (!io) return;
+  try {
+    io.to('admins').emit(event, payload);
+  } catch {
+    /* best-effort */
   }
 }
 
