@@ -373,9 +373,12 @@ export async function getRoulTicketContext(ticketId: string): Promise<{
 export async function persistRoulReply(ticketId: string, answer: string): Promise<void> {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true },
+    select: { id: true, humanTakeover: true },
   });
   if (!ticket) return;
+  // Re-check takeover at WRITE time: an admin may have grabbed the ticket during
+  // the (up to 8s) OpenAI call. If so, ROUL stays silent - the human owns it.
+  if (ticket.humanTakeover) return;
   await prisma.supportMessage.create({
     data: { ticketId: ticket.id, senderType: 'roul', body: sanitizeText(answer).slice(0, 4000) },
   });
@@ -463,11 +466,19 @@ export async function runSupportEscalationSweep(): Promise<{ scanned: number; es
 
   let escalated = 0;
   for (const t of candidates) {
-    const last = t.messages[0];
-    if (!last || last.senderType !== 'user') continue; // member isn't the one waiting
-    if (last.createdAt > cutoff) continue; // not yet 30 min
-    // Already escalated for this same wait? (escalatedAt at/after the last msg)
-    if (t.escalatedAt && t.escalatedAt >= last.createdAt) continue;
+    // messages are newest-first. Find the member's most recent message and the
+    // most recent REAL reply (agent or ROUL). A `system` auto-greeting does NOT
+    // count as a reply - otherwise a freshly-opened, never-answered ticket (its
+    // newest message is the greeting) would be skipped forever.
+    const lastUser = t.messages.find((m) => m.senderType === 'user');
+    if (!lastUser) continue; // member never wrote - nothing to wait on
+    const lastReply = t.messages.find(
+      (m) => m.senderType === 'agent' || m.senderType === 'roul',
+    );
+    if (lastReply && lastReply.createdAt >= lastUser.createdAt) continue; // already answered
+    if (lastUser.createdAt > cutoff) continue; // not yet 30 min
+    // Already escalated for this same wait? (escalatedAt at/after the member's msg)
+    if (t.escalatedAt && t.escalatedAt >= lastUser.createdAt) continue;
 
     const transcript = [...t.messages]
       .reverse()

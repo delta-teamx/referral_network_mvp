@@ -69,8 +69,21 @@ export async function buildWeeklyDigest(userId: string): Promise<WeeklyDigestDat
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
   const TERMINAL = ['won', 'lost', 'dead'];
 
-  const [user, pendingIntros, newMatches, newLeads, advanced, staleCards, agingIntros, points] =
-    await Promise.all([
+  const [
+    user,
+    pendingIntros,
+    newMatches,
+    newLeads,
+    advanced,
+    staleCards,
+    agingIntros,
+    points,
+    // Real totals for the headline numbers (the findMany queries above cap at 5
+    // for the NAME lists; counting their .length would under-report "9 waiting").
+    pendingIntrosTotal,
+    newMatchesTotal,
+    staleCardsTotal,
+  ] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } }),
       // Intro requests waiting on THIS member's response.
       prisma.introduction.findMany({
@@ -122,6 +135,18 @@ export async function buildWeeklyDigest(userId: string): Promise<WeeklyDigestDat
         where: { userId, occurredAt: { gte: weekAgo } },
         _sum: { points: true },
       }),
+      // Accurate totals (not capped at 5) for the headline counts.
+      prisma.introduction.count({ where: { targetId: userId, status: 'requested' } }),
+      prisma.introduction.count({
+        where: {
+          status: 'suggested',
+          createdAt: { gte: weekAgo },
+          OR: [{ senderId: userId }, { targetId: userId }],
+        },
+      }),
+      prisma.pipelineCard.count({
+        where: { ownerId: userId, stage: { notIn: TERMINAL }, stageUpdatedAt: { lt: twoWeeksAgo } },
+      }),
     ]);
 
   const pendingNames = pendingIntros.map((i) => fullName(i.sender));
@@ -135,13 +160,13 @@ export async function buildWeeklyDigest(userId: string): Promise<WeeklyDigestDat
     firstName: user?.firstName ?? 'there',
     quiet: false,
     network: {
-      pendingIntros: pendingIntros.length,
+      pendingIntros: pendingIntrosTotal,
       pendingNames,
-      newMatches: newMatches.length,
+      newMatches: newMatchesTotal,
       matchNames,
     },
     momentum: { newLeads, advanced },
-    attention: { staleCards: staleCards.length, staleNames, agingIntros },
+    attention: { staleCards: staleCardsTotal, staleNames, agingIntros },
     standing: { weeklyPoints },
   };
 
@@ -222,9 +247,14 @@ export async function runWeeklyDigests(
       await sendEmailStrict({ to: m.email, template: 'weekly_digest', data: { ...data } });
       sent++;
     } catch (err) {
-      // The slot is already claimed; a failed send won't retry until next week.
       // eslint-disable-next-line no-console
       console.error(`[weekly-digest] send failed for ${m.id}`, err);
+      // Roll back the week-slot claim so a later run inside the Monday window
+      // retries this member - a transient provider blip (e.g. a 429) must not
+      // silently drop their whole week's briefing.
+      await prisma.domainEvent
+        .delete({ where: { id: `weekly_digest:${m.id}:${weekKey}` } })
+        .catch(() => undefined);
     }
   }
 

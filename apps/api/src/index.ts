@@ -463,7 +463,15 @@ async function ensureRuntimeSchema(): Promise<void> {
          );
        EXCEPTION WHEN OTHERS THEN NULL; END $$;`,
     ]) {
-      await prisma.$executeRawUnsafe(ddl);
+      // Per-statement guard: one failing heal (e.g. an extension the DB role
+      // can't create, or an index on a not-yet-present column) must not abort
+      // the whole block and starve later tables/columns of their creation.
+      try {
+        await prisma.$executeRawUnsafe(ddl);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[schema] heal statement failed (continuing):', String(err).slice(0, 200));
+      }
     }
     // Group white-label fields - prod was missing some, which 500'd group
     // creation (Prisma includes defaulted columns in the INSERT) and the
@@ -483,6 +491,7 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "humanTakeover" BOOLEAN NOT NULL DEFAULT false;`,
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "assignedAdminId" TEXT;`,
       `ALTER TABLE "SupportTicket" ADD COLUMN IF NOT EXISTS "escalatedAt" TIMESTAMP(3);`,
+      `CREATE INDEX IF NOT EXISTS "SupportTicket_priority_updatedAt_idx" ON "SupportTicket" ("priority", "updatedAt" DESC);`,
       // ROUL can now speak inside a ticket thread (senderType 'roul'); no schema
       // change needed for SupportMessage - senderType is already free-text.
       // ROUL Support conversations surfaced in the member's Messages tab.
@@ -629,7 +638,15 @@ async function ensureRuntimeSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS "SupportEscalation_route_status_idx" ON "SupportEscalation" ("route", "status");`,
       `CREATE INDEX IF NOT EXISTS "SupportEscalation_category_createdAt_idx" ON "SupportEscalation" ("category", "createdAt" DESC);`,
     ]) {
-      await prisma.$executeRawUnsafe(ddl);
+      // Per-statement guard: one failing heal (e.g. an extension the DB role
+      // can't create, or an index on a not-yet-present column) must not abort
+      // the whole block and starve later tables/columns of their creation.
+      try {
+        await prisma.$executeRawUnsafe(ddl);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[schema] heal statement failed (continuing):', String(err).slice(0, 200));
+      }
     }
     // eslint-disable-next-line no-console
     console.log('[schema] ensured GroupMessage table + drifted columns');

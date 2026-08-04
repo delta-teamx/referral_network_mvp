@@ -119,7 +119,10 @@ export function SupportChatWidget() {
         });
         if (cancelled) return;
         const seen = Number(window.localStorage.getItem(seenKey) ?? '0');
-        setHasUnseen(t.messages.length > seen && t.messages[t.messages.length - 1]?.senderType === 'agent');
+        const lastType = t.messages[t.messages.length - 1]?.senderType;
+        // Light the unseen dot for any support-side reply - ROUL ('roul') or a
+        // human agent ('agent') - not just human replies.
+        setHasUnseen(t.messages.length > seen && (lastType === 'agent' || lastType === 'roul'));
       } catch {
         /* silent */
       }

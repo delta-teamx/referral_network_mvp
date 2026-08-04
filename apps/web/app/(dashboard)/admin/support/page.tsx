@@ -123,8 +123,10 @@ export default function AdminSupportPage() {
       if (evt?.ticketId && evt.ticketId === activeId) void loadThread(activeId);
     });
     return off;
+    // `filter` included so the handler always calls loadList bound to the
+    // current filter (else a live event would refetch the previous filter).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, accessToken]);
+  }, [activeId, accessToken, filter]);
 
   async function reply() {
     if (!accessToken || !activeId || !draft.trim()) return;

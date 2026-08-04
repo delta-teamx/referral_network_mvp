@@ -279,10 +279,14 @@ export function NotificationBell() {
               <li className="px-4 py-6 text-center text-xs text-gray-500">No notifications yet</li>
             ) : (
               items.map((n) => {
-                // A ROUL/support notification opens the support widget on its
-                // thread; everything else uses the per-type destination.
-                const ticketId = n.data?.ticketId;
+                // Precedence: a per-type destination (href) wins. Only fall back
+                // to opening the member support widget on a ticket when the type
+                // has NO href - i.e. member-facing support pings (admin_message,
+                // support_reply). Admin-facing types (support_ticket,
+                // support_escalation, roul_system_request) carry a ticketId too
+                // but must navigate to their admin page, not the member widget.
                 const href = TYPE_HREF[n.type];
+                const ticketId = href ? undefined : n.data?.ticketId;
                 const isReminder = n.type === 'booking_reminder';
                 const isAdmin = n.type === 'admin_message';
                 const inner = (

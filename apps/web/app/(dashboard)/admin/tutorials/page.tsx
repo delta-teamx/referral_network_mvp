@@ -251,6 +251,6 @@ export default function AdminTutorialsPage() {
 function extractId(url: string): string | null {
   const s = url.trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
-  const m = s.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([a-zA-Z0-9_-]{11})/);
+  const m = s.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/|\/v\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1]! : null;
 }

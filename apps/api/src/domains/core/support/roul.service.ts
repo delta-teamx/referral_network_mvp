@@ -83,13 +83,22 @@ export async function setRoulInstructions(text: string | null): Promise<void> {
 }
 
 /**
+ * A non-negotiable escalation clause appended to EVERY system prompt, whatever
+ * the (admin-editable) instructions say. This guarantees ROUL never silently
+ * loses its ability to escalate because a prompt rewrite dropped the token.
+ */
+const MANDATORY_ESCALATION_CLAUSE = `
+
+NON-NEGOTIABLE ESCALATION RULE (always applies): If you cannot fully resolve the user's issue from the KNOWLEDGE, do NOT guess. Reply with one short line saying you're forwarding it to the team, and begin that reply with the token [ESCALATE] on its own line (the system removes it before the user sees it).`;
+
+/**
  * Build the system prompt for a turn. `knowledge` is the grounding text - either
  * the top-K chunks retrieved from the pgvector store (RAG) or, as a fallback,
  * the full curated KB. `instructions` is the (possibly admin-edited) persona +
- * rules block.
+ * rules block. The mandatory escalation clause is always appended.
  */
 function buildSystemPrompt(knowledge: string, instructions: string): string {
-  return `${instructions}\n\nKNOWLEDGE:\n${knowledge}`;
+  return `${instructions}${MANDATORY_ESCALATION_CLAUSE}\n\nKNOWLEDGE:\n${knowledge}`;
 }
 
 /** Strip markdown / enforce plain text and the 3-line cap. */
@@ -172,12 +181,15 @@ export async function askRoul(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[roul] completion failed', err);
-    if (ctx?.isOnboarding && user) {
+    // Any signed-in member (not just onboarding) gets routed to a human on an
+    // OpenAI failure - never a dead-end "try again" with no safety net. The
+    // triage classifier is also down, so this reliably lands on the human email.
+    if (user) {
       const { userMessage } = await routeEscalation(
         user,
         [...history, { role: 'user', content: q }],
         q,
-        ctx.ticketId,
+        ctx?.ticketId,
       );
       return { answer: userMessage, escalated: true };
     }

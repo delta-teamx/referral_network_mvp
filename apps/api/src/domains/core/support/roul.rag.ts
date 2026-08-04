@@ -148,26 +148,29 @@ export async function syncKnowledge(
     embedded.push({ ...c, vec });
   }
 
-  // Replace the curated set atomically-ish (delete then insert).
-  await prisma.$executeRawUnsafe(`DELETE FROM "KnowledgeChunk" WHERE "source" = 'curated';`);
-  let synced = 0;
-  for (let i = 0; i < embedded.length; i++) {
-    const c = embedded[i]!;
-    const id = `curated-${KNOWLEDGE_VERSION}-${i}`;
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "KnowledgeChunk" ("id","title","content","source","embedding","version","updatedAt")
-       VALUES ($1,$2,$3,'curated', '${toVectorLiteral(c.vec)}'::vector, $4, CURRENT_TIMESTAMP)
-       ON CONFLICT ("id") DO UPDATE SET
-         "title"=EXCLUDED."title", "content"=EXCLUDED."content",
-         "embedding"=EXCLUDED."embedding", "version"=EXCLUDED."version",
-         "updatedAt"=CURRENT_TIMESTAMP;`,
-      id,
-      c.title,
-      c.content,
-      KNOWLEDGE_VERSION,
-    );
-    synced++;
-  }
+  // Replace the curated set ATOMICALLY: wrap the delete + all inserts in one
+  // transaction so a mid-loop failure can never leave a partially-populated KB
+  // (embeddings were computed above, outside the tx, so no long calls inside it).
+  const synced = embedded.length;
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(`DELETE FROM "KnowledgeChunk" WHERE "source" = 'curated';`);
+    for (let i = 0; i < embedded.length; i++) {
+      const c = embedded[i]!;
+      const id = `curated-${KNOWLEDGE_VERSION}-${i}`;
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "KnowledgeChunk" ("id","title","content","source","embedding","version","updatedAt")
+         VALUES ($1,$2,$3,'curated', '${toVectorLiteral(c.vec)}'::vector, $4, CURRENT_TIMESTAMP)
+         ON CONFLICT ("id") DO UPDATE SET
+           "title"=EXCLUDED."title", "content"=EXCLUDED."content",
+           "embedding"=EXCLUDED."embedding", "version"=EXCLUDED."version",
+           "updatedAt"=CURRENT_TIMESTAMP;`,
+        id,
+        c.title,
+        c.content,
+        KNOWLEDGE_VERSION,
+      );
+    }
+  });
 
   await prisma.appSetting.upsert({
     where: { key: KB_VERSION_KEY },
