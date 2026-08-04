@@ -25,6 +25,7 @@ import {
 import { useEffect } from 'react';
 import { fadeInUp, staggerContainer } from '../lib/animations';
 import { HeroShowcase } from '../components/home/HeroShowcase';
+import { TutorialHomeSection } from '../components/home/TutorialHomeSection';
 import { FoundingOffer } from '../components/marketing/FoundingOffer';
 import { JsonLd, faqSchema } from '../components/seo/JsonLd';
 import { useI18n } from '../lib/i18n';
@@ -166,6 +167,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ═══ SEE HOW IT WORKS (admin-featured tutorial video) ═══ */}
+      <TutorialHomeSection />
 
       {/* ═══ FEATURED PARTNERSHIP: NRG ═══ */}
       <section className="border-y border-gray-100 bg-white py-10">

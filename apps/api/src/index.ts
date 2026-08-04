@@ -49,6 +49,8 @@ import { registerReferralTrackingSubscribers } from './domains/network/referral-
 import { registerGroupSubscribers } from './domains/network/groups/groups.subscribers.js';
 import { pipelineRouter } from './domains/network/pipeline/pipeline.routes.js';
 import { supportRouter } from './domains/core/support/support.routes.js';
+import { tutorialsRouter, adminTutorialsRouter } from './domains/core/tutorials/tutorials.routes.js';
+import { seedTutorials } from './domains/core/tutorials/tutorials.service.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { mutationRateLimit, rateLimit } from './middleware/rateLimit.js';
 import { initSentry, sentryErrorHandler } from './config/sentry.js';
@@ -183,6 +185,8 @@ app.use('/api/v1/referral-tracking', referralTrackingRouter);
 app.use('/api/v1/rewards', rewardsRouter);
 app.use('/api/v1/pipeline', pipelineRouter);
 app.use('/api/v1/support', rateLimit({ windowMs: 60_000, max: 30, key: 'support' }), supportRouter);
+app.use('/api/v1/tutorials', tutorialsRouter);
+app.use('/api/v1/admin/tutorials', adminTutorialsRouter);
 
 // 404 + error handler (order matters). Sentry hooks BEFORE our handler so
 // it captures the error with full request context before we format JSON.
@@ -575,6 +579,24 @@ async function ensureRuntimeSchema(): Promise<void> {
          ALTER TABLE "GroupAnnouncement" ADD CONSTRAINT "GroupAnnouncement_groupId_fkey"
            FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE;
        EXCEPTION WHEN duplicate_object THEN NULL; WHEN others THEN NULL; END $$;`,
+      // Admin-managed YouTube tutorials (homepage + dashboard Tutorials tab).
+      `CREATE TABLE IF NOT EXISTS "TutorialVideo" (
+         "id" TEXT NOT NULL,
+         "youtubeId" TEXT NOT NULL,
+         "title" TEXT NOT NULL,
+         "description" TEXT,
+         "category" TEXT,
+         "showOnHomepage" BOOLEAN NOT NULL DEFAULT false,
+         "showInTutorials" BOOLEAN NOT NULL DEFAULT true,
+         "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+         "sortOrder" INTEGER NOT NULL DEFAULT 0,
+         "createdById" TEXT,
+         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         CONSTRAINT "TutorialVideo_pkey" PRIMARY KEY ("id")
+       );`,
+      `CREATE INDEX IF NOT EXISTS "TutorialVideo_showInTutorials_sortOrder_idx" ON "TutorialVideo" ("showInTutorials", "sortOrder");`,
+      `CREATE INDEX IF NOT EXISTS "TutorialVideo_showOnHomepage_idx" ON "TutorialVideo" ("showOnHomepage");`,
     ]) {
       await prisma.$executeRawUnsafe(ddl);
     }
@@ -604,6 +626,9 @@ async function start(): Promise<void> {
 
   // Ensure the official NRG group + its admins exist (idempotent, non-fatal).
   await seedNrgGroup();
+
+  // Seed the launch tutorial videos (idempotent, non-fatal).
+  await seedTutorials();
 
   // Background jobs - BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();

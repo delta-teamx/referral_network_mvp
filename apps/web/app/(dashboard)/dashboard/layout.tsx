@@ -8,6 +8,7 @@ import {
   BarChart3,
   Calendar,
   FileSignature,
+  GraduationCap,
   KanbanSquare,
   LayoutDashboard,
   MessageSquare,
@@ -75,6 +76,7 @@ const NAV: NavEntry[] = [
     ],
   },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/tutorials', label: 'Tutorials', icon: GraduationCap },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 

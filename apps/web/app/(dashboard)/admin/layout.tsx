@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { BarChart3, Calendar, Coins, FileSignature, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
+import { BarChart3, Calendar, Coins, FileSignature, GraduationCap, Headset, LayoutDashboard, MessageSquare, Shield, Trophy, Users, UsersRound, Video } from 'lucide-react';
 import { useAuthStore } from '../../../stores/auth';
 
 type IconType = typeof LayoutDashboard;
@@ -45,6 +45,7 @@ const NAV: NavEntry[] = [
   },
   { href: '/admin/groups', label: 'Groups', icon: UsersRound },
   { href: '/admin/contracts', label: 'Contracts', icon: FileSignature },
+  { href: '/admin/tutorials', label: 'Tutorials', icon: GraduationCap },
 ];
 
 function isGroup(e: NavEntry): e is NavGroup {

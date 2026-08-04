@@ -1090,3 +1090,25 @@ model ReferralTracking {
   @@index([inviteeEmail])
   @@index([inviteeUserId])
 }
+
+// ==================== TUTORIAL VIDEOS ====================
+
+/// Admin-managed YouTube tutorials shown on the marketing homepage and the
+/// dashboard Tutorials tab. Flags decide where each video appears.
+model TutorialVideo {
+  id              String   @id @default(uuid())
+  youtubeId       String
+  title           String
+  description     String?
+  category        String?
+  showOnHomepage  Boolean  @default(false)
+  showInTutorials Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([showInTutorials, sortOrder])
+  @@index([showOnHomepage])
+}
