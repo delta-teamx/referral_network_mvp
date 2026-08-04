@@ -76,7 +76,7 @@ const NAV: NavEntry[] = [
     ],
   },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/dashboard/tutorials', label: 'Tutorials', icon: GraduationCap },
+  { href: '/dashboard/tutorials', label: 'Tutorials', icon: GraduationCap, tag: 'NEW' },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];
 
