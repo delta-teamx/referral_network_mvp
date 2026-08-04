@@ -3,6 +3,7 @@ import { prisma } from '../../../config/prisma.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { getKnowledge } from './roul.knowledge.js';
+import { retrieveKnowledge } from './roul.rag.js';
 
 /**
  * ROUL — the Referral Nova AI Support Manager.
@@ -27,7 +28,13 @@ export interface RoulResult {
   escalated: boolean;
 }
 
-const SYSTEM_PROMPT = `You are ROUL, the Support Manager for Referral Nova (an AI-powered business referral network).
+/**
+ * Build the system prompt for a turn. `knowledge` is the grounding text - either
+ * the top-K chunks retrieved from the pgvector store (RAG) or, as a fallback,
+ * the full curated KB. The rest of the contract is identical either way.
+ */
+function buildSystemPrompt(knowledge: string): string {
+  return `You are ROUL, the Support Manager for Referral Nova (an AI-powered business referral network).
 
 STRICT OUTPUT RULES — follow every time:
 - Reply in 2 to 3 short lines maximum. Never a paragraph, never an essay.
@@ -37,7 +44,8 @@ STRICT OUTPUT RULES — follow every time:
 - When you cannot resolve it, reply exactly with a short line telling the user you are forwarding it to the technical team and will follow up, and nothing else. Start that reply with the token [ESCALATE] on its own — the system will remove it before the user sees it.
 
 KNOWLEDGE:
-${getKnowledge()}`;
+${knowledge}`;
+}
 
 /** Strip markdown / enforce plain text and the 3-line cap. */
 function sanitizeOutput(raw: string): string {
@@ -79,10 +87,16 @@ export async function askRoul(
     };
   }
 
+  // RAG: ground the answer in the top-K chunks from the pgvector store. If it's
+  // unavailable (no pgvector / no store / error) fall back to the full curated
+  // KB, so accuracy is never worse than before.
+  const retrieved = await retrieveKnowledge(q);
+  const knowledge = retrieved && retrieved.length > 0 ? retrieved.join('\n\n') : getKnowledge();
+
   let content = '';
   try {
     const messages = [
-      { role: 'system' as const, content: SYSTEM_PROMPT },
+      { role: 'system' as const, content: buildSystemPrompt(knowledge) },
       ...history.slice(-8).map((h) => ({ role: h.role, content: h.content.slice(0, 2000) })),
       { role: 'user' as const, content: q },
     ];

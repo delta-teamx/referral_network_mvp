@@ -636,6 +636,16 @@ async function start(): Promise<void> {
   // Seed the launch tutorial videos (idempotent, non-fatal).
   await seedTutorials();
 
+  // Sync ROUL's knowledge into the pgvector store (idempotent by KB version).
+  // Non-fatal + self-skipping: no pgvector or no OpenAI => ROUL uses the curated
+  // KB fallback and this is a no-op.
+  void import('./domains/core/support/roul.rag.js')
+    .then(({ syncKnowledge }) => syncKnowledge())
+    .then((r) => {
+      if (r.synced > 0) console.log(`[roul-rag] knowledge store ready (${r.synced} chunks)`);
+    })
+    .catch((err) => console.warn('[roul-rag] sync skipped:', String(err)));
+
   // Background jobs - BullMQ when REDIS_URL is real, setInterval otherwise.
   void startScheduler();
   startMatchmakingScheduler();
