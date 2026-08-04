@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { deleteAttachmentPrefixes } from '../../network/messaging/messaging.service.js';
 import { emitToAdmins, emitToUser } from '../../../realtime/io.js';
@@ -86,7 +87,7 @@ export async function createTicket(input: {
 
   // Surface the new ticket to every admin's bell.
   const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN', deletedAt: null, NOT: { email: 'roul-support@referralnova.com' } },
+    where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
     select: { id: true },
   });
   await Promise.all(
@@ -236,7 +237,7 @@ export async function addVisitorMessage(
   // loop actually closes - "they reply, we get back to them".
   if (!isAdminSender && (ticket.priority || ticket.humanTakeover)) {
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', deletedAt: null },
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
       select: { id: true },
     });
     await Promise.all(

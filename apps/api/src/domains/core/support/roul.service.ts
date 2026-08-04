@@ -1,5 +1,6 @@
 import { env } from '../../../config/env.js';
 import { prisma } from '../../../config/prisma.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
 import { getKnowledge } from './roul.knowledge.js';
@@ -332,7 +333,7 @@ export async function escalateToTechnicalAdmin(
   // Surface in the admin bell for every admin.
   try {
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', deletedAt: null },
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
       select: { id: true },
     });
     await Promise.all(

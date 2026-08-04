@@ -1,5 +1,6 @@
 import { env } from '../../../config/env.js';
 import { prisma } from '../../../config/prisma.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { sendEmail } from '../notifications/email.service.js';
 import { createNotification } from '../notifications/notifications.service.js';
 
@@ -224,7 +225,10 @@ export async function routeEscalation(
   const escalationId = await recordTriage(decision, user, transcript, ticketId);
 
   const admins = await prisma.user
-    .findMany({ where: { role: 'ADMIN', deletedAt: null }, select: { id: true } })
+    .findMany({
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
+      select: { id: true },
+    })
     .catch(() => [] as { id: string }[]);
 
   if (decision.route === 'human') {

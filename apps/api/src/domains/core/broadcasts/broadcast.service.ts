@@ -1,11 +1,8 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { sendEmail } from '../notifications/email.service.js';
-import {
-  ANNOUNCER_EMAIL,
-  ROUL_EMAIL,
-  deliverBroadcastToMember,
-} from '../../network/messaging/messaging.service.js';
+import { deliverBroadcastToMember } from '../../network/messaging/messaging.service.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 
 /**
  * Founder / team broadcasts.
@@ -61,7 +58,7 @@ export async function sendBroadcast(
     where: {
       deletedAt: null,
       role: { not: 'ADMIN' },
-      NOT: { email: { in: [ROUL_EMAIL, ANNOUNCER_EMAIL] } },
+      NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } },
     },
     select: { id: true, email: true, firstName: true },
   });
@@ -130,7 +127,7 @@ export async function countBroadcastAudience(): Promise<number> {
     where: {
       deletedAt: null,
       role: { not: 'ADMIN' },
-      NOT: { email: { in: [ROUL_EMAIL, ANNOUNCER_EMAIL] } },
+      NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } },
     },
   });
 }

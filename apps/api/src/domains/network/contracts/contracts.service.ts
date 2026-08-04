@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
 import { env } from '../../../config/env.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
@@ -34,7 +35,8 @@ function appOrigin(): string {
 
 async function emailAdmins(template: 'contract_sent' | 'contract_signed', data: Record<string, unknown>) {
   const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN', deletedAt: null },
+    // Skip synthetic system accounts (ROUL, announcements) - not real inboxes.
+    where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
     select: { email: true },
   });
   await Promise.all(admins.map((a) => sendEmail({ to: a.email, template, data })));

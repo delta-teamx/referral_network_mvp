@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../config/prisma.js';
 import { AppError } from '../../../utils/AppError.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { eventBus } from '../../core/events/index.js';
 import { sanitizeText } from '../../../utils/sanitize.js';
 import { TIERS, type Tier } from '../../billing/billing.tiers.js';
@@ -828,7 +829,6 @@ const NRG_LEADERS: Array<{ email: string; role: 'LEADER' | 'CO_LEADER' }> = [
   { email: 'mike@networkreferralgroup.com', role: 'LEADER' },
   { email: 'lori@lorilandin.com', role: 'CO_LEADER' },
 ];
-const ROUL_SUPPORT_EMAIL = 'roul-support@referralnova.com';
 
 /**
  * Ensure the official NRG group exists and its admins are wired up. Idempotent
@@ -872,7 +872,7 @@ export async function seedNrgGroup(): Promise<void> {
     // Every platform admin (except the ROUL support bot) joins as CO_LEADER so
     // they can test and manage what we ship.
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', deletedAt: null, NOT: { email: ROUL_SUPPORT_EMAIL } },
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
       select: { id: true },
     });
 

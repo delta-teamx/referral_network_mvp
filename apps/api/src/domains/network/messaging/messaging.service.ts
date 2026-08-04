@@ -5,6 +5,11 @@ import { sanitizeText } from '../../../utils/sanitize.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { assertEngagementQuota } from '../../billing/billing.tiers.js';
 import { emitNewMessage, emitRead } from './messaging.realtime.js';
+import {
+  ANNOUNCER_EMAIL as ANNOUNCER_EMAIL_SYS,
+  ROUL_SUPPORT_EMAIL,
+  SYSTEM_ACCOUNT_EMAILS,
+} from '../../../config/system-accounts.js';
 
 /**
  * In-app messaging between two users.
@@ -19,7 +24,7 @@ import { emitNewMessage, emitRead } from './messaging.realtime.js';
 // ---------------------------------------------------------------------------
 
 /** The system account that admins speak through in the member's Messages tab. */
-export const ROUL_EMAIL = 'roul-support@referralnova.com';
+export const ROUL_EMAIL = ROUL_SUPPORT_EMAIL;
 let roulUserIdCache: string | null = null;
 
 /** Get (or lazily create) the ROUL Support system user. Cached per process. */
@@ -70,7 +75,7 @@ export async function startOfficialConversationFromRoul(
 /** The system account Founder/admin announcements are delivered from. Distinct
  *  from ROUL Support so members get a separate, clearly-labeled announcements
  *  thread. */
-export const ANNOUNCER_EMAIL = 'announcements@referralnova.com';
+export const ANNOUNCER_EMAIL = ANNOUNCER_EMAIL_SYS;
 let announcerUserIdCache: string | null = null;
 
 /** Get (or lazily create) the "Referral Nova" announcements system user. */
@@ -390,7 +395,7 @@ export async function sendMessage(
     // once per recipient.
     if (isOfficial && !fromRoul && !isBroadcast) {
       const admins = await prisma.user.findMany({
-        where: { role: 'ADMIN', deletedAt: null, NOT: { email: ROUL_EMAIL } },
+        where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
         select: { id: true },
       });
       await Promise.all(

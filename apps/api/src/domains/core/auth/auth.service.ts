@@ -7,6 +7,7 @@ import type {
   SignupInput,
 } from '@refnet/shared';
 import { prisma } from '../../../config/prisma.js';
+import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 import { AppError } from '../../../utils/AppError.js';
 import { generateToken, hashToken } from '../../../utils/crypto.js';
 import { hashPassword, verifyPassword } from '../../../utils/password.js';
@@ -117,8 +118,9 @@ export async function notifyAdminsOfSignup(user: {
 }): Promise<void> {
   try {
     const admins = await prisma.user.findMany({
-      // Exclude the ROUL Support system account (a role=ADMIN system user).
-      where: { role: 'ADMIN', deletedAt: null, NOT: { email: 'roul-support@referralnova.com' } },
+      // Exclude synthetic system accounts (ROUL, announcements) - role=ADMIN
+      // rows that are not real inboxes, so signup emails don't bounce off them.
+      where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
       select: { email: true },
     });
     if (admins.length === 0) return;
