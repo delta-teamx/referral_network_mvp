@@ -78,6 +78,14 @@ function hmToMin(s: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
+// Google Calendar sync is fully built and working, but the Google OAuth app is
+// under verification review. Until it's approved, members hit Google's
+// "unverified app" screen, so we show a "Coming soon" button instead of the
+// live Connect control. Flip this to `true` (and redeploy) the moment Google
+// approves the app - no other change needed; the backend stays wired the whole
+// time.
+const GOOGLE_CALENDAR_LIVE = false;
+
 export default function BookingsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
@@ -210,7 +218,20 @@ export default function BookingsPage() {
           >
             <Video size={14} /> Book a call
           </Link>
-          <GoogleCalendarButton accessToken={accessToken} />
+          {GOOGLE_CALENDAR_LIVE ? (
+            <GoogleCalendarButton accessToken={accessToken} />
+          ) : (
+            <button
+              disabled
+              title="Google Calendar sync is coming soon"
+              className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-dashed border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-400"
+            >
+              <CalendarPlus size={14} /> Integrate Google Calendar
+              <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">
+                Coming soon
+              </span>
+            </button>
+          )}
         </div>
       </header>
 
