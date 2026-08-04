@@ -701,6 +701,12 @@ function GoogleCalendarButton({ accessToken }: { accessToken: string | null }) {
         </button>
       )}
       {notice && <span className="text-[11px] font-medium text-gray-500">{notice}</span>}
+      {connected === false && !notice && (
+        <span className="max-w-[15rem] text-right text-[11px] leading-tight text-gray-400">
+          If Google shows an &ldquo;app not verified&rdquo; screen, tap{' '}
+          <span className="font-semibold">Advanced → continue</span> to allow it.
+        </span>
+      )}
     </div>
   );
 }
