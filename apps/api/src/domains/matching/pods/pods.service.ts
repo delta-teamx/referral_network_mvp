@@ -1,8 +1,13 @@
 import { prisma } from '../../../config/prisma.js';
 import { createZoomMeeting } from '../../integrations/zoom.service.js';
 import { sendEmail } from '../../core/notifications/email.service.js';
+import { createNotification } from '../../core/notifications/notifications.service.js';
 import { eventBus } from '../../core/events/index.js';
 import { env } from '../../../config/env.js';
+
+// A platform admin who joins EVERY pod as facilitator/host - always on the
+// board so there's a familiar face to run it. Resolved by email at run time.
+const POD_HOST_EMAIL = 'brian@virtualpros.com';
 
 // A "weekly board" forms once there are a few eligible members. The old min of
 // 10 meant a young network (which is every network at launch) silently formed
@@ -95,6 +100,16 @@ export async function runDailyMatchmaking(
   // 3. Form pods using ICP-based matching + rotation
   const pods = formPods(members, history);
 
+  // Resolve the standing pod host (a platform admin) once - added to every pod.
+  const host = await prisma.user.findFirst({
+    where: { email: POD_HOST_EMAIL, deletedAt: null },
+    select: { id: true, email: true, firstName: true, lastName: true },
+  });
+  if (!host) {
+    // eslint-disable-next-line no-console
+    console.warn(`[matchmaking] pod host ${POD_HOST_EMAIL} not found - pods will form without a host`);
+  }
+
   // 4. Create Zoom meetings + persist pods + send invitations
   let totalMatched = 0;
   for (const pod of pods) {
@@ -115,7 +130,13 @@ export async function runDailyMatchmaking(
           podSize: pod.length,
           matchCriteria: { industries: [...new Set(pod.map((m) => m.industry))] },
           members: {
-            create: pod.map((m) => ({ userId: m.userId })),
+            create: [
+              ...pod.map((m) => ({ userId: m.userId, isHost: false })),
+              // Always add the standing host (unless somehow already in the pod).
+              ...(host && !pod.some((m) => m.userId === host.id)
+                ? [{ userId: host.id, isHost: true }]
+                : []),
+            ],
           },
         },
       });
@@ -137,32 +158,56 @@ export async function runDailyMatchmaking(
         });
       }
 
-      // Send invitations
+      // Send invitations - a full pod invite (host + who's in the group + a
+      // direct Zoom link) as both an email and an in-app bell notification, to
+      // every member AND the host.
       const origin = env.FRONTEND_URL.split(',')[0] ?? 'https://dashboard.referralnova.com';
-      for (const member of pod) {
-        const otherMembers = pod
-          .filter((m) => m.userId !== member.userId)
-          .map((m) => `${m.firstName} ${m.lastName} (${m.industry})`)
-          .slice(0, 5);
+      const whenLabel = tomorrow9am.toLocaleString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/New_York',
+        timeZoneName: 'short',
+      });
+      const hostName = host ? `${host.firstName} ${host.lastName}`.trim() : '';
+      const allNames = pod.map((m) => `${m.firstName} ${m.lastName} (${m.industry})`);
+
+      const recipients: Array<{ userId: string; email: string; selfLabel: string | null }> = [
+        ...pod.map((m) => ({
+          userId: m.userId,
+          email: m.email,
+          selfLabel: `${m.firstName} ${m.lastName} (${m.industry})`,
+        })),
+        ...(host ? [{ userId: host.id, email: host.email, selfLabel: null }] : []),
+      ];
+
+      for (const r of recipients) {
+        const others = allNames.filter((n) => n !== r.selfLabel);
+        const podMembers =
+          others.slice(0, 8).join(', ') + (others.length > 8 ? ` and ${others.length - 8} more` : '');
 
         void sendEmail({
-          to: member.email,
-          template: 'event_registered',
+          to: r.email,
+          template: 'pod_invite',
           data: {
-            title: 'AI-Matched Networking Pod',
-            whenLabel: tomorrow9am.toLocaleString('en-US', {
-              weekday: 'long',
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            }),
+            title: 'AI-Matched Networking Board',
+            whenLabel,
+            hostName,
+            podMembers,
             zoomUrl: zoom.joinUrl,
             eventUrl: `${origin}/events`,
-            podMembers: otherMembers.join(', ') + (pod.length > 6 ? ` and ${pod.length - 6} more` : ''),
-            inviteUrl: `${origin}/signup?ref=${member.userId}`,
           },
         });
+
+        void createNotification({
+          userId: r.userId,
+          type: 'pod_invite',
+          title: "You're in a networking board 🎉",
+          body: `Your AI-matched board is ${whenLabel}.${hostName ? ` Host: ${hostName}.` : ''} Tap for the group and the Zoom link.`,
+          data: { podId: dbPod.id, zoomUrl: zoom.joinUrl },
+        }).catch(() => undefined);
       }
 
       totalMatched += pod.length;

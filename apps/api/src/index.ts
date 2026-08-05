@@ -665,6 +665,8 @@ async function ensureRuntimeSchema(): Promise<void> {
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestGcalEventId" TEXT;`,
       // Before-call reminder email: sent once per booking by the scheduler sweep.
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3);`,
+      // Pod host: a platform admin who joins every matchmaking pod as facilitator.
+      `ALTER TABLE "PodMember" ADD COLUMN IF NOT EXISTS "isHost" BOOLEAN NOT NULL DEFAULT false;`,
       `CREATE INDEX IF NOT EXISTS "BookingCall_status_startsAt_idx" ON "BookingCall" ("status", "startsAt");`,
       // Distributed scheduler lease: lets the setInterval fallback run each job on
       // only ONE instance at a time (multi-instance-safe without Redis).

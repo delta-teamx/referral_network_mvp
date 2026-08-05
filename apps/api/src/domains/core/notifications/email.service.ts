@@ -38,6 +38,7 @@ export type EmailTemplate =
   | 'booking_canceled'
   | 'booking_reminder'
   | 'booking_rescheduled'
+  | 'pod_invite'
   | 'group_join_request'
   | 'group_request_approved'
   | 'group_invite_welcome';
@@ -532,6 +533,38 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             P(`Your call with ${escapeHtml(withName)}${whenLabel ? ` on <strong>${escapeHtml(whenLabel)}</strong>` : ''} has been canceled.`) +
             P(`No problem - you can rebook whenever it suits you both.`) +
             button('Go to bookings', url),
+        ),
+      };
+    }
+    case 'pod_invite': {
+      const title = String(d.title ?? 'AI-Matched Networking Board');
+      const whenLabel = String(d.whenLabel ?? '');
+      const hostName = String(d.hostName ?? '');
+      const podMembers = String(d.podMembers ?? '');
+      const zoomUrl = String(d.zoomUrl ?? '');
+      const eventUrl = String(d.eventUrl ?? `${BRAND.app}/events`);
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const row = (label: string, val: string) =>
+        val ? P(`<strong>${label}:</strong> ${escapeHtml(val)}`) : '';
+      return {
+        subject: `You're matched: ${title}${whenLabel ? ` — ${whenLabel}` : ''}`,
+        text:
+          `You've been matched into a Referral Nova networking board - a small group our AI chose to be complementary, not competing.\n\n` +
+          (whenLabel ? `When: ${whenLabel}\n` : '') +
+          (hostName ? `Host: ${hostName}\n` : '') +
+          (podMembers ? `In your group: ${podMembers}\n` : '') +
+          (zoomUrl ? `\nJoin the Zoom board: ${zoomUrl}\n` : '') +
+          `\nDetails: ${eventUrl}`,
+        html: brandedLayout(
+          'Your networking board is set',
+          P(
+            `You've been matched into a Referral Nova networking board - a small group our AI chose to be complementary, not competing. Come ready to share who you're looking to meet.`,
+          ) +
+            row('When', whenLabel) +
+            row('Host', hostName) +
+            row('In your group', podMembers) +
+            (zoomUrl ? button('Join the Zoom board', zoomUrl) : button('View details', eventUrl)) +
+            P(`<span style="color:#888;font-size:12px">Add it to your calendar so you don't miss it.</span>`),
         ),
       };
     }

@@ -1012,6 +1012,7 @@ model PodMember {
   userId    String
   invited   Boolean  @default(true)
   attended  Boolean  @default(false)
+  isHost    Boolean  @default(false) // platform admin facilitator on every pod
   invitedBy String?  // userId of who invited them (null = AI-selected)
   createdAt DateTime @default(now())
 
