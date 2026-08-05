@@ -98,6 +98,7 @@ export default function BookingsPage() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string>(dayKey(new Date()));
+  const [rescheduleFor, setRescheduleFor] = useState<Booking | null>(null);
 
   async function load() {
     if (!accessToken) return;
@@ -429,6 +430,7 @@ export default function BookingsPage() {
                     meId={user?.id}
                     onRespond={respond}
                     onCancel={cancel}
+                    onReschedule={setRescheduleFor}
                     compact
                   />
                 ))}
@@ -449,7 +451,14 @@ export default function BookingsPage() {
           ) : (
             <ul className="space-y-3">
               {upcoming.map((b) => (
-                <BookingRow key={b.id} b={b} meId={user?.id} onRespond={respond} onCancel={cancel} />
+                <BookingRow
+                  key={b.id}
+                  b={b}
+                  meId={user?.id}
+                  onRespond={respond}
+                  onCancel={cancel}
+                  onReschedule={setRescheduleFor}
+                />
               ))}
             </ul>
           )}
@@ -506,8 +515,153 @@ export default function BookingsPage() {
       ) : (
         <AvailabilityEditor accessToken={accessToken} />
       )}
+
+      {rescheduleFor && (
+        <RescheduleModal
+          booking={rescheduleFor}
+          meId={user?.id}
+          accessToken={accessToken}
+          onClose={() => setRescheduleFor(null)}
+          onDone={() => {
+            setRescheduleFor(null);
+            void load();
+          }}
+        />
+      )}
     </div>
     </UpgradeGate>
+  );
+}
+
+/** Pick a new time (from the host's open slots) to move a confirmed call. */
+function RescheduleModal({
+  booking,
+  meId,
+  accessToken,
+  onClose,
+  onDone,
+}: {
+  booking: Booking;
+  meId: string | undefined;
+  accessToken: string | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [slots, setSlots] = useState<Array<{ startsAt: string; endsAt: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hostName = `${booking.host.firstName} ${booking.host.lastName}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await api.get<Array<{ startsAt: string; endsAt: string }>>(
+          `/api/v1/bookings/availability/${booking.host.id}?days=21`,
+          { accessToken: accessToken ?? undefined },
+        );
+        if (!cancelled) setSlots(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Could not load times');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [booking.host.id, accessToken]);
+
+  async function submit(slot: { startsAt: string; endsAt: string }) {
+    if (!accessToken) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.post(
+        `/api/v1/bookings/${booking.id}/reschedule`,
+        { startsAt: slot.startsAt, endsAt: slot.endsAt },
+        { accessToken: accessToken ?? undefined },
+      );
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Reschedule failed');
+      setSaving(false);
+    }
+  }
+
+  // Group slots by Eastern day for a tidy picker.
+  const byDay = new Map<string, Array<{ startsAt: string; endsAt: string }>>();
+  for (const s of slots) {
+    const label = new Date(s.startsAt).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    byDay.set(label, [...(byDay.get(label) ?? []), s]);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">Reschedule call</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="mb-4 text-sm text-gray-500">
+          Pick a new time from {meId === booking.host.id ? 'your' : `${hostName}'s`} available slots.
+          Both of you (and the team) get an updated calendar invite.
+        </p>
+
+        {error && (
+          <p className="mb-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+
+        {loading ? (
+          <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+        ) : slots.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+            No open times in the next few weeks.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {Array.from(byDay.entries()).map(([day, daySlots]) => (
+              <div key={day}>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  {day}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {daySlots.map((s) => (
+                    <button
+                      key={s.startsAt}
+                      disabled={saving}
+                      onClick={() => void submit(s)}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-primary hover:bg-primary-light/40 hover:text-primary disabled:opacity-50"
+                    >
+                      {new Date(s.startsAt).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -533,12 +687,14 @@ function BookingRow({
   meId,
   onRespond,
   onCancel,
+  onReschedule,
   compact = false,
 }: {
   b: Booking;
   meId: string | undefined;
   onRespond: (id: string, action: 'accept' | 'decline') => Promise<void>;
   onCancel: (id: string) => Promise<void>;
+  onReschedule?: (b: Booking) => void;
   compact?: boolean;
 }) {
   const peer = b.host.id === meId ? b.guest : b.host;
@@ -616,6 +772,14 @@ function BookingRow({
           >
             <Video size={12} /> Join Zoom
           </a>
+        )}
+        {b.status === 'confirmed' && onReschedule && (
+          <button
+            onClick={() => onReschedule(b)}
+            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"
+          >
+            <Clock size={11} className="mr-0.5 inline" /> Reschedule
+          </button>
         )}
         {(b.status === 'confirmed' || (b.status === 'pending' && !isHost)) && (
           <button
