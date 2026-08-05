@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -16,7 +15,6 @@ import {
   Mail,
   MapPin,
   MessageSquare,
-  Send,
   Sparkles,
   Star,
   Target,
@@ -96,102 +94,9 @@ function BadgeChips({ badges }: { badges: string[] }) {
   );
 }
 
-/** Inline form: send this member a client referral. */
-function ReferClientForm({
-  targetUserId,
-  targetName,
-  accessToken,
-  done,
-  sending,
-  setSending,
-  setDone,
-  onError,
-}: {
-  targetUserId: string;
-  targetName: string;
-  accessToken: string | null;
-  done: boolean;
-  sending: boolean;
-  setSending: (v: boolean) => void;
-  setDone: (v: boolean) => void;
-  onError: (m: string) => void;
-}) {
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!accessToken) return;
-    const form = new FormData(e.currentTarget);
-    setSending(true);
-    try {
-      await api.post(
-        '/api/v1/referrals',
-        {
-          receiverUserId: targetUserId,
-          clientName: String(form.get('clientName') ?? '').trim() || undefined,
-          clientEmail: String(form.get('clientEmail') ?? '').trim() || undefined,
-          clientPhone: String(form.get('clientPhone') ?? '').trim() || undefined,
-          notes: String(form.get('notes') ?? '').trim() || undefined,
-        },
-        { accessToken: accessToken ?? undefined },
-      );
-      setDone(true);
-    } catch (err) {
-      onError(
-        err instanceof ApiError
-          ? `${err.message}${err.status ? ` (status ${err.status})` : ''}`
-          : 'Could not send referral',
-      );
-    } finally {
-      setSending(false);
-    }
-  }
-
-  if (done) {
-    return (
-      <p className="mt-4 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
-        ✅ Referral sent - {targetName} has been notified and it&rsquo;s on both of your
-        pipelines.
-      </p>
-    );
-  }
-
-  return (
-    <form method="post" onSubmit={onSubmit} className="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
-      <p className="text-sm font-semibold text-gray-900">Send a referral to {targetName}</p>
-      <input
-        name="clientName"
-        placeholder="Client name"
-        required
-        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
-      />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <input
-          name="clientEmail"
-          type="email"
-          placeholder="Client email (optional)"
-          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
-        />
-        <input
-          name="clientPhone"
-          placeholder="Client phone (optional)"
-          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
-        />
-      </div>
-      <textarea
-        name="notes"
-        rows={2}
-        placeholder="What does the client need?"
-        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
-      />
-      <button
-        type="submit"
-        disabled={sending}
-        className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
-      >
-        {sending ? 'Sending…' : 'Send referral'}
-      </button>
-    </form>
-  );
-}
+/** Connection / intro state between the viewer and this member (mirrors the
+ *  AI-suggestion "intro request" flow: request -> the other member accepts). */
+type IntroState = 'none' | 'pending_outbound' | 'pending_inbound' | 'accepted' | 'declined';
 
 /**
  * The member profile - a clean CV-style layout: identity + contact block on
@@ -204,9 +109,8 @@ export function MemberProfileView({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [messaging, setMessaging] = useState(false);
-  const [referOpen, setReferOpen] = useState(false);
-  const [referSending, setReferSending] = useState(false);
-  const [referDone, setReferDone] = useState(false);
+  const [introState, setIntroState] = useState<IntroState>('none');
+  const [introBusy, setIntroBusy] = useState(false);
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const status = useAuthStore((s) => s.status);
@@ -215,6 +119,50 @@ export function MemberProfileView({ id }: { id: string }) {
   useEffect(() => {
     if (status === 'idle') void hydrate();
   }, [status, hydrate]);
+
+  // Know the intro/connection state so the button reflects it (request /
+  // pending / connected), mirroring the AI-suggestion intro request.
+  useEffect(() => {
+    if (!profile || !accessToken || !user || user.id === profile.user.id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await api.get<{ state: IntroState }>(
+          `/api/v1/connections/state/${profile.user.id}`,
+          { accessToken: accessToken ?? undefined },
+        );
+        if (!cancelled) setIntroState(res.state);
+      } catch {
+        /* non-critical - button falls back to "Request intro" */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, accessToken, user]);
+
+  async function requestIntro() {
+    if (!profile) return;
+    if (!accessToken) {
+      window.location.href =
+        '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+      return;
+    }
+    setIntroBusy(true);
+    setError(null);
+    try {
+      await api.post(
+        '/api/v1/connections/request',
+        { targetUserId: profile.user.id },
+        { accessToken: accessToken ?? undefined },
+      );
+      setIntroState('pending_outbound');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send the intro request.');
+    } finally {
+      setIntroBusy(false);
+    }
+  }
 
   async function startConversation() {
     if (!profile) return;
@@ -383,25 +331,31 @@ export function MemberProfileView({ id }: { id: string }) {
             >
               <MessageSquare size={14} /> {messaging ? 'Opening…' : 'Message'}
             </button>
-            <button
-              onClick={() => setReferOpen((v) => !v)}
-              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
-            >
-              <Send size={14} /> Send Referral
-            </button>
+            {introState === 'accepted' ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success/5 px-5 py-2.5 text-sm font-semibold text-success">
+                <Handshake size={14} /> Connected
+              </span>
+            ) : introState === 'pending_outbound' ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-5 py-2.5 text-sm font-semibold text-gray-500">
+                <Handshake size={14} /> Intro requested
+              </span>
+            ) : introState === 'pending_inbound' ? (
+              <button
+                onClick={() => router.push('/dashboard/network')}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
+              >
+                <Handshake size={14} /> Respond to intro
+              </button>
+            ) : (
+              <button
+                onClick={() => void requestIntro()}
+                disabled={introBusy}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary disabled:opacity-60"
+              >
+                <Handshake size={14} /> {introBusy ? 'Sending…' : 'Request intro'}
+              </button>
+            )}
           </div>
-        )}
-        {referOpen && user && (
-          <ReferClientForm
-            targetUserId={profile.user.id}
-            targetName={profile.user.firstName}
-            accessToken={accessToken}
-            done={referDone}
-            sending={referSending}
-            setSending={setReferSending}
-            setDone={setReferDone}
-            onError={(m) => setError(m)}
-          />
         )}
         {!user && (
           <div className="mt-5 border-t border-gray-100 pt-5">

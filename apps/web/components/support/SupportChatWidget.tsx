@@ -399,7 +399,9 @@ export function SupportChatWidget() {
             <div className="flex items-center gap-2">
               <Headset size={18} />
               <div>
-                <p className="text-sm font-bold leading-tight">Referral Nova Support</p>
+                <p className="text-sm font-bold leading-tight">
+                  {inDashboard ? 'Referral Nova Support' : 'Chat with us'}
+                </p>
                 <p className="flex items-center gap-1 text-[10px] text-white/80">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" />
                   Online 24/7
@@ -609,7 +611,7 @@ export function SupportChatWidget() {
             className="relative flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-xl transition hover:scale-105 hover:shadow-2xl"
             aria-label="Open support chat"
           >
-            <Headset size={18} /> Support
+            <Headset size={18} /> {inDashboard ? 'Support' : 'Questions?'}
             {hasUnseen && (
               <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-danger" />
             )}
