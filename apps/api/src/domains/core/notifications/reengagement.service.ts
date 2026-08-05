@@ -120,24 +120,46 @@ export async function runReengagementSweep(
 }
 
 /**
- * Profile-completion reminder: a single nudge ~24 hours after signup to members
- * who have NOT finished their profile (no profile row, or a profile with no
- * photo). Sent once per member. Separate audience from the re-engagement
- * sequence above (which only targets fully set-up, then-inactive members).
+ * Profile-completion reminders: a PERSISTENT sequence that keeps nudging members
+ * who signed up but never finished their profile (no profile row, or a profile
+ * with no photo - the photo is the join gate). A reminder goes out at each stage
+ * below until they complete, one email per stage, then we stop.
+ *
+ * Separate audience from the re-engagement sequence above (which only targets
+ * fully set-up, then-inactive members). Idempotency markers in DomainEvent make
+ * it safe to run every few hours and across instances.
  */
+const COMPLETE_STAGE_DAYS = [1, 3, 7, 14, 30] as const;
+const COMPLETE_STOP_AFTER_DAYS = 45;
+
+/** The highest completion stage a member `daysOld` days old should have received. */
+function completionStageFor(daysOld: number): number | null {
+  if (daysOld >= COMPLETE_STOP_AFTER_DAYS) return null;
+  for (let i = COMPLETE_STAGE_DAYS.length - 1; i >= 0; i--) {
+    if (daysOld >= COMPLETE_STAGE_DAYS[i]!) return COMPLETE_STAGE_DAYS[i]!;
+  }
+  return null;
+}
+
+/** Per-stage marker. Stage 1 keeps the legacy id so anyone who already got the
+ *  original single reminder isn't re-sent stage 1. */
+function completionMarkerId(userId: string, stage: number): string {
+  return stage === 1 ? `complete_profile:${userId}` : `complete_profile:${userId}:d${stage}`;
+}
+
 export async function runProfileCompletionReminders(
   opts: { dryRun?: boolean } = {},
-): Promise<{ scanned: number; sent: number; preview?: { email: string; hoursOld: number }[] }> {
+): Promise<{ scanned: number; sent: number; preview?: { email: string; stage: number; daysOld: number }[] }> {
   const now = Date.now();
-  const dayAgo = new Date(now - 1 * DAY); // signed up at least 24h ago
-  const fourteenDaysAgo = new Date(now - 14 * DAY); // ...but not older than 14d
+  const dayAgo = new Date(now - 1 * DAY); // first reminder at ~24h
+  const oldestToNudge = new Date(now - COMPLETE_STOP_AFTER_DAYS * DAY);
 
   const candidates = await prisma.user.findMany({
     where: {
       deletedAt: null,
       ...AUDIENCE_GUARD, // members only - no admins/staff/demo
-      createdAt: { lte: dayAgo, gte: fourteenDaysAgo },
-      // Incomplete = no profile at all, OR a profile with no photo.
+      createdAt: { lte: dayAgo, gte: oldestToNudge },
+      // Incomplete = no profile at all, OR a profile with no photo (join gate).
       OR: [{ memberProfile: { is: null } }, { memberProfile: { photoUrl: null } }],
     },
     select: { id: true, email: true, firstName: true, createdAt: true },
@@ -145,31 +167,38 @@ export async function runProfileCompletionReminders(
     orderBy: { createdAt: 'asc' },
   });
 
-  const preview: { email: string; hoursOld: number }[] = [];
+  const preview: { email: string; stage: number; daysOld: number }[] = [];
   let sent = 0;
   for (const u of candidates) {
-    const hoursOld = Math.floor((now - u.createdAt.getTime()) / (60 * 60 * 1000));
-    const markerId = `complete_profile:${u.id}`;
+    const daysOld = Math.floor((now - u.createdAt.getTime()) / DAY);
+    const stage = completionStageFor(daysOld);
+    if (!stage) continue;
+    const markerId = completionMarkerId(u.id, stage);
 
     if (opts.dryRun) {
       const already = await prisma.domainEvent.findUnique({
         where: { id: markerId },
         select: { id: true },
       });
-      if (!already) preview.push({ email: u.email, hoursOld });
+      if (!already) preview.push({ email: u.email, stage, daysOld });
       continue;
     }
 
+    // Claim the once-per-stage marker atomically; skip if already sent.
     try {
       await prisma.domainEvent.create({
-        data: { id: markerId, type: 'email.complete_profile', aggregateId: u.id, payload: {} },
+        data: { id: markerId, type: 'email.complete_profile', aggregateId: u.id, payload: { stage } },
       });
     } catch (err) {
       if (err && typeof err === 'object' && (err as { code?: string }).code === 'P2002') continue;
       throw err;
     }
 
-    await sendEmail({ to: u.email, template: 'complete_profile', data: { firstName: u.firstName } });
+    await sendEmail({
+      to: u.email,
+      template: 'complete_profile',
+      data: { firstName: u.firstName, stage },
+    });
     sent += 1;
   }
 
