@@ -70,6 +70,7 @@ export interface DomainEventMap {
   'booking.created': { bookingId: string; hostId: string; guestId: string };
   'booking.canceled': { bookingId: string };
   'booking.reminder_due': { bookingId: string };
+  'booking.rescheduled': { bookingId: string; hostId: string; guestId: string; oldStartsAt: string };
 
   // Networking events
   'networking_event.created': { eventId: string };

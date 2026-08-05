@@ -1,5 +1,7 @@
 import { env } from '../../../config/env.js';
+import { prisma } from '../../../config/prisma.js';
 import { recomputeAllTrustScores } from '../trust/trust.service.js';
+import { runBookingReminders } from '../../network/bookings/bookings.service.js';
 import { refreshAllSuggestions } from '../../matching/ai/ai-matching.service.js';
 import { retrainFromOutcomes } from '../../matching/ai/ai-learning.service.js';
 import {
@@ -148,7 +150,43 @@ const JOBS: JobDefinition[] = [
       return result;
     },
   },
+  {
+    name: 'booking-reminders',
+    intervalMs: 5 * 60 * 1000, // Every 5 min - email a reminder ~30 min before each call
+    handler: async () => {
+      const result = await runBookingReminders();
+      if (result.sent > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`[jobs] booking-reminders: scanned ${result.scanned}, sent ${result.sent}`);
+      }
+      return result;
+    },
+  },
 ];
+
+/**
+ * Distributed lease so the setInterval fallback runs each job on only ONE
+ * instance per interval, even without Redis. A single atomic upsert claims the
+ * lease when the previous one has expired; losers skip this tick. If the lock
+ * table isn't present yet (very first boot before the schema heal), we run
+ * anyway - correct for a single instance, and self-corrects on the next tick.
+ */
+async function tryAcquireJobLease(name: string, leaseMs: number): Promise<boolean> {
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ name: string }>>(
+      `INSERT INTO "SchedulerLock" ("name", "lockedUntil")
+       VALUES ($1, now() + ($2 || ' milliseconds')::interval)
+       ON CONFLICT ("name") DO UPDATE SET "lockedUntil" = EXCLUDED."lockedUntil"
+       WHERE "SchedulerLock"."lockedUntil" < now()
+       RETURNING "name"`,
+      name,
+      String(Math.max(1000, Math.round(leaseMs))),
+    );
+    return rows.length > 0;
+  } catch {
+    return true;
+  }
+}
 
 function isRealRedis(url: string): boolean {
   // Local default we ship in .env.example - treat as "not configured".
@@ -200,11 +238,19 @@ async function tryBullMqStart(): Promise<boolean> {
 
 function startIntervalFallback(): void {
   for (const job of JOBS) {
+    // Lease slightly shorter than the interval so it reliably expires before the
+    // next tick, letting exactly one instance re-acquire and run each period.
+    const leaseMs = Math.max(1000, job.intervalMs - 5_000);
+    const runGuarded = async () => {
+      if (!(await tryAcquireJobLease(job.name, leaseMs))) return; // another instance owns this tick
+      await job.handler();
+    };
+
     // Run once at boot after a short delay (lets the DB settle), then on
     // the declared interval. Unref so the timer doesn't keep node alive
     // during graceful shutdown.
     const firstRun = setTimeout(() => {
-      void job.handler().catch((err) => {
+      void runGuarded().catch((err) => {
         // eslint-disable-next-line no-console
         console.error(`[jobs] ${job.name}: first run failed`, err);
       });
@@ -212,7 +258,7 @@ function startIntervalFallback(): void {
     firstRun.unref?.();
 
     const timer = setInterval(() => {
-      void job.handler().catch((err) => {
+      void runGuarded().catch((err) => {
         // eslint-disable-next-line no-console
         console.error(`[jobs] ${job.name}: run failed`, err);
       });
@@ -220,7 +266,7 @@ function startIntervalFallback(): void {
     timer.unref?.();
 
     // eslint-disable-next-line no-console
-    console.log(`[jobs] ${job.name}: scheduled via setInterval (every ${job.intervalMs}ms)`);
+    console.log(`[jobs] ${job.name}: scheduled via setInterval (every ${job.intervalMs}ms, DB-leased)`);
   }
 }
 

@@ -14,6 +14,7 @@ import {
   listAvailability,
   listMyBookings,
   rateBooking,
+  rescheduleBooking,
   respondToBooking,
   setAvailability,
 } from './bookings.service.js';
@@ -132,6 +133,27 @@ bookingsRouter.post(
   asyncHandler(async (req, res) => {
     if (!req.user) throw AppError.unauthorized();
     const booking = await cancelBooking(req.params.id ?? '', req.user.id);
+    const body: ApiResponse<typeof booking> = { success: true, data: booking };
+    res.json(body);
+  }),
+);
+
+// Move a booking to a new time (either participant may reschedule).
+const rescheduleSchema = z.object({
+  startsAt: z.string().datetime(),
+  endsAt: z.string().datetime(),
+});
+bookingsRouter.post(
+  '/:id/reschedule',
+  validate(rescheduleSchema),
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw AppError.unauthorized();
+    const booking = await rescheduleBooking(
+      req.params.id ?? '',
+      req.user.id,
+      new Date(req.body.startsAt),
+      new Date(req.body.endsAt),
+    );
     const body: ApiResponse<typeof booking> = { success: true, data: booking };
     res.json(body);
   }),

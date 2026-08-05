@@ -9,6 +9,10 @@ import {
   pushEvent,
   deleteEvent,
 } from '../../integrations/google-calendar.service.js';
+import {
+  emailBookingCanceled,
+  emailBookingReminder,
+} from './booking-emails.service.js';
 
 /**
  * Booking & availability service.
@@ -31,6 +35,9 @@ export type BookingReason = (typeof BOOKING_REASONS)[number];
 
 const SLOT_MINUTES = 30;
 const DEFAULT_LOOKAHEAD_DAYS = 14;
+// How far ahead the reminder sweep looks: a confirmed call starting within this
+// window (and not yet reminded) gets its before-call reminder email.
+const REMINDER_LEAD_MS = 30 * 60 * 1000;
 
 // Availability windows are declared in Eastern time. We expand them in this
 // zone so a host's "9-5" means 9-5 Eastern regardless of the server's clock,
@@ -508,7 +515,6 @@ export async function cancelBooking(bookingId: string, userId: string) {
 
   // Notify the OTHER party (not whoever cancelled) in-app + by email.
   const canceledByHost = userId === booking.hostId;
-  const other = canceledByHost ? booking.guest : booking.host;
   const canceller = canceledByHost ? booking.host : booking.guest;
   const otherId = canceledByHost ? booking.guestId : booking.hostId;
   const whenLabel = booking.startsAt.toLocaleString('en-US', {
@@ -525,18 +531,175 @@ export async function cancelBooking(bookingId: string, userId: string) {
     body: `${canceller.firstName} ${canceller.lastName} canceled your call on ${whenLabel}. You can rebook anytime.`,
     data: { bookingId: booking.id },
   }).catch(() => undefined);
-  if (other.email) {
-    void sendEmail({
-      to: other.email,
-      template: 'booking_canceled',
-      data: {
-        firstName: other.firstName,
-        withName: `${canceller.firstName} ${canceller.lastName}`.trim(),
-        whenLabel,
-      },
-    }).catch(() => undefined);
-  }
+  // Cancellation email to the other party + admin CC + a cancel .ics that
+  // removes the event from their calendar.
+  void emailBookingCanceled(booking.id, canceledByHost).catch(() => undefined);
   return updated;
+}
+
+/**
+ * Move a confirmed/pending booking to a new time. Either participant may do it.
+ * Re-validates the host's availability + conflicts, resets the reminder, updates
+ * the Google Calendar event, and fires `booking.rescheduled` (which emails both
+ * parties + admins with an updated .ics).
+ */
+export async function rescheduleBooking(
+  bookingId: string,
+  userId: string,
+  startsAt: Date,
+  endsAt: Date,
+) {
+  if (endsAt <= startsAt) throw AppError.badRequest('endsAt must be after startsAt');
+  if (endsAt.getTime() - startsAt.getTime() > 8 * 60 * 60 * 1000) {
+    throw AppError.badRequest('Booking duration cannot exceed 8 hours');
+  }
+  if (startsAt.getTime() < Date.now() - 60_000) {
+    throw AppError.badRequest('That time is in the past. Please pick an upcoming slot.');
+  }
+
+  const booking = await prisma.bookingCall.findFirst({
+    where: {
+      id: bookingId,
+      OR: [{ hostId: userId }, { guestId: userId }],
+      status: { in: ['pending', 'confirmed'] },
+    },
+    select: {
+      id: true,
+      hostId: true,
+      guestId: true,
+      reason: true,
+      startsAt: true,
+      zoomUrl: true,
+      hostGcalEventId: true,
+      guestGcalEventId: true,
+      host: { select: { firstName: true, lastName: true, email: true } },
+      guest: { select: { firstName: true, lastName: true, email: true } },
+    },
+  });
+  if (!booking) throw AppError.notFound('Booking not found');
+
+  if (!(await isWithinAvailability(booking.hostId, startsAt, endsAt))) {
+    throw AppError.badRequest("That time isn't within the host's available hours.");
+  }
+
+  // Conflict with a DIFFERENT active booking for the host.
+  const conflict = await prisma.bookingCall.findFirst({
+    where: {
+      hostId: booking.hostId,
+      id: { not: booking.id },
+      status: { in: ['pending', 'confirmed'] },
+      startsAt: { lt: endsAt },
+      endsAt: { gt: startsAt },
+    },
+    select: { id: true },
+  });
+  if (conflict) throw AppError.conflict('That time slot is no longer available.');
+
+  // Host's Google Calendar busy at the new time (best-effort).
+  const hostBusy = await getBusyIntervals(booking.hostId, startsAt, endsAt);
+  if (hostBusy.some((b) => startsAt.getTime() < b.end && endsAt.getTime() > b.start)) {
+    throw AppError.conflict("That time is blocked on the host's calendar. Please pick another slot.");
+  }
+
+  const oldStartsAt = booking.startsAt;
+
+  let updated;
+  try {
+    updated = await prisma.bookingCall.update({
+      where: { id: booking.id },
+      // Reset the reminder so a fresh one fires for the new time.
+      data: { startsAt, endsAt, reminderSentAt: null },
+      select: bookingSelect,
+    });
+  } catch (err) {
+    const msg = String((err as { message?: string })?.message ?? err);
+    if (msg.includes('BookingCall_no_overlap') || msg.includes('23P01')) {
+      throw AppError.conflict('That time slot is no longer available.');
+    }
+    throw err;
+  }
+
+  // Move the event on each party's Google Calendar: delete the old, push the
+  // new, and store the new ids. Best-effort - never blocks the reschedule.
+  const summary = `Referral Nova call: ${booking.guest.firstName} ${booking.guest.lastName} ↔ ${booking.host.firstName} ${booking.host.lastName}`;
+  const description = `${booking.reason.replace(/_/g, ' ')} call booked via Referral Nova.${booking.zoomUrl ? `\nJoin: ${booking.zoomUrl}` : ''}`;
+  void (async () => {
+    try {
+      if (booking.hostGcalEventId) await deleteEvent(booking.hostId, booking.hostGcalEventId);
+      if (booking.guestGcalEventId) await deleteEvent(booking.guestId, booking.guestGcalEventId);
+      const [hostEventId, guestEventId] = await Promise.all([
+        pushEvent({ userId: booking.hostId, summary, description, location: booking.zoomUrl ?? undefined, startsAt, endsAt }),
+        pushEvent({ userId: booking.guestId, summary, description, location: booking.zoomUrl ?? undefined, startsAt, endsAt }),
+      ]);
+      if (hostEventId || guestEventId) {
+        await prisma.bookingCall.update({
+          where: { id: booking.id },
+          data: { hostGcalEventId: hostEventId, guestGcalEventId: guestEventId },
+        });
+      }
+    } catch {
+      // best-effort calendar sync
+    }
+  })();
+
+  await eventBus.publish('booking.rescheduled', {
+    bookingId: booking.id,
+    hostId: booking.hostId,
+    guestId: booking.guestId,
+    oldStartsAt: oldStartsAt.toISOString(),
+  });
+
+  // Notify the OTHER party in-app.
+  const rescheduledByHost = userId === booking.hostId;
+  const otherId = rescheduledByHost ? booking.guestId : booking.hostId;
+  const mover = rescheduledByHost ? booking.host : booking.guest;
+  const whenLabel = startsAt.toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    timeZone: BOOKING_TZ,
+  });
+  void createNotification({
+    userId: otherId,
+    type: 'booking_confirmed',
+    title: 'Call rescheduled',
+    body: `${mover.firstName} ${mover.lastName} moved your call to ${whenLabel}. The Zoom link is unchanged.`,
+    data: { bookingId: booking.id },
+  }).catch(() => undefined);
+
+  return updated;
+}
+
+/**
+ * Scheduler sweep: email a before-call reminder for every confirmed call
+ * starting within REMINDER_LEAD_MS that hasn't been reminded yet. The per-row
+ * atomic claim on reminderSentAt makes it safe to run repeatedly and across
+ * instances - each booking is reminded exactly once.
+ */
+export async function runBookingReminders(): Promise<{ scanned: number; sent: number }> {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + REMINDER_LEAD_MS);
+  const due = await prisma.bookingCall.findMany({
+    where: {
+      status: 'confirmed',
+      reminderSentAt: null,
+      startsAt: { gt: now, lte: windowEnd },
+    },
+    select: { id: true, startsAt: true },
+    take: 200,
+  });
+  let sent = 0;
+  for (const b of due) {
+    // Atomic claim - only the writer that flips reminderSentAt sends the email.
+    const claim = await prisma.bookingCall.updateMany({
+      where: { id: b.id, reminderSentAt: null },
+      data: { reminderSentAt: new Date() },
+    });
+    if (claim.count === 0) continue;
+    const mins = Math.max(1, Math.round((b.startsAt.getTime() - Date.now()) / 60_000));
+    const startsInLabel = mins <= 1 ? 'in a minute' : `in about ${mins} minutes`;
+    await emailBookingReminder(b.id, startsInLabel).catch(() => undefined);
+    sent += 1;
+  }
+  return { scanned: due.length, sent };
 }
 
 export async function listMyBookings(

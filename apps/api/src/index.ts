@@ -663,6 +663,15 @@ async function ensureRuntimeSchema(): Promise<void> {
       // Track the pushed Google event ids so a cancel/decline can delete them.
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "hostGcalEventId" TEXT;`,
       `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "guestGcalEventId" TEXT;`,
+      // Before-call reminder email: sent once per booking by the scheduler sweep.
+      `ALTER TABLE "BookingCall" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3);`,
+      `CREATE INDEX IF NOT EXISTS "BookingCall_status_startsAt_idx" ON "BookingCall" ("status", "startsAt");`,
+      // Distributed scheduler lease: lets the setInterval fallback run each job on
+      // only ONE instance at a time (multi-instance-safe without Redis).
+      `CREATE TABLE IF NOT EXISTS "SchedulerLock" (
+         "name" TEXT PRIMARY KEY,
+         "lockedUntil" TIMESTAMP(3) NOT NULL
+       );`,
       // Founder/admin broadcasts: one-way announcement threads (also official,
       // so pinned + pipeline-excluded) + the broadcast history log.
       `ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "isBroadcast" BOOLEAN NOT NULL DEFAULT false;`,

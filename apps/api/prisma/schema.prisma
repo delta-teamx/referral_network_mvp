@@ -931,6 +931,7 @@ model BookingCall {
   guestRating Int?     // 1-5, guest's rating of the call/peer
   hostGcalEventId  String? // Google Calendar event id pushed to the host's calendar
   guestGcalEventId String? // Google Calendar event id pushed to the guest's calendar
+  reminderSentAt   DateTime? // when the before-call reminder email was sent (once)
   createdAt   DateTime @default(now())
   canceledAt  DateTime?
 

@@ -12,6 +12,11 @@ export interface IcsEvent {
   endsAt: Date;
   organizerEmail?: string;
   attendeeEmails?: string[];
+  // METHOD:REQUEST (new/updated) vs CANCEL (removal). STATUS mirrors it.
+  method?: 'REQUEST' | 'CANCEL';
+  // Must strictly increase across versions of the same UID for calendar
+  // clients to accept an update/cancel over the original invite.
+  sequence?: number;
 }
 
 function fmtDateUtc(d: Date): string {
@@ -28,12 +33,15 @@ function escapeText(s: string): string {
 
 export function generateIcs(event: IcsEvent): string {
   const now = fmtDateUtc(new Date());
+  const method = event.method ?? 'REQUEST';
+  const status = method === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED';
+  const sequence = event.sequence ?? 0;
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Referral Nova//Booking//EN',
     'CALSCALE:GREGORIAN',
-    'METHOD:REQUEST',
+    `METHOD:${method}`,
     'BEGIN:VEVENT',
     `UID:${event.uid}@referralnova.com`,
     `DTSTAMP:${now}`,
@@ -49,6 +57,6 @@ export function generateIcs(event: IcsEvent): string {
   for (const att of event.attendeeEmails ?? []) {
     lines.push(`ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:${att}`);
   }
-  lines.push('STATUS:CONFIRMED', 'SEQUENCE:0', 'END:VEVENT', 'END:VCALENDAR');
+  lines.push(`STATUS:${status}`, `SEQUENCE:${sequence}`, 'END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n');
 }

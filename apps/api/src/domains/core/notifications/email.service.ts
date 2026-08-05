@@ -36,6 +36,8 @@ export type EmailTemplate =
   | 'intro_request'
   | 'booking_request'
   | 'booking_canceled'
+  | 'booking_reminder'
+  | 'booking_rescheduled'
   | 'group_join_request'
   | 'group_request_approved'
   | 'group_invite_welcome';
@@ -48,6 +50,7 @@ export interface EmailAttachment {
 
 export interface EmailRequest {
   to: string;
+  cc?: string[]; // additional recipients copied on the email (e.g. admins on bookings)
   template: EmailTemplate;
   data: Record<string, unknown>;
   attachments?: EmailAttachment[];
@@ -531,6 +534,54 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
         ),
       };
     }
+    case 'booking_reminder': {
+      const firstName = String(d.firstName ?? 'there');
+      const withName = String(d.withName ?? 'a member');
+      const whenLabel = String(d.whenLabel ?? '');
+      const startsInLabel = String(d.startsInLabel ?? 'soon');
+      const zoomUrl = String(d.zoomUrl ?? '');
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `Reminder: your call with ${withName} starts ${startsInLabel}`,
+        text:
+          `Hi ${firstName},\n\n` +
+          `This is a reminder that your call with ${withName}${whenLabel ? ` on ${whenLabel}` : ''} starts ${startsInLabel}.\n\n` +
+          (zoomUrl ? `Join here: ${zoomUrl}\n\n` : '') +
+          `See you there!`,
+        html: brandedLayout(
+          `Your call starts ${escapeHtml(startsInLabel)}`,
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Just a reminder that your call with <strong>${escapeHtml(withName)}</strong>${whenLabel ? ` on <strong>${escapeHtml(whenLabel)}</strong>` : ''} starts <strong>${escapeHtml(startsInLabel)}</strong>.`) +
+            (zoomUrl ? button('Join the call', zoomUrl) : '') +
+            P(`<span style="color:#888;font-size:12px">The calendar invite is attached.</span>`),
+        ),
+      };
+    }
+    case 'booking_rescheduled': {
+      const firstName = String(d.firstName ?? 'there');
+      const withName = String(d.withName ?? 'a member');
+      const oldWhenLabel = String(d.oldWhenLabel ?? '');
+      const whenLabel = String(d.whenLabel ?? '');
+      const zoomUrl = String(d.zoomUrl ?? '');
+      const url = `${BRAND.app}/dashboard/bookings`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      return {
+        subject: `Your call with ${withName} was moved to ${whenLabel}`,
+        text:
+          `Hi ${firstName},\n\n` +
+          `Your call with ${withName} has been rescheduled${oldWhenLabel ? ` from ${oldWhenLabel}` : ''} to ${whenLabel}.\n\n` +
+          (zoomUrl ? `The same Zoom link still works: ${zoomUrl}\n\n` : '') +
+          `View it in your bookings: ${url}`,
+        html: brandedLayout(
+          'Your call was rescheduled',
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(`Your call with <strong>${escapeHtml(withName)}</strong> has been moved${oldWhenLabel ? ` from <strong>${escapeHtml(oldWhenLabel)}</strong>` : ''} to <strong>${escapeHtml(whenLabel)}</strong>.`) +
+            (zoomUrl ? P(`The same Zoom link still works.`) : '') +
+            button('View booking', url) +
+            P(`<span style="color:#888;font-size:12px">An updated calendar invite is attached.</span>`),
+        ),
+      };
+    }
     case 'group_join_request': {
       // Sent to a group leader/co-leader when someone requests to join.
       const firstName = String(d.firstName ?? 'there');
@@ -905,7 +956,9 @@ class ConsoleEmailProvider implements EmailProvider {
     // eslint-disable-next-line no-console
     console.log('─'.repeat(70));
     // eslint-disable-next-line no-console
-    console.log(`[email:${req.template}] to ${req.to} · from ${env.EMAIL_FROM}`);
+    console.log(
+      `[email:${req.template}] to ${req.to}${req.cc?.length ? ` cc ${req.cc.join(', ')}` : ''} · from ${env.EMAIL_FROM}`,
+    );
     // eslint-disable-next-line no-console
     console.log(`[email:${req.template}] subject: ${r.subject}`);
     // eslint-disable-next-line no-console
@@ -933,6 +986,7 @@ class ResendEmailProvider implements EmailProvider {
       text: r.text,
       html: r.html,
     };
+    if (req.cc && req.cc.length > 0) body.cc = req.cc;
     if (req.attachments && req.attachments.length > 0) {
       body.attachments = req.attachments.map((a) => ({
         filename: a.filename,
@@ -975,6 +1029,7 @@ class SendGridEmailProvider implements EmailProvider {
     }));
     await this.client.send({
       to: req.to,
+      cc: req.cc && req.cc.length > 0 ? req.cc : undefined,
       from: env.EMAIL_FROM,
       subject: r.subject,
       text: r.text,

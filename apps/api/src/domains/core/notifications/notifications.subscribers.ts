@@ -4,6 +4,10 @@ import { env } from '../../../config/env.js';
 import { sendEmail } from './email.service.js';
 // SMS removed - all notifications via email (SendGrid)
 import { generateIcs } from '../../integrations/ics.service.js';
+import {
+  emailBookingConfirmed,
+  emailBookingRescheduled,
+} from '../../network/bookings/booking-emails.service.js';
 
 /**
  * Notification subscribers - turn domain events into outbound emails. Kept
@@ -65,82 +69,14 @@ export function registerNotificationSubscribers(eventBus: EventBus): void {
   // registerLeadSubscribers (leads.subscribers.ts) with fuller detail. It was
   // ALSO sent here, so every lead emailed the owner twice - removed to dedupe.
 
-  // Booking confirmation emails to BOTH host and guest with .ics attachment
+  // Booking confirmation emails to BOTH host and guest (+ admin CC, .ics).
   eventBus.subscribe('booking.created', async ({ bookingId }) => {
-    const booking = await prisma.bookingCall.findUnique({
-      where: { id: bookingId },
-      select: {
-        id: true,
-        reason: true,
-        notes: true,
-        startsAt: true,
-        endsAt: true,
-        zoomUrl: true,
-        host: { select: { email: true, firstName: true, lastName: true } },
-        guest: { select: { email: true, firstName: true, lastName: true } },
-      },
-    });
-    if (!booking) return;
+    await emailBookingConfirmed(bookingId);
+  });
 
-    const whenLabel = booking.startsAt.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    });
-    const reasonLabel = booking.reason.replace(/_/g, ' ');
-
-    const icsForHost = generateIcs({
-      uid: booking.id,
-      title: `Call with ${booking.guest.firstName} ${booking.guest.lastName}`,
-      description: `Reason: ${reasonLabel}\n${booking.notes ?? ''}\nZoom: ${booking.zoomUrl ?? ''}`,
-      location: booking.zoomUrl ?? undefined,
-      startsAt: booking.startsAt,
-      endsAt: booking.endsAt,
-      organizerEmail: booking.host.email,
-      attendeeEmails: [booking.guest.email],
-    });
-    const icsForGuest = generateIcs({
-      uid: booking.id,
-      title: `Call with ${booking.host.firstName} ${booking.host.lastName}`,
-      description: `Reason: ${reasonLabel}\n${booking.notes ?? ''}\nZoom: ${booking.zoomUrl ?? ''}`,
-      location: booking.zoomUrl ?? undefined,
-      startsAt: booking.startsAt,
-      endsAt: booking.endsAt,
-      organizerEmail: booking.host.email,
-      attendeeEmails: [booking.guest.email],
-    });
-
-    await sendEmail({
-      to: booking.host.email,
-      template: 'booking_confirmed',
-      data: {
-        withName: `${booking.guest.firstName} ${booking.guest.lastName}`,
-        whenLabel,
-        reason: reasonLabel,
-        notes: booking.notes,
-        zoomUrl: booking.zoomUrl,
-      },
-      attachments: [
-        { filename: 'invite.ics', content: icsForHost, contentType: 'text/calendar' },
-      ],
-    });
-    await sendEmail({
-      to: booking.guest.email,
-      template: 'booking_confirmed',
-      data: {
-        withName: `${booking.host.firstName} ${booking.host.lastName}`,
-        whenLabel,
-        reason: reasonLabel,
-        notes: booking.notes,
-        zoomUrl: booking.zoomUrl,
-      },
-      attachments: [
-        { filename: 'invite.ics', content: icsForGuest, contentType: 'text/calendar' },
-      ],
-    });
+  // Reschedule emails to both parties (+ admin CC, updated .ics).
+  eventBus.subscribe('booking.rescheduled', async ({ bookingId, oldStartsAt }) => {
+    await emailBookingRescheduled(bookingId, new Date(oldStartsAt));
   });
 
   // Networking event registration confirmation
