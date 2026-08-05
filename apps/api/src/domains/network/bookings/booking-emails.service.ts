@@ -6,7 +6,7 @@ import { SYSTEM_ACCOUNT_EMAILS } from '../../../config/system-accounts.js';
 /**
  * All booking notification emails in one place: booked, rescheduled, cancelled,
  * and reminder-before-call. Every one attaches an add-to-calendar (.ics) file
- * and CCs the platform admins so the team has visibility on every booking.
+ * and BCCs the platform admins so the team has visibility on every booking.
  *
  * Everything here is best-effort - a mail failure must never break the booking
  * action that triggered it. Callers already treat these as fire-and-forget.
@@ -49,8 +49,9 @@ type BookingRow = {
   guest: { email: string; firstName: string; lastName: string };
 };
 
-/** Real admin emails to CC on booking notifications (never the system accounts). */
-export async function getBookingCcEmails(): Promise<string[]> {
+/** Real admin emails to BCC on booking notifications (never the system accounts).
+ *  BCC (not CC) so members never see internal admin addresses. */
+export async function getBookingAdminEmails(): Promise<string[]> {
   try {
     const admins = await prisma.user.findMany({
       where: { role: 'ADMIN', deletedAt: null, NOT: { email: { in: SYSTEM_ACCOUNT_EMAILS } } },
@@ -71,7 +72,7 @@ function ccExcluding(cc: string[], ...exclude: string[]): string[] {
 function buildIcs(
   booking: BookingRow,
   perspective: 'host' | 'guest',
-  method: 'REQUEST' | 'CANCEL',
+  method: 'REQUEST' | 'CANCEL' | 'PUBLISH',
   sequence: number,
 ): string {
   const peer = perspective === 'host' ? booking.guest : booking.host;
@@ -94,18 +95,18 @@ async function loadBooking(bookingId: string): Promise<BookingRow | null> {
   return prisma.bookingCall.findUnique({ where: { id: bookingId }, select: bookingSelect });
 }
 
-/** Booked / confirmed - to both parties, CC admins, with .ics. */
+/** Booked / confirmed - to both parties, BCC admins, with .ics. */
 export async function emailBookingConfirmed(bookingId: string): Promise<void> {
   const booking = await loadBooking(bookingId);
   if (!booking) return;
-  const cc = await getBookingCcEmails();
+  const bcc = await getBookingAdminEmails();
   const whenLabel = formatWhen(booking.startsAt);
   const reason = booking.reason.replace(/_/g, ' ');
   const seq = Math.floor(Date.now() / 1000);
 
   await sendEmail({
     to: booking.host.email,
-    cc: ccExcluding(cc, booking.host.email, booking.guest.email),
+    bcc: ccExcluding(bcc, booking.host.email, booking.guest.email),
     template: 'booking_confirmed',
     data: {
       withName: `${booking.guest.firstName} ${booking.guest.lastName}`,
@@ -121,7 +122,7 @@ export async function emailBookingConfirmed(bookingId: string): Promise<void> {
 
   await sendEmail({
     to: booking.guest.email,
-    cc: ccExcluding(cc, booking.host.email, booking.guest.email),
+    bcc: ccExcluding(bcc, booking.host.email, booking.guest.email),
     template: 'booking_confirmed',
     data: {
       withName: `${booking.host.firstName} ${booking.host.lastName}`,
@@ -136,11 +137,11 @@ export async function emailBookingConfirmed(bookingId: string): Promise<void> {
   }).catch(() => undefined);
 }
 
-/** Rescheduled - to both parties, CC admins, with an updated .ics. */
+/** Rescheduled - to both parties, BCC admins, with an updated .ics. */
 export async function emailBookingRescheduled(bookingId: string, oldStartsAt: Date): Promise<void> {
   const booking = await loadBooking(bookingId);
   if (!booking) return;
-  const cc = await getBookingCcEmails();
+  const bcc = await getBookingAdminEmails();
   const whenLabel = formatWhen(booking.startsAt);
   const oldWhenLabel = formatWhen(oldStartsAt);
   const seq = Math.floor(Date.now() / 1000);
@@ -150,7 +151,7 @@ export async function emailBookingRescheduled(bookingId: string, oldStartsAt: Da
     const peer = side === 'host' ? booking.guest : booking.host;
     await sendEmail({
       to: me.email,
-      cc: ccExcluding(cc, booking.host.email, booking.guest.email),
+      bcc: ccExcluding(bcc, booking.host.email, booking.guest.email),
       template: 'booking_rescheduled',
       data: {
         firstName: me.firstName,
@@ -166,11 +167,11 @@ export async function emailBookingRescheduled(bookingId: string, oldStartsAt: Da
   }
 }
 
-/** Reminder before the call - to both parties, CC admins, with .ics. */
+/** Reminder before the call - to both parties, BCC admins, with .ics. */
 export async function emailBookingReminder(bookingId: string, startsInLabel: string): Promise<void> {
   const booking = await loadBooking(bookingId);
   if (!booking) return;
-  const cc = await getBookingCcEmails();
+  const bcc = await getBookingAdminEmails();
   const whenLabel = formatWhen(booking.startsAt);
   const seq = Math.floor(Date.now() / 1000);
 
@@ -179,7 +180,7 @@ export async function emailBookingReminder(bookingId: string, startsInLabel: str
     const peer = side === 'host' ? booking.guest : booking.host;
     await sendEmail({
       to: me.email,
-      cc: ccExcluding(cc, booking.host.email, booking.guest.email),
+      bcc: ccExcluding(bcc, booking.host.email, booking.guest.email),
       template: 'booking_reminder',
       data: {
         firstName: me.firstName,
@@ -189,14 +190,16 @@ export async function emailBookingReminder(bookingId: string, startsInLabel: str
         zoomUrl: booking.zoomUrl,
       },
       attachments: [
-        { filename: 'invite.ics', content: buildIcs(booking, side, 'REQUEST', seq), contentType: 'text/calendar' },
+        // PUBLISH (not REQUEST) so the reminder is informational and calendars
+        // don't pop an "event updated" prompt for a call the invitee already has.
+        { filename: 'invite.ics', content: buildIcs(booking, side, 'PUBLISH', seq), contentType: 'text/calendar' },
       ],
     }).catch(() => undefined);
   }
 }
 
 /**
- * Cancelled. Emails the party who did NOT cancel (plus CC admins) with a
+ * Cancelled. Emails the party who did NOT cancel (plus BCC admins) with a
  * cancellation .ics so it drops off their calendar. `canceledByHost` decides
  * who is notified.
  */
@@ -206,7 +209,7 @@ export async function emailBookingCanceled(
 ): Promise<void> {
   const booking = await loadBooking(bookingId);
   if (!booking) return;
-  const cc = await getBookingCcEmails();
+  const bcc = await getBookingAdminEmails();
   const other = canceledByHost ? booking.guest : booking.host;
   const canceller = canceledByHost ? booking.host : booking.guest;
   const whenLabel = formatWhen(booking.startsAt);
@@ -214,7 +217,7 @@ export async function emailBookingCanceled(
   if (!other.email) return;
   await sendEmail({
     to: other.email,
-    cc: ccExcluding(cc, other.email),
+    bcc: ccExcluding(bcc, other.email),
     template: 'booking_canceled',
     data: {
       firstName: other.firstName,

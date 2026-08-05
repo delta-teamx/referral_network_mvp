@@ -12,8 +12,9 @@ export interface IcsEvent {
   endsAt: Date;
   organizerEmail?: string;
   attendeeEmails?: string[];
-  // METHOD:REQUEST (new/updated) vs CANCEL (removal). STATUS mirrors it.
-  method?: 'REQUEST' | 'CANCEL';
+  // REQUEST = invite/update (RSVP), PUBLISH = informational (no update prompt),
+  // CANCEL = removal. STATUS mirrors it.
+  method?: 'REQUEST' | 'CANCEL' | 'PUBLISH';
   // Must strictly increase across versions of the same UID for calendar
   // clients to accept an update/cancel over the original invite.
   sequence?: number;

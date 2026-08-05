@@ -50,7 +50,8 @@ export interface EmailAttachment {
 
 export interface EmailRequest {
   to: string;
-  cc?: string[]; // additional recipients copied on the email (e.g. admins on bookings)
+  cc?: string[]; // visible copied recipients
+  bcc?: string[]; // hidden copied recipients (e.g. admins on booking emails)
   template: EmailTemplate;
   data: Record<string, unknown>;
   attachments?: EmailAttachment[];
@@ -957,7 +958,7 @@ class ConsoleEmailProvider implements EmailProvider {
     console.log('─'.repeat(70));
     // eslint-disable-next-line no-console
     console.log(
-      `[email:${req.template}] to ${req.to}${req.cc?.length ? ` cc ${req.cc.join(', ')}` : ''} · from ${env.EMAIL_FROM}`,
+      `[email:${req.template}] to ${req.to}${req.cc?.length ? ` cc ${req.cc.join(', ')}` : ''}${req.bcc?.length ? ` bcc ${req.bcc.join(', ')}` : ''} · from ${env.EMAIL_FROM}`,
     );
     // eslint-disable-next-line no-console
     console.log(`[email:${req.template}] subject: ${r.subject}`);
@@ -987,6 +988,7 @@ class ResendEmailProvider implements EmailProvider {
       html: r.html,
     };
     if (req.cc && req.cc.length > 0) body.cc = req.cc;
+    if (req.bcc && req.bcc.length > 0) body.bcc = req.bcc;
     if (req.attachments && req.attachments.length > 0) {
       body.attachments = req.attachments.map((a) => ({
         filename: a.filename,
@@ -1030,6 +1032,7 @@ class SendGridEmailProvider implements EmailProvider {
     await this.client.send({
       to: req.to,
       cc: req.cc && req.cc.length > 0 ? req.cc : undefined,
+      bcc: req.bcc && req.bcc.length > 0 ? req.bcc : undefined,
       from: env.EMAIL_FROM,
       subject: r.subject,
       text: r.text,

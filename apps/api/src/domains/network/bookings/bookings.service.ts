@@ -627,16 +627,18 @@ export async function rescheduleBooking(
     try {
       if (booking.hostGcalEventId) await deleteEvent(booking.hostId, booking.hostGcalEventId);
       if (booking.guestGcalEventId) await deleteEvent(booking.guestId, booking.guestGcalEventId);
-      const [hostEventId, guestEventId] = await Promise.all([
+      // allSettled so one party's push failing still persists the other's new
+      // event id (never leave a freshly-created event orphaned with no id stored).
+      const results = await Promise.allSettled([
         pushEvent({ userId: booking.hostId, summary, description, location: booking.zoomUrl ?? undefined, startsAt, endsAt }),
         pushEvent({ userId: booking.guestId, summary, description, location: booking.zoomUrl ?? undefined, startsAt, endsAt }),
       ]);
-      if (hostEventId || guestEventId) {
-        await prisma.bookingCall.update({
-          where: { id: booking.id },
-          data: { hostGcalEventId: hostEventId, guestGcalEventId: guestEventId },
-        });
-      }
+      const hostEventId = results[0]?.status === 'fulfilled' ? results[0].value : null;
+      const guestEventId = results[1]?.status === 'fulfilled' ? results[1].value : null;
+      await prisma.bookingCall.update({
+        where: { id: booking.id },
+        data: { hostGcalEventId: hostEventId, guestGcalEventId: guestEventId },
+      });
     } catch {
       // best-effort calendar sync
     }
