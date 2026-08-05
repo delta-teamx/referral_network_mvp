@@ -23,6 +23,12 @@ interface Broadcast {
   createdAt: string;
 }
 
+interface WelcomeConfig {
+  enabled: boolean;
+  subject: string;
+  body: string;
+}
+
 export default function AdminAnnouncementsPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
@@ -39,6 +45,11 @@ export default function AdminAnnouncementsPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // New-member welcome config (auto-sent when a member finishes onboarding).
+  const [welcome, setWelcome] = useState<WelcomeConfig | null>(null);
+  const [welcomeSaving, setWelcomeSaving] = useState(false);
+  const [welcomeSaved, setWelcomeSaved] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -59,6 +70,40 @@ export default function AdminAnnouncementsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    void (async () => {
+      try {
+        const data = await api.get<WelcomeConfig>('/api/v1/admin/broadcasts/welcome', {
+          accessToken,
+        });
+        setWelcome(data);
+      } catch {
+        // non-fatal - the welcome editor just won't render
+      }
+    })();
+  }, [accessToken]);
+
+  async function saveWelcome() {
+    if (!accessToken || !welcome) return;
+    setWelcomeSaving(true);
+    setError(null);
+    try {
+      const data = await api.put<WelcomeConfig>(
+        '/api/v1/admin/broadcasts/welcome',
+        { enabled: welcome.enabled, subject: welcome.subject, body: welcome.body },
+        { accessToken },
+      );
+      setWelcome(data);
+      setWelcomeSaved(true);
+      setTimeout(() => setWelcomeSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save the welcome message.');
+    } finally {
+      setWelcomeSaving(false);
+    }
+  }
 
   // Default the sender name to the current admin's name once loaded.
   useEffect(() => {
@@ -219,6 +264,66 @@ export default function AdminAnnouncementsPage() {
           </button>
         </div>
       </div>
+
+      {/* New-member welcome */}
+      {welcome && (
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-white">New-member welcome</h2>
+              <p className="text-xs text-gray-400">
+                Automatically sent to every member (inbox + email) the moment they finish
+                onboarding. Never touches the pipeline or analytics.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-300">
+              <input
+                type="checkbox"
+                checked={welcome.enabled}
+                onChange={(e) => setWelcome({ ...welcome, enabled: e.target.checked })}
+                className="h-4 w-4 accent-amber-500"
+              />
+              {welcome.enabled ? 'On' : 'Off'}
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Subject
+            </span>
+            <input
+              value={welcome.subject}
+              onChange={(e) => setWelcome({ ...welcome, subject: e.target.value })}
+              maxLength={160}
+              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+            />
+          </label>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Message
+            </span>
+            <textarea
+              value={welcome.body}
+              onChange={(e) => setWelcome({ ...welcome, body: e.target.value })}
+              maxLength={5000}
+              rows={8}
+              className="w-full resize-y rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+            />
+          </label>
+
+          <div className="mt-4 flex items-center justify-end gap-3">
+            {welcomeSaved && <span className="text-xs font-medium text-emerald-400">Saved.</span>}
+            <button
+              onClick={() => void saveWelcome()}
+              disabled={welcomeSaving}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 transition hover:border-amber-500 disabled:opacity-60"
+            >
+              {welcomeSaving ? <Loader2 size={15} className="animate-spin" /> : null}
+              {welcomeSaving ? 'Saving…' : 'Save welcome message'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* History */}
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">

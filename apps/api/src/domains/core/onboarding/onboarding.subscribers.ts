@@ -5,6 +5,7 @@ import { env } from '../../../config/env.js';
 import { ensureOnboardingRecord } from './onboarding.service.js';
 import { findUserById } from '../users/users.service.js';
 import { notifyAdminsOfSignup } from '../auth/auth.service.js';
+import { sendWelcomeToMember } from '../broadcasts/welcome.service.js';
 
 /**
  * Event subscribers that belong to the onboarding domain. Registered once
@@ -38,6 +39,23 @@ export function registerOnboardingSubscribers(bus: EventBus): void {
       where: { userId, completedAt: null },
       data: { completedAt: new Date() },
     });
+
+    // One-time welcome to the new member (in-app + email). Guarded with its own
+    // DomainEvent marker so profile-edit re-fires never re-welcome, and kept
+    // independent of the admin-notify guard below. sendWelcomeToMember is
+    // best-effort and skips admin/system accounts.
+    try {
+      await prisma.domainEvent.create({
+        data: { id: `welcomed:${userId}`, type: 'member.welcomed', aggregateId: userId, payload: {} },
+      });
+      await sendWelcomeToMember(userId);
+    } catch (err) {
+      // P2002 = already welcomed on an earlier fire; anything else is logged.
+      if (!(err && typeof err === 'object' && (err as { code?: string }).code === 'P2002')) {
+        // eslint-disable-next-line no-console
+        console.warn('[welcome] onboarding-completed handler error:', String(err).slice(0, 200));
+      }
+    }
 
     // Admin new-member email - ONCE per member (onboarding.completed can fire on
     // later profile edits too, so we guard with a DomainEvent marker).

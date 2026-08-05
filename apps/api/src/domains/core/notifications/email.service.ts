@@ -29,6 +29,7 @@ export type EmailTemplate =
   | 'complete_profile'
   | 'roul_message'
   | 'broadcast'
+  | 'member_welcome'
   | 'message_received'
   | 'digest'
   | 'weekly_digest'
@@ -645,6 +646,29 @@ function renderTemplate(req: EmailRequest): RenderedEmail {
             quoted +
             P(`— ${escapeHtml(fromLine)}`) +
             button('Open Referral Nova', messagesUrl),
+        ),
+      };
+    }
+    case 'member_welcome': {
+      const firstName = String(d.firstName ?? 'there');
+      const subject = String(d.subject ?? 'Welcome to Referral Nova!');
+      const messageText = String(d.message ?? '');
+      const dashUrl = `${BRAND.app}/dashboard`;
+      const P = (s: string) => `<p style="margin:0 0 14px;">${s}</p>`;
+      const bodyHtml = escapeHtml(messageText).replace(/\n/g, '<br/>');
+      return {
+        subject,
+        text:
+          `Hi ${firstName},\n\n` +
+          `${messageText}\n\n` +
+          `— The Referral Nova Team\n\n` +
+          `Open your dashboard: ${dashUrl}`,
+        html: brandedLayout(
+          escapeHtml(subject),
+          P(`Hi ${escapeHtml(firstName)},`) +
+            P(bodyHtml) +
+            P(`— The Referral Nova Team`) +
+            button('Open my dashboard', dashUrl),
         ),
       };
     }

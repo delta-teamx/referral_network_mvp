@@ -11,6 +11,7 @@ import {
   listBroadcasts,
   sendBroadcast,
 } from './broadcast.service.js';
+import { getWelcomeMessage, setWelcomeMessage } from './welcome.service.js';
 
 /**
  * Admin broadcast (Founder announcement) API. All routes require ADMIN.
@@ -61,5 +62,31 @@ broadcastRouter.post(
     });
     const body: ApiResponse<typeof result> = { success: true, data: result };
     res.status(201).json(body);
+  }),
+);
+
+// ── New-member welcome config (auto-sent when a member finishes onboarding) ──
+broadcastRouter.get(
+  '/welcome',
+  asyncHandler(async (_req, res) => {
+    const data = await getWelcomeMessage();
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
+  }),
+);
+
+const welcomeSchema = z.object({
+  enabled: z.boolean().optional(),
+  subject: z.string().trim().max(160).optional(),
+  body: z.string().trim().max(5000).optional(),
+});
+
+broadcastRouter.put(
+  '/welcome',
+  validate(welcomeSchema),
+  asyncHandler(async (req, res) => {
+    const data = await setWelcomeMessage(req.body);
+    const body: ApiResponse<typeof data> = { success: true, data };
+    res.json(body);
   }),
 );
