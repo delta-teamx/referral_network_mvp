@@ -68,32 +68,34 @@ const introSelect = {
 
 export async function listSuggestionsForUser(userId: string) {
   // The feed shows two things:
-  //   • my fresh 'suggested' picks I can still act on (I'm the sender), and
-  //   • incoming intro requests I need to accept/decline (I'm the target).
+  //   • incoming intro requests I need to accept/decline (I'm the target), and
+  //   • my fresh 'suggested' picks I can still act on (I'm the sender).
   // My OWN outbound 'requested' intros are deliberately excluded - the moment I
   // request an intro that contact leaves suggestions and lives in my pipeline.
-  const rows = await prisma.introduction.findMany({
-    where: {
-      OR: [
-        { senderId: userId, status: 'suggested' },
-        { targetId: userId, status: 'requested' },
-      ],
-    },
-    orderBy: { matchScore: 'desc' },
-    take: 80,
-    select: introSelect,
-  });
+  //
+  // Incoming requests are fetched SEPARATELY and always returned first, so a
+  // low-match-score request can never be sorted/truncated out of the list -
+  // both the AI feed and the Leads page rely on these to render accept/decline.
+  const [incoming, picks] = await Promise.all([
+    prisma.introduction.findMany({
+      where: { targetId: userId, status: 'requested' },
+      orderBy: { requestedAt: 'desc' },
+      take: 50,
+      select: introSelect,
+    }),
+    prisma.introduction.findMany({
+      where: { senderId: userId, status: 'suggested' },
+      orderBy: { matchScore: 'desc' },
+      take: 60,
+      select: introSelect,
+    }),
+  ]);
   const engaged = await getEngagedPeerIds(userId);
-  return rows
-    .filter((r) => {
-      // Incoming requests (I'm the target) ALWAYS show - I must respond to them,
-      // even though the requester now counts as an engaged peer.
-      if (r.target.id === userId) return true;
-      // My own 'suggested' picks: hide anyone I'm already engaged with so a
-      // stale suggestion can never re-surface for a contact in my pipeline.
-      return !engaged.has(r.target.id);
-    })
-    .slice(0, 20);
+  // Hide any pick for a contact I'm already engaged with, so a stale suggestion
+  // can never re-surface for someone in my pipeline. Incoming requests are
+  // never filtered - I must be able to respond to them.
+  const filteredPicks = picks.filter((r) => !engaged.has(r.target.id)).slice(0, 20);
+  return [...incoming, ...filteredPicks];
 }
 
 export async function listCompletedIntros(userId: string) {

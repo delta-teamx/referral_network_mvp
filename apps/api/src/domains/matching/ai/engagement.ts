@@ -24,13 +24,26 @@ export async function getEngagedPeerIds(userId: string): Promise<Set<string>> {
       select: { senderId: true, targetId: true },
       take: 2000,
     }),
+    // Only connections that the pipeline ALSO cards count as engagement -
+    // accepted (either direction) or my own still-pending outbound request.
+    // A pending INBOUND request, or a declined/archived connection, is NOT
+    // engagement: the pipeline never cards it, so suppressing it here would
+    // make the contact vanish from both the feed and the pipeline.
     prisma.businessConnection.findMany({
-      where: { OR: [{ initiatorId: userId }, { targetId: userId }] },
+      where: {
+        OR: [
+          { status: 'accepted', OR: [{ initiatorId: userId }, { targetId: userId }] },
+          { status: 'pending', initiatorId: userId },
+        ],
+      },
       select: { initiatorId: true, targetId: true },
       take: 2000,
     }),
+    // Only conversations that have at least one message count - matching the
+    // pipeline, which skips empty threads. An opened-but-never-messaged thread
+    // must NOT pull the peer out of suggestions (they'd be carded nowhere).
     prisma.conversationParticipant.findMany({
-      where: { userId },
+      where: { userId, conversation: { messages: { some: {} } } },
       select: { conversationId: true },
       take: 1000,
     }),
