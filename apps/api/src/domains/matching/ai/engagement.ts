@@ -1,9 +1,14 @@
 import { prisma } from '../../../config/prisma.js';
 
 /**
- * Every userId that `userId` is already ENGAGED with - anyone they have an
- * introduction (any status, either direction), a business connection, a
- * conversation, or a pipeline card with.
+ * Every userId that `userId` is already ENGAGED with - anyone they have ACTED
+ * on an introduction with (requested / accepted / completed / declined, either
+ * direction), a business connection, a conversation, or a pipeline card with.
+ *
+ * NB: a bare `status: 'suggested'` introduction is NOT engagement - it is the
+ * matcher's own pick that hasn't been acted on yet. It must be EXCLUDED here,
+ * otherwise every fresh suggestion would filter itself out of the feed (the
+ * suggested row makes its own target look "engaged") and the feed goes blank.
  *
  * Used to keep already-engaged contacts OUT of AI suggestions: the moment you
  * request an intro (or connect / message / pipeline someone), they leave your
@@ -12,7 +17,10 @@ import { prisma } from '../../../config/prisma.js';
 export async function getEngagedPeerIds(userId: string): Promise<Set<string>> {
   const [intros, connections, myConvoParts, cards] = await Promise.all([
     prisma.introduction.findMany({
-      where: { OR: [{ senderId: userId }, { targetId: userId }] },
+      where: {
+        status: { not: 'suggested' },
+        OR: [{ senderId: userId }, { targetId: userId }],
+      },
       select: { senderId: true, targetId: true },
       take: 2000,
     }),

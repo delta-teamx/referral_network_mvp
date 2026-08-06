@@ -250,17 +250,31 @@ export async function syncPipeline(ownerId: string): Promise<void> {
     else if (c.status === 'sent') await advanceCard(card.id, card.stage, 'signing_contract');
   }
 
-  // 7. Accepted connections also count as engagement.
-  const acceptedConnections = await prisma.businessConnection.findMany({
+  // 7. Connections → card + engagement. An accepted connection (either
+  //    direction) or my own still-pending outbound request means that contact
+  //    has left my AI suggestions, so they must land here in the pipeline as a
+  //    lead (mirrors the intro rule) - not vanish into neither list.
+  const connections = await prisma.businessConnection.findMany({
     where: {
-      status: 'accepted',
-      OR: [{ initiatorId: ownerId }, { targetId: ownerId }],
+      OR: [
+        { status: 'accepted', OR: [{ initiatorId: ownerId }, { targetId: ownerId }] },
+        { status: 'pending', initiatorId: ownerId },
+      ],
     },
-    select: { initiatorId: true, targetId: true },
+    select: {
+      initiatorId: true,
+      status: true,
+      initiator: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+      target: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+    },
     take: 500,
   });
-  for (const c of acceptedConnections) {
-    engagedPeerIds.add(c.initiatorId === ownerId ? c.targetId : c.initiatorId);
+  for (const c of connections) {
+    const peer = c.initiatorId === ownerId ? c.target : c.initiator;
+    // Never card an admin/system account as a lead.
+    if (peer.role === 'ADMIN') continue;
+    if (c.status === 'accepted') engagedPeerIds.add(peer.id);
+    await ensureContactCard(ownerId, peer, 'connection');
   }
 
   // 8. INTERCONNECTION HEAL: an intro request between two people who already

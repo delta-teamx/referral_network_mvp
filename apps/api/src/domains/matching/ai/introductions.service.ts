@@ -67,18 +67,33 @@ const introSelect = {
 } as const;
 
 export async function listSuggestionsForUser(userId: string) {
-  // ONLY fresh 'suggested' picks the member hasn't acted on. Once they request
-  // an intro (suggested -> requested) the contact leaves suggestions and lives
-  // in the pipeline instead. We also drop any suggestion for a contact the
-  // member is already engaged with, so a stale row can never re-surface.
+  // The feed shows two things:
+  //   • my fresh 'suggested' picks I can still act on (I'm the sender), and
+  //   • incoming intro requests I need to accept/decline (I'm the target).
+  // My OWN outbound 'requested' intros are deliberately excluded - the moment I
+  // request an intro that contact leaves suggestions and lives in my pipeline.
   const rows = await prisma.introduction.findMany({
-    where: { senderId: userId, status: 'suggested' },
+    where: {
+      OR: [
+        { senderId: userId, status: 'suggested' },
+        { targetId: userId, status: 'requested' },
+      ],
+    },
     orderBy: { matchScore: 'desc' },
-    take: 60,
+    take: 80,
     select: introSelect,
   });
   const engaged = await getEngagedPeerIds(userId);
-  return rows.filter((r) => !engaged.has(r.target.id)).slice(0, 20);
+  return rows
+    .filter((r) => {
+      // Incoming requests (I'm the target) ALWAYS show - I must respond to them,
+      // even though the requester now counts as an engaged peer.
+      if (r.target.id === userId) return true;
+      // My own 'suggested' picks: hide anyone I'm already engaged with so a
+      // stale suggestion can never re-surface for a contact in my pipeline.
+      return !engaged.has(r.target.id);
+    })
+    .slice(0, 20);
 }
 
 export async function listCompletedIntros(userId: string) {
