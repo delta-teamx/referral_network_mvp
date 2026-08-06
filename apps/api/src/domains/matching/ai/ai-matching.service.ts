@@ -91,6 +91,12 @@ export async function generateMatchesForUser(
   // pipeline. They belong in the pipeline, not back in your suggestions.
   const engaged = await getEngagedPeerIds(userId);
 
+  // Score against the WHOLE network, not an arbitrary slice. The rules scorer
+  // runs in-app, so every candidate must be loaded to be ranked - a low `take`
+  // silently hid most members from a >200-person network and made the top
+  // picks arbitrary. 5000 covers current + foreseeable scale; beyond that we
+  // move to embedding / pgvector similarity (see file header) rather than a
+  // bigger in-memory scan.
   const candidates = await prisma.memberProfile.findMany({
     where: {
       userId: candidateUserIds
@@ -100,7 +106,7 @@ export async function generateMatchesForUser(
       user: { deletedAt: null, role: { not: 'ADMIN' } },
     },
     select: profileFields,
-    take: 200,
+    take: 5000,
   });
 
   // Members holding the Priority matching perk (earned this cycle by inviting

@@ -53,17 +53,22 @@ const cardSelect = {
   },
 } as const;
 
+type CardRec = { id: string; stage: string };
+
+/**
+ * Return the peer's card, creating it if missing. Reads/writes the preloaded
+ * `cardByContact` map so the whole sync is one findMany + only the genuinely
+ * new cards, never a findFirst per peer (that N+1 is what capped the sync).
+ */
 async function ensureContactCard(
   ownerId: string,
   contact: { id: string; firstName: string; lastName: string; email?: string | null },
   source: string,
-) {
-  const existing = await prisma.pipelineCard.findFirst({
-    where: { ownerId, contactUserId: contact.id },
-    select: { id: true, stage: true },
-  });
+  cardByContact: Map<string, CardRec>,
+): Promise<CardRec> {
+  const existing = cardByContact.get(contact.id);
   if (existing) return existing;
-  return prisma.pipelineCard.create({
+  const created = await prisma.pipelineCard.create({
     data: {
       ownerId,
       contactUserId: contact.id,
@@ -74,16 +79,24 @@ async function ensureContactCard(
     },
     select: { id: true, stage: true },
   });
+  const rec: CardRec = { id: created.id, stage: created.stage };
+  cardByContact.set(contact.id, rec);
+  return rec;
 }
 
-/** Advance a card forward (never backwards, never out of a terminal stage). */
-async function advanceCard(cardId: string, currentStage: string, to: PipelineStage) {
-  if (TERMINAL.includes(currentStage as PipelineStage)) return;
-  if (stageRank(currentStage) >= stageRank(to)) return;
+/**
+ * Advance a card forward (never backwards, never out of a terminal stage).
+ * Mutates the passed record's stage after a successful update so a later
+ * section in the same run sees the fresh stage and can't move it backward.
+ */
+async function advanceCard(card: CardRec, to: PipelineStage) {
+  if (TERMINAL.includes(card.stage as PipelineStage)) return;
+  if (stageRank(card.stage) >= stageRank(to)) return;
   await prisma.pipelineCard.update({
-    where: { id: cardId },
+    where: { id: card.id },
     data: { stage: to, stageUpdatedAt: new Date() },
   });
+  card.stage = to;
 }
 
 /** Idempotent sync: turn real platform activity into pipeline cards. */
@@ -93,6 +106,38 @@ export async function syncPipeline(ownerId: string): Promise<void> {
   await prisma.pipelineCard
     .updateMany({ where: { ownerId, stage: 'contract_signed' }, data: { stage: 'won' } })
     .catch(() => undefined);
+
+  // Preload this owner's existing cards ONCE, keyed the three ways sync looks
+  // them up (by contact user, by referral name, by consumer-lead id). Every
+  // section then dedups against an in-memory Set/Map instead of a findFirst per
+  // row, so the per-section caps below can be raised without an N+1 blow-up.
+  const [existingContactCards, existingReferralCards, existingConsumerCards] = await Promise.all([
+    prisma.pipelineCard.findMany({
+      where: { ownerId, contactUserId: { not: null } },
+      select: { id: true, contactUserId: true, stage: true },
+      take: 5000,
+    }),
+    prisma.pipelineCard.findMany({
+      where: { ownerId, source: 'referral' },
+      select: { name: true },
+      take: 5000,
+    }),
+    prisma.pipelineCard.findMany({
+      where: { ownerId, consumerLeadId: { not: null } },
+      select: { consumerLeadId: true },
+      take: 5000,
+    }),
+  ]);
+  const cardByContact = new Map<string, CardRec>();
+  for (const c of existingContactCards) {
+    if (c.contactUserId) cardByContact.set(c.contactUserId, { id: c.id, stage: c.stage });
+  }
+  const referralNames = new Set(existingReferralCards.map((c) => c.name));
+  const consumerLeadIds = new Set(
+    existingConsumerCards
+      .map((c) => c.consumerLeadId)
+      .filter((id): id is string => id !== null),
+  );
 
   // Peers this member has ACTUALLY engaged with - used at the end to
   // auto-resolve stale intro requests (the system stays interconnected:
@@ -113,7 +158,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       },
       messages: { take: 1, select: { id: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const c of conversations) {
     if (c.messages.length === 0) continue;
@@ -122,7 +167,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
     // Admins (incl. the ROUL Support system account) are never leads.
     if (peer.role === 'ADMIN') continue;
     engagedPeerIds.add(peer.id);
-    await ensureContactCard(ownerId, peer, 'message');
+    await ensureContactCard(ownerId, peer, 'message', cardByContact);
   }
 
   // 2. Intros → card. Accepted (either direction) AND my own still-pending
@@ -140,11 +185,11 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       sender: { select: { id: true, firstName: true, lastName: true, email: true } },
       target: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const i of intros) {
     const peer = i.senderId === ownerId ? i.target : i.sender;
-    await ensureContactCard(ownerId, peer, 'intro');
+    await ensureContactCard(ownerId, peer, 'intro', cardByContact);
   }
 
   // 3. Client referrals I received → a card per referral sender's client.
@@ -157,28 +202,24 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       status: true,
       sender: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const r of referrals) {
     // The referred CLIENT is the prospect. Key by the sending member so
     // repeat referrals from the same partner stay on one card per client.
     const name = r.clientName?.trim() || `Referral from ${r.sender.firstName} ${r.sender.lastName}`;
-    const found = await prisma.pipelineCard.findFirst({
-      where: { ownerId, source: 'referral', name },
-      select: { id: true },
+    if (referralNames.has(name)) continue;
+    await prisma.pipelineCard.create({
+      data: {
+        ownerId,
+        name,
+        email: r.clientEmail ?? null,
+        source: 'referral',
+        stage: r.status === 'CONVERTED' ? 'won' : 'new',
+        notes: `Referred by ${r.sender.firstName} ${r.sender.lastName}`,
+      },
     });
-    if (!found) {
-      await prisma.pipelineCard.create({
-        data: {
-          ownerId,
-          name,
-          email: r.clientEmail ?? null,
-          source: 'referral',
-          stage: r.status === 'CONVERTED' ? 'won' : 'new',
-          notes: `Referred by ${r.sender.firstName} ${r.sender.lastName}`,
-        },
-      });
-    }
+    referralNames.add(name);
   }
 
   // 4. Consumer leads on my listings → card each.
@@ -189,14 +230,10 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       status: true,
       consumer: { select: { firstName: true, lastName: true, email: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const l of consumerLeads) {
-    const existing = await prisma.pipelineCard.findFirst({
-      where: { ownerId, consumerLeadId: l.id },
-      select: { id: true },
-    });
-    if (existing) continue;
+    if (consumerLeadIds.has(l.id)) continue;
     await prisma.pipelineCard.create({
       data: {
         ownerId,
@@ -207,6 +244,7 @@ export async function syncPipeline(ownerId: string): Promise<void> {
         stage: l.status === 'CONVERTED' ? 'won' : 'new',
       },
     });
+    consumerLeadIds.add(l.id);
   }
 
   // 5. Confirmed bookings advance the peer's card to zoom_booked.
@@ -220,13 +258,13 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       host: { select: { id: true, firstName: true, lastName: true, email: true } },
       guest: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const b of bookings) {
     const peer = b.hostId === ownerId ? b.guest : b.host;
     engagedPeerIds.add(peer.id);
-    const card = await ensureContactCard(ownerId, peer, 'booking');
-    await advanceCard(card.id, card.stage, 'zoom_booked');
+    const card = await ensureContactCard(ownerId, peer, 'booking', cardByContact);
+    await advanceCard(card, 'zoom_booked');
   }
 
   // 6. Contracts advance the peer's card: sent → signing_contract,
@@ -239,15 +277,15 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       sender: { select: { id: true, firstName: true, lastName: true, email: true } },
       receiver: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
-    take: 200,
+    take: 1000,
   });
   for (const c of contracts) {
     const peer = c.senderId === ownerId ? c.receiver : c.sender;
     engagedPeerIds.add(peer.id);
-    const card = await ensureContactCard(ownerId, peer, 'contract');
+    const card = await ensureContactCard(ownerId, peer, 'contract', cardByContact);
     // A signed contract IS a won deal.
-    if (c.status === 'signed') await advanceCard(card.id, card.stage, 'won');
-    else if (c.status === 'sent') await advanceCard(card.id, card.stage, 'signing_contract');
+    if (c.status === 'signed') await advanceCard(card, 'won');
+    else if (c.status === 'sent') await advanceCard(card, 'signing_contract');
   }
 
   // 7. Connections → card + engagement. An accepted connection (either
@@ -267,14 +305,14 @@ export async function syncPipeline(ownerId: string): Promise<void> {
       initiator: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
       target: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
     },
-    take: 500,
+    take: 1000,
   });
   for (const c of connections) {
     const peer = c.initiatorId === ownerId ? c.target : c.initiator;
     // Never card an admin/system account as a lead.
     if (peer.role === 'ADMIN') continue;
     if (c.status === 'accepted') engagedPeerIds.add(peer.id);
-    await ensureContactCard(ownerId, peer, 'connection');
+    await ensureContactCard(ownerId, peer, 'connection', cardByContact);
   }
 
   // 8. INTERCONNECTION HEAL: an intro request between two people who already
