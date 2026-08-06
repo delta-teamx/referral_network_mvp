@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   BarChart3,
+  Banknote,
   Calendar,
   FileSignature,
   GraduationCap,
@@ -76,6 +77,7 @@ const NAV: NavEntry[] = [
     ],
   },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/funding', label: 'Funding', icon: Banknote, tag: 'NEW' },
   { href: '/dashboard/tutorials', label: 'Tutorials', icon: GraduationCap, tag: 'NEW' },
   { href: '/dashboard/settings', label: 'Profile settings', icon: Settings },
 ];

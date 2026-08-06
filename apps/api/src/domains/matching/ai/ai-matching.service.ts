@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import { usersWithPriorityMatching } from '../../network/referral-tracking/referral-tracking.service.js';
 import { activeRewardUserIds } from '../../network/rewards/rewards.service.js';
+import { getEngagedPeerIds } from './engagement.js';
 
 /**
  * How much the "Priority matching" perk lifts a member in other people's
@@ -85,9 +86,16 @@ export async function generateMatchesForUser(
     candidateUserIds = members.map((m) => m.userId).filter((id) => id !== userId);
   }
 
+  // Never suggest someone you're already engaged with - a contact you've sent
+  // or received an intro from, connected with, messaged, or have in your
+  // pipeline. They belong in the pipeline, not back in your suggestions.
+  const engaged = await getEngagedPeerIds(userId);
+
   const candidates = await prisma.memberProfile.findMany({
     where: {
-      userId: candidateUserIds ? { in: candidateUserIds } : { not: userId },
+      userId: candidateUserIds
+        ? { in: candidateUserIds.filter((id) => !engaged.has(id)) }
+        : { notIn: [userId, ...engaged] },
       // Admins never appear as match candidates - they are operators.
       user: { deletedAt: null, role: { not: 'ADMIN' } },
     },

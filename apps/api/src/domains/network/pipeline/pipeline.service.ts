@@ -125,11 +125,15 @@ export async function syncPipeline(ownerId: string): Promise<void> {
     await ensureContactCard(ownerId, peer, 'message');
   }
 
-  // 2. Intro requests I accepted (or that were accepted for me) → card.
+  // 2. Intros → card. Accepted (either direction) AND my own still-pending
+  //    outbound request: the moment I request an intro, that contact leaves my
+  //    AI suggestions and belongs here in my pipeline as a lead.
   const intros = await prisma.introduction.findMany({
     where: {
-      status: 'accepted',
-      OR: [{ senderId: ownerId }, { targetId: ownerId }],
+      OR: [
+        { status: 'accepted', OR: [{ senderId: ownerId }, { targetId: ownerId }] },
+        { status: 'requested', senderId: ownerId },
+      ],
     },
     select: {
       senderId: true,

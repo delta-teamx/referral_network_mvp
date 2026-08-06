@@ -4,6 +4,7 @@ import { eventBus } from '../../core/events/index.js';
 import { createNotification } from '../../core/notifications/notifications.service.js';
 import { getOrCreateConversation, sendMessage } from '../../network/messaging/messaging.service.js';
 import { assertEngagementQuota } from '../../billing/billing.tiers.js';
+import { getEngagedPeerIds } from './engagement.js';
 
 /**
  * Introduction lifecycle - manage AI-suggested introductions between members.
@@ -66,15 +67,18 @@ const introSelect = {
 } as const;
 
 export async function listSuggestionsForUser(userId: string) {
-  return prisma.introduction.findMany({
-    where: {
-      OR: [{ senderId: userId }, { targetId: userId }],
-      status: { in: ['suggested', 'requested'] },
-    },
+  // ONLY fresh 'suggested' picks the member hasn't acted on. Once they request
+  // an intro (suggested -> requested) the contact leaves suggestions and lives
+  // in the pipeline instead. We also drop any suggestion for a contact the
+  // member is already engaged with, so a stale row can never re-surface.
+  const rows = await prisma.introduction.findMany({
+    where: { senderId: userId, status: 'suggested' },
     orderBy: { matchScore: 'desc' },
-    take: 20,
+    take: 60,
     select: introSelect,
   });
+  const engaged = await getEngagedPeerIds(userId);
+  return rows.filter((r) => !engaged.has(r.target.id)).slice(0, 20);
 }
 
 export async function listCompletedIntros(userId: string) {

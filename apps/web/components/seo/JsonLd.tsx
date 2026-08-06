@@ -51,6 +51,45 @@ export const websiteSchema: Record<string, unknown> = {
   },
 };
 
+/**
+ * SoftwareApplication schema - tells search & AI answer engines that Referral
+ * Nova is a SaaS product with a tiered pricing model. Powers rich results and
+ * lets AI assistants describe the plans accurately.
+ */
+export const softwareApplicationSchema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Referral Nova',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  url: MARKETING_URL,
+  description:
+    'AI-powered referral network that matches businesses with trusted partners so qualified referrals flow both ways.',
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Free',
+      price: '0',
+      priceCurrency: 'USD',
+      description: 'Get started with core referral matching.',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Pro',
+      price: '49',
+      priceCurrency: 'USD',
+      description: 'Unlimited introductions and advanced matching.',
+    },
+    {
+      '@type': 'Offer',
+      name: 'Premium',
+      price: '149',
+      priceCurrency: 'USD',
+      description: 'Priority matching, pods, and concierge support.',
+    },
+  ],
+};
+
 /** Build a FAQPage schema from a list of Q&A pairs. */
 export function faqSchema(faqs: Array<{ q: string; a: string }>): Record<string, unknown> {
   return {
