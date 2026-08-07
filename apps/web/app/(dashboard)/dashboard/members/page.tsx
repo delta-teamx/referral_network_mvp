@@ -71,7 +71,9 @@ export default function MembersDirectoryPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
+    // Extra bottom padding so the last row (pagination) always clears the
+    // fixed support-chat button in the bottom-right corner.
+    <div className="p-4 pb-28 sm:p-6 sm:pb-28 md:p-8 md:pb-28">
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Directory</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
