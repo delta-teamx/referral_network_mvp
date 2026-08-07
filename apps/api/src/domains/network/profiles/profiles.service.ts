@@ -89,23 +89,33 @@ export async function upsertMemberProfile(userId: string, input: UpsertProfileIn
   // member had completed each time they saved their profile.
   const existingProgress = await prisma.onboardingProgress.findUnique({
     where: { userId },
-    select: { completedSteps: true },
+    select: { completedSteps: true, completedAt: true },
   });
   // completedSteps is a Json column - coerce to a string[] before merging.
   const priorSteps = Array.isArray(existingProgress?.completedSteps)
     ? (existingProgress.completedSteps as string[])
     : [];
   const mergedSteps = Array.from(new Set([...priorSteps, 'profile_submitted']));
+
+  // Onboarding completes EXACTLY ONCE. Only the first profile save stamps
+  // completedAt and fires `onboarding.completed`; later profile edits must
+  // neither reset the timestamp nor re-emit the event. The old code did both
+  // on every save, so each profile edit re-ran every onboarding.completed
+  // subscriber - re-sending the welcome email + in-app welcome and re-notifying
+  // admins for members who had joined long ago.
+  const alreadyCompleted = Boolean(existingProgress?.completedAt);
   await prisma.onboardingProgress.upsert({
     where: { userId },
     create: { userId, completedSteps: ['profile_submitted'], completedAt: new Date() },
     update: {
       completedSteps: mergedSteps,
-      completedAt: new Date(),
+      ...(alreadyCompleted ? {} : { completedAt: new Date() }),
     },
   });
 
-  await eventBus.publish('onboarding.completed', { userId });
+  if (!alreadyCompleted) {
+    await eventBus.publish('onboarding.completed', { userId });
+  }
   return profile;
 }
 
